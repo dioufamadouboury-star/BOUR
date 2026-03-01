@@ -56,3 +56,4 @@ stripe==14.1.0
 # Utils
 python-dateutil==2.9.0.post0
 pytz==2025.2
+groq
