@@ -1560,11 +1560,10 @@ async def delete_product(product_id: str, user: User = Depends(require_admin)):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Produit non trouvé")
     
-    # Clear products cache
-    clear_cache("products")
-    clear_cache("flash_sales")
+    # Clear ALL cache to ensure product is removed
+    clear_cache()
     
-    return {"message": "Produit supprimé"}
+    return {"message": "Produit supprimé", "deleted": True}
 
 # ============== FLASH SALES ROUTES ==============
 
