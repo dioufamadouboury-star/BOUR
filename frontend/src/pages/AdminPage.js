@@ -527,9 +527,13 @@ export default function AdminPage() {
       const headers = { Authorization: `Bearer ${token}` };
       await axios.delete(`${API_URL}/api/products/${productId}`, { headers });
       toast.success("Produit supprimé");
-      fetchData();
+      // Mise à jour immédiate de l'état local
+      setProducts(prevProducts => prevProducts.filter(p => p.product_id !== productId));
+      // Puis rafraîchir depuis le serveur
+      setTimeout(() => fetchData(), 500);
     } catch (error) {
       toast.error("Erreur lors de la suppression");
+      console.error("Delete error:", error);
     }
   };
 
