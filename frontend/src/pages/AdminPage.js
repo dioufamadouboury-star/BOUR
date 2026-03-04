@@ -599,6 +599,41 @@ export default function AdminPage() {
     }
   };
 
+  // Download Monthly PDF Report
+  const handleDownloadMonthlyReport = async () => {
+    try {
+      toast.info("Génération du rapport en cours...");
+      const headers = { Authorization: `Bearer ${token}` };
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      
+      const response = await axios.get(
+        `${API_URL}/api/admin/reports/monthly?month=${month}&year=${year}`,
+        { 
+          headers,
+          responseType: 'blob'
+        }
+      );
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const monthNames = ["", "janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout", "septembre", "octobre", "novembre", "decembre"];
+      link.setAttribute('download', `rapport_yama_${monthNames[month]}_${year}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Rapport téléchargé avec succès !");
+    } catch (error) {
+      console.error("Error downloading report:", error);
+      toast.error("Erreur lors de la génération du rapport");
+    }
+  };
+
   // Filter products by search
   const filteredProducts = products.filter(
     (p) =>
@@ -859,6 +894,15 @@ export default function AdminPage() {
               <span className="font-medium">
                 {fixingImages ? "Correction en cours..." : "Réparer les images"}
               </span>
+            </button>
+            
+            {/* Monthly Report PDF Button */}
+            <button
+              onClick={handleDownloadMonthlyReport}
+              className="w-full flex items-center gap-3 p-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            >
+              <FileText className="w-5 h-5" />
+              <span className="font-medium">Rapport mensuel PDF</span>
             </button>
           </div>
         </div>

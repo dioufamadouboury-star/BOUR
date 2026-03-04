@@ -6487,6 +6487,242 @@ async def export_clients_csv(user: User = Depends(require_admin)):
         headers={"Content-Disposition": "attachment; filename=clients_yama.csv"}
     )
 
+
+# ============== MONTHLY PDF REPORT ==============
+
+async def generate_monthly_report_pdf(month: int, year: int) -> io.BytesIO:
+    """Generate a comprehensive monthly PDF report"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+    from reportlab.lib.units import cm
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#1a365d'), spaceAfter=20, alignment=1)
+    heading_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#2c5282'), spaceBefore=15, spaceAfter=10)
+    normal_style = ParagraphStyle('Normal', parent=styles['Normal'], fontSize=10, spaceAfter=5)
+    
+    # Date range for the month
+    start_date = datetime(year, month, 1, tzinfo=timezone.utc)
+    if month == 12:
+        end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        end_date = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+    
+    month_names = ["", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+    month_name = month_names[month]
+    
+    # Title
+    elements.append(Paragraph(f"GROUPE YAMA+", title_style))
+    elements.append(Paragraph(f"Rapport Mensuel - {month_name} {year}", heading_style))
+    elements.append(Paragraph(f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}", normal_style))
+    elements.append(Spacer(1, 20))
+    
+    # ===== SALES SECTION =====
+    elements.append(Paragraph("📊 VENTES", heading_style))
+    
+    # Get orders for the month
+    orders = await db.orders.find({
+        "created_at": {"$gte": start_date.isoformat(), "$lt": end_date.isoformat()}
+    }, {"_id": 0}).to_list(1000)
+    
+    total_orders = len(orders)
+    paid_orders = [o for o in orders if o.get("payment_status") == "paid"]
+    pending_orders = [o for o in orders if o.get("order_status") == "pending"]
+    delivered_orders = [o for o in orders if o.get("order_status") == "delivered"]
+    
+    total_revenue = sum(o.get("total", 0) for o in paid_orders)
+    avg_order_value = total_revenue // len(paid_orders) if paid_orders else 0
+    
+    sales_data = [
+        ["Métrique", "Valeur"],
+        ["Commandes totales", str(total_orders)],
+        ["Commandes payées", str(len(paid_orders))],
+        ["Commandes en attente", str(len(pending_orders))],
+        ["Commandes livrées", str(len(delivered_orders))],
+        ["Chiffre d'affaires", f"{total_revenue:,} FCFA".replace(",", " ")],
+        ["Panier moyen", f"{avg_order_value:,} FCFA".replace(",", " ")],
+    ]
+    
+    sales_table = Table(sales_data, colWidths=[10*cm, 6*cm])
+    sales_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5282')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f7fafc')),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0')),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('PADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(sales_table)
+    elements.append(Spacer(1, 20))
+    
+    # ===== TOP PRODUCTS =====
+    elements.append(Paragraph("🏆 PRODUITS LES PLUS VENDUS", heading_style))
+    
+    product_sales = {}
+    for order in orders:
+        for item in order.get("items", []):
+            pid = item.get("product_id", "")
+            pname = item.get("name", "Produit inconnu")
+            qty = item.get("quantity", 1)
+            if pid in product_sales:
+                product_sales[pid]["qty"] += qty
+            else:
+                product_sales[pid] = {"name": pname, "qty": qty}
+    
+    sorted_products = sorted(product_sales.items(), key=lambda x: x[1]["qty"], reverse=True)[:10]
+    
+    if sorted_products:
+        products_data = [["#", "Produit", "Quantité vendue"]]
+        for i, (pid, data) in enumerate(sorted_products, 1):
+            products_data.append([str(i), data["name"][:40], str(data["qty"])])
+        
+        products_table = Table(products_data, colWidths=[1*cm, 11*cm, 4*cm])
+        products_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#38a169')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (2, 0), (2, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 11),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f0fff4')),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#c6f6d5')),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('PADDING', (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(products_table)
+    else:
+        elements.append(Paragraph("Aucune vente ce mois-ci", normal_style))
+    elements.append(Spacer(1, 20))
+    
+    # ===== CUSTOMERS SECTION =====
+    elements.append(Paragraph("👥 CLIENTS", heading_style))
+    
+    # New users this month
+    new_users = await db.users.count_documents({
+        "created_at": {"$gte": start_date.isoformat(), "$lt": end_date.isoformat()}
+    })
+    
+    total_users = await db.users.count_documents({})
+    
+    # Active customers (who ordered this month)
+    active_customers = len(set(o.get("user_id") for o in orders if o.get("user_id")))
+    
+    customers_data = [
+        ["Métrique", "Valeur"],
+        ["Nouveaux inscrits ce mois", str(new_users)],
+        ["Clients actifs (avec commandes)", str(active_customers)],
+        ["Total clients inscrits", str(total_users)],
+    ]
+    
+    customers_table = Table(customers_data, colWidths=[10*cm, 6*cm])
+    customers_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#805ad5')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#faf5ff')),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e9d8fd')),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('PADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(customers_table)
+    elements.append(Spacer(1, 20))
+    
+    # ===== INVENTORY SECTION =====
+    elements.append(Paragraph("📦 INVENTAIRE", heading_style))
+    
+    total_products = await db.products.count_documents({})
+    low_stock = await db.products.count_documents({"stock": {"$lte": 5, "$gt": 0}})
+    out_of_stock = await db.products.count_documents({"stock": 0})
+    
+    inventory_data = [
+        ["Métrique", "Valeur"],
+        ["Total produits", str(total_products)],
+        ["Stock faible (≤5)", str(low_stock)],
+        ["Rupture de stock", str(out_of_stock)],
+    ]
+    
+    inventory_table = Table(inventory_data, colWidths=[10*cm, 6*cm])
+    inventory_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dd6b20')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#fffaf0')),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#fbd38d')),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('PADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(inventory_table)
+    elements.append(Spacer(1, 20))
+    
+    # ===== FOOTER =====
+    elements.append(Spacer(1, 30))
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.gray, alignment=1)
+    elements.append(Paragraph("─" * 80, footer_style))
+    elements.append(Paragraph(f"GROUPE YAMA+ | Fass Paillote, Dakar, Sénégal", footer_style))
+    elements.append(Paragraph(f"Tél: +221 78 382 75 75 | Email: contact@groupeyamaplus.com", footer_style))
+    elements.append(Paragraph(f"www.groupeyamaplus.com", footer_style))
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+
+@api_router.get("/admin/reports/monthly")
+async def get_monthly_report(
+    month: int = None,
+    year: int = None,
+    user: User = Depends(require_admin)
+):
+    """Generate and download monthly PDF report"""
+    # Default to current month
+    now = datetime.now()
+    if month is None:
+        month = now.month
+    if year is None:
+        year = now.year
+    
+    # Validate
+    if month < 1 or month > 12:
+        raise HTTPException(status_code=400, detail="Mois invalide (1-12)")
+    if year < 2020 or year > 2030:
+        raise HTTPException(status_code=400, detail="Année invalide")
+    
+    month_names = ["", "janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout", "septembre", "octobre", "novembre", "decembre"]
+    
+    # Generate PDF
+    pdf_buffer = await generate_monthly_report_pdf(month, year)
+    
+    # Return as downloadable file
+    filename = f"rapport_yama_{month_names[month]}_{year}.pdf"
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+
 # ============== CONTACT ROUTES ==============
 
 @api_router.post("/contact")
