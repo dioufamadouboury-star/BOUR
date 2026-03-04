@@ -107,9 +107,6 @@ export default function HomePage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // Seed database first
-        await axios.post(`${API_URL}/api/seed`);
-        
         const [featured, newProds, promos] = await Promise.all([
           axios.get(`${API_URL}/api/products?featured=true&limit=4`),
           axios.get(`${API_URL}/api/products?is_new=true&limit=4`),
