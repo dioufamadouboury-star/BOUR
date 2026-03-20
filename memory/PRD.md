@@ -1,17 +1,7 @@
 # GROUPE YAMA+ - E-commerce Platform PRD
 
 ## Original Problem Statement
-Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with:
-- Premium category pages with sub-categories
-- Admin panel for automobile features (appointments, rentals, carpooling)
-- Temu-style "Wheel of Fortune" marketing game
-- Email notification system for orders
-- WhatsApp AI Chatbot with human handoff
-- Facebook Pixel tracking & SEO optimization
-- Social media share buttons on product pages
-- Real Estate module (Immobilier)
-- Google Analytics 4 integration
-- Ad campaigns guides (Facebook, Google, YouTube)
+Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categories, admin panel, marketing games, email notifications, WhatsApp AI Chatbot, tracking (FB Pixel, GA4), SEO optimization, Real Estate module, and ad campaign guides.
 
 ## Current Tech Stack
 - **Frontend**: React.js, TailwindCSS, Framer Motion, Axios
@@ -23,92 +13,65 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with:
 ## What's Implemented
 
 ### Core E-commerce
-- Product catalog with categories and subcategories
-- Shopping cart and checkout with PayTech
-- Order management and tracking
-- User authentication (JWT + Google OAuth)
-- Promo codes system
-- Flash sales system
-- Newsletter subscriptions
+- Product catalog, cart, checkout (PayTech), order management, auth (JWT + Google OAuth), promo codes, flash sales, newsletter
 
 ### Premium Category Pages
-- ElectroniquePage, MobilierPage, DecorationPage
-- BeauteModePage, ElectromenagerPage
-- AutomobilePage (reference design)
-- All with dark theme, tabs, custom backgrounds
+- Electronique, Mobilier, Decoration, BeauteMode, Electromenager, Automobile
 
 ### Admin Dashboard
-- Products CRUD with subcategory support
-- Orders management with status updates
-- Promo codes management
-- Flash sales management
-- Automobile section (appointments, rentals, carpooling)
-- Analytics dashboard
-- Immobilier admin section
+- Full CRUD for products, orders, promo codes, flash sales, automobile, analytics, immobilier
 
-### Marketing Features
-- Wheel of Fortune (Temu-style) - black/gold/blue colors, 30s delay
-- Newsletter popup
-- WhatsApp integration
+### Marketing
+- Wheel of Fortune, Newsletter popup, WhatsApp integration
 
-### Facebook Pixel Integration (Mar 20, 2026)
-- Pixel ID: 3225886221025264
-- Events: PageView, ViewContent, AddToCart, RemoveFromCart, AddToWishlist, InitiateCheckout, Purchase, Search, CompleteRegistration, Lead, Contact, Login
+### Tracking & SEO
+- Facebook Pixel (3225886221025264), GA4 (G-MWD2FB6LEL)
+- Schema.org JSON-LD, OG/Twitter meta, dynamic prerendering for bots, sitemap, robots.txt
 
-### Google Analytics 4 (Mar 20, 2026)
-- Measurement ID: G-MWD2FB6LEL
-- Client-side & server-side tracking
+### Real Estate Module (Mar 20, 2026) - DEPLOYED
+- Property listings (/immobilier), detail page, admin CRUD
+- 3 test properties seeded
 
-### SEO Enhancements (Mar 20, 2026)
-- Schema.org JSON-LD structured data
-- Open Graph & Twitter Card meta tags
-- Dynamic prerendering for search engine bots (Googlebot, Bingbot, etc.)
-- Sitemap XML with 20+ URLs including /immobilier
-- robots.txt optimized
-
-### Real Estate Module (Mar 20, 2026) - DEPLOYED TO PRODUCTION
-- Property listings page (/immobilier) with filters (listing type, property type, city, price, bedrooms)
-- Property detail page (/immobilier/:propertyId) with gallery, specs, contact (WhatsApp/phone)
-- Admin dashboard for property CRUD (create, edit, delete, toggle featured/availability)
-- Backend API: GET /api/properties, GET /api/properties/:id, POST/PUT/DELETE /api/admin/properties
-- SEO: Added to sitemap, Nginx prerender for bots
-- 3 test properties seeded (studio Saly, villa Almadies, appartement Plateau)
+### Appointment/Visit System (Mar 20, 2026) - DEPLOYED
+- **Types**: immobilier, automobile, general
+- **Customer side**: "Demander une visite" button on PropertyDetailPage (green theme), AppointmentModal with type-specific styling
+- **Admin side**: Filter by type (Tous/Immobilier/Automobile/Général), type badges, confirmation modal with:
+  - Date/heure confirmée (pré-remplie)
+  - Adresse du rendez-vous (meeting_address) - FIXED
+  - Contact sur place (meeting_contact) - FIXED
+  - Envoi WhatsApp (checkbox)
+- **Emails**: Notification admin, confirmation client, email de confirmation avec adresse
+- **Rappel automatique**: Background task (toutes les heures) envoie un email rappel le jour du RDV
+- **Trigger manuel**: POST /api/admin/appointments/send-reminders
+- **Product page**: appointmentType="automobile" quand category=automobile
 
 ### Refactoring Progress
-- Extracted Gift Box routes to `/app/backend/routes/gift_box.py`
-- Extracted Blog routes to `/app/backend/routes/blog.py`
-- Extracted Real Estate routes to `/app/backend/routes/real_estate.py`
-- server.py reduced from ~10,000 to ~9,000 lines
-
-## P0 - Completed
-- Google Analytics 4 configured
-- Facebook Pixel configured
-- Real Estate Module deployed to production
+- Extracted: gift_box.py, blog.py, real_estate.py to /backend/routes/
+- server.py ~9000 lines (needs more extraction)
 
 ## P1 - Pending Tasks
-1. Provide step-by-step guide for Facebook/Google/YouTube ad campaigns (user explicitly requested)
-2. Continue refactoring server.py (extract products, orders, auth modules)
-3. Add more products to the catalog
+1. Guide étape par étape campagnes publicitaires (Facebook/Google/YouTube Ads) - demandé par l'utilisateur
+2. Continuer refactoring server.py (extract products, orders, auth)
+3. Ajouter produits au catalogue
 
 ## P2 - Future Tasks
-1. Configure WhatsApp Chatbot (pending Meta API credentials)
-2. Mobile App (React Native/Expo - postponed)
-3. Fix car appointment details persistence (meeting_address, meeting_contact)
+1. WhatsApp Chatbot (attente identifiants Meta API)
+2. App mobile React Native (reportée)
 
 ## Known Issues
-- Browser caching causes users to not see updates (use Ctrl+Shift+R)
-- server.py is extremely large (~9000 lines) - needs more refactoring
-- Orange SMS delivery issue (external - Orange Support needed, BLOCKED)
+- Orange SMS blocked (external - contact Orange Support)
+- server.py ~9000 lines - needs refactoring
+- Browser caching (Ctrl+Shift+R pour forcer)
 
 ## Credentials
 - Admin: admin@yamaplus.com / Admin123!
 - VPS: root@76.13.58.76
-- Production URL: https://groupeyamaplus.com
+- Production: https://groupeyamaplus.com
 
 ## Key Files
-- `/app/backend/routes/real_estate.py` - Real Estate APIs
-- `/app/frontend/src/pages/ImmobilierPage.js` - Property listings
-- `/app/frontend/src/pages/PropertyDetailPage.js` - Property detail
-- `/app/frontend/src/components/Admin/ImmobilierAdmin.js` - Admin panel
-- `/app/backend/routes/seo_prerender.py` - SEO bot prerendering
-- `/app/backend/server.py` - Main backend (~9000 lines)
+- /app/backend/server.py - Main backend
+- /app/backend/routes/real_estate.py - Real Estate APIs
+- /app/frontend/src/components/AppointmentModal.js - Visit/appointment modal
+- /app/frontend/src/pages/PropertyDetailPage.js - Property detail + visit button
+- /app/frontend/src/pages/AdminPage.js - Admin dashboard
+- /app/frontend/src/pages/ProductPage.js - Product page with automobile appointments
