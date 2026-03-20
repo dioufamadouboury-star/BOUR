@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuth } from "./AuthContext";
+import Analytics from "../lib/analytics";
 
 const WishlistContext = createContext(null);
 
@@ -48,6 +49,8 @@ export function WishlistProvider({ children }) {
         { withCredentials: true }
       );
       await fetchWishlist();
+      // Track add to wishlist
+      Analytics.addToWishlist({ product_id: productId });
       toast.success("Ajouté aux favoris");
     } catch (error) {
       toast.error("Erreur lors de l'ajout aux favoris");

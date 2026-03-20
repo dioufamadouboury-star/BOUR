@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { X, Gift, Mail, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
+import Analytics from "../lib/analytics";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -51,6 +52,8 @@ export default function NewsletterPopup() {
       } else {
         setPromoCode(response.data.promo_code);
         setSuccess(true);
+        // Track newsletter signup
+        Analytics.newsletterSignup();
       }
     } catch (error) {
       toast.error("Erreur lors de l'inscription");

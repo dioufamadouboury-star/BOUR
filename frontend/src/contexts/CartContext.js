@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import Analytics from "../lib/analytics";
 
 const CartContext = createContext(null);
 
@@ -50,8 +51,11 @@ export function CartProvider({ children }) {
   const addToCart = async (productId, quantity = 1) => {
     setLoading(true);
     try {
-      await cartApi.post("/api/cart/add", { product_id: productId, quantity });
+      const response = await cartApi.post("/api/cart/add", { product_id: productId, quantity });
       await fetchCart();
+      // Track add to cart event
+      const addedItem = response.data?.item || { product_id: productId, price: 0, name: "" };
+      Analytics.addToCart(addedItem, quantity);
       toast.success("Produit ajouté au panier");
       setIsOpen(true);
     } catch (error) {
@@ -80,6 +84,9 @@ export function CartProvider({ children }) {
     setLoading(true);
     try {
       await cartApi.delete(`/api/cart/remove/${productId}`);
+      // Track remove from cart
+      const removedItem = cart.items.find(item => item.product_id === productId);
+      if (removedItem) Analytics.removeFromCart(removedItem, removedItem.quantity);
       await fetchCart();
       toast.success("Produit retiré du panier");
     } catch (error) {

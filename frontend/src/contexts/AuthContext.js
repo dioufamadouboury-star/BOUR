@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import Analytics from "../lib/analytics";
 
 const AuthContext = createContext(null);
 
@@ -61,6 +62,8 @@ export function AuthProvider({ children }) {
     setToken(newToken);
     setUser(userData);
     localStorage.setItem("auth_token", newToken);
+    // Track sign up
+    Analytics.signUp("email");
     
     return userData;
   };
@@ -76,6 +79,8 @@ export function AuthProvider({ children }) {
     setToken(newToken);
     setUser(userData);
     localStorage.setItem("auth_token", newToken);
+    // Track login
+    Analytics.login("email");
     
     return userData;
   };
@@ -111,6 +116,8 @@ export function AuthProvider({ children }) {
       setToken(newToken);
       setUser(userData);
       localStorage.setItem("auth_token", newToken);
+      // Track Google login
+      Analytics.login("google");
       
       return userData;
     } catch (error) {

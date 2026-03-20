@@ -40,6 +40,7 @@ import FrequentlyBoughtTogether from "../components/FrequentlyBoughtTogether";
 import SEO from "../components/SEO";
 import AppointmentModal from "../components/AppointmentModal";
 import ShareButtons from "../components/ShareButtons";
+import Analytics from "../lib/analytics";
 import { toast } from "sonner";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -74,6 +75,8 @@ export default function ProductPage() {
       try {
         const response = await axios.get(`${API_URL}/api/products/${productId}`);
         setProduct(response.data);
+        // Track product view
+        Analytics.viewProduct(response.data);
       } catch (error) {
         console.error("Error fetching product:", error);
       } finally {

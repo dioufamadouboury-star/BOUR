@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "../lib/utils";
 import PromoCodeInput from "../components/PromoCodeInput";
+import Analytics from "../lib/analytics";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const WHATSAPP_NUMBER = "+221783827575";
@@ -267,6 +268,9 @@ export default function CheckoutPage() {
     
     if (!validateStep1()) return;
     
+    // Track begin checkout
+    Analytics.beginCheckout(cart.items, total);
+    
     setLoading(true);
     
     try {
@@ -299,6 +303,9 @@ export default function CheckoutPage() {
       const response = await axios.post(`${API_URL}/api/orders`, orderData);
 
       const newOrderId = response.data.order_id;
+
+      // Track purchase event
+      Analytics.purchase(newOrderId, cart.items, total, shippingCost);
 
       // For Mobile Money (Wave, Orange Money) or Card payments - redirect to PayTech
       if (['mobile_money', 'card'].includes(formData.payment_method)) {

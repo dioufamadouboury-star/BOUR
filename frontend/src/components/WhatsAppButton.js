@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Phone } from "lucide-react";
+import Analytics from "../lib/analytics";
 
 const WHATSAPP_NUMBER = "221783827575"; // Replace with actual number
 const STORE_NAME = "YAMA+";
@@ -20,6 +21,8 @@ export default function WhatsAppButton() {
   const openWhatsApp = (message) => {
     const encodedMessage = encodeURIComponent(message);
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`;
+    // Track WhatsApp contact
+    Analytics.whatsappClick();
     window.open(url, "_blank");
     setIsOpen(false);
   };

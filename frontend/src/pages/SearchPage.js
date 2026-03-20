@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import ProductCard from "../components/ProductCard";
 import { Search as SearchIcon } from "lucide-react";
+import Analytics from "../lib/analytics";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -20,6 +21,9 @@ export default function SearchPage() {
         setLoading(false);
         return;
       }
+      
+      // Track search event
+      Analytics.search(query);
       
       setLoading(true);
       try {
