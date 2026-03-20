@@ -249,8 +249,14 @@ api_router = APIRouter(prefix="/api")
 # Include modular routers
 from routes.gift_box import router as gift_box_router
 from routes.blog import router as blog_router
+from routes.seo_prerender import router as seo_prerender_router
 api_router.include_router(gift_box_router)
 api_router.include_router(blog_router)
+
+# SEO Prerender router (served at /api/prerender/ for bot detection by Nginx)
+prerender_router = APIRouter(prefix="/api/prerender")
+prerender_router.include_router(seo_prerender_router)
+app.include_router(prerender_router)
 
 # ============== SECURITY MIDDLEWARE ==============
 

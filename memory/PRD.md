@@ -98,6 +98,14 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with:
 - ~~Google Analytics~~ - Configuré avec G-MWD2FB6LEL ✅
 - ~~Facebook Pixel~~ - Configuré avec 3225886221025264 ✅
 
+## SEO Prerendering (Mar 20, 2026)
+- Dynamic prerender system for search engine bots deployed to production
+- Nginx detects bots (Googlebot, Bingbot, etc.) and serves pre-rendered HTML
+- Routes: /, /product/*, /category/*, /promotions, /nouveautes, /blog, /a-propos, /contact, /aide, /coffret-cadeau
+- Sitemap XML fixed and expanded (19+ URLs)
+- SEO added to all pages: AboutPage, ContactPage, PromotionsPage, NewProductsPage, FAQPage, SearchPage
+- FAQ Schema.org rich snippets, robots.txt optimized
+
 ## Refactoring Progress (Mar 20, 2026)
 - Extracted Gift Box routes to `/app/backend/routes/gift_box.py` (~435 lines)
 - Extracted Blog routes to `/app/backend/routes/blog.py` (~191 lines)
