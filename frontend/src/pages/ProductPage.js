@@ -39,6 +39,7 @@ import SimilarProducts from "../components/SimilarProducts";
 import FrequentlyBoughtTogether from "../components/FrequentlyBoughtTogether";
 import SEO from "../components/SEO";
 import AppointmentModal from "../components/AppointmentModal";
+import ShareButtons from "../components/ShareButtons";
 import { toast } from "sonner";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -284,8 +285,11 @@ export default function ProductPage() {
                 {product.name}
               </h1>
 
-              {/* Short Description */}
-              <p className="text-body-lg mb-6">{product.short_description}</p>
+              {/* Short Description & Share */}
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <p className="text-body-lg">{product.short_description}</p>
+                <ShareButtons product={product} />
+              </div>
 
               {/* Price */}
               <div className="flex items-baseline gap-3 mb-4">

@@ -63,7 +63,7 @@
             }
         </script>
         
-        <!-- Facebook Pixel -->
+        <!-- Meta Pixel Code -->
         <script>
             !function(f,b,e,v,n,t,s)
             {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -73,15 +73,54 @@
             t.src=v;s=b.getElementsByTagName(e)[0];
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
-            // Replace FB_PIXEL_ID with your actual Facebook Pixel ID
-            if (window.location.hostname !== 'localhost') {
-                fbq('init', 'FB_PIXEL_ID');
-                fbq('track', 'PageView');
-            }
+            fbq('init', '3225886221025264');
+            fbq('track', 'PageView');
         </script>
         <noscript>
-            <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=FB_PIXEL_ID&ev=PageView&noscript=1"/>
+            <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=3225886221025264&ev=PageView&noscript=1"/>
         </noscript>
+        <!-- End Meta Pixel Code -->
+
+        <!-- Schema.org JSON-LD Structured Data -->
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "GROUPE YAMA+",
+            "url": "https://groupeyamaplus.com",
+            "logo": "https://groupeyamaplus.com/assets/images/logo_yama_full.png",
+            "description": "Boutique premium au Sénégal - Électronique, électroménager, décoration et beauté",
+            "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Dakar",
+                "addressRegion": "Dakar",
+                "addressCountry": "SN"
+            },
+            "contactPoint": {
+                "@type": "ContactPoint",
+                "telephone": "+221783827575",
+                "contactType": "customer service",
+                "availableLanguage": ["French", "Wolof"]
+            },
+            "sameAs": [
+                "https://www.facebook.com/groupeyamaplus",
+                "https://www.instagram.com/groupeyamaplus"
+            ]
+        }
+        </script>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "GROUPE YAMA+",
+            "url": "https://groupeyamaplus.com",
+            "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://groupeyamaplus.com/search?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+            }
+        }
+        </script>
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
