@@ -31,6 +31,8 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 ### Real Estate Module (Mar 20, 2026) - DEPLOYED
 - Property listings (/immobilier), detail page, admin CRUD
 - 3 test properties seeded
+- Category card in Navbar dropdown with living room image + "Location et vente"
+- Hero background image (living room interior) on ImmobilierPage
 
 ### Appointment/Visit System (Mar 20, 2026) - DEPLOYED
 - **Types**: immobilier, automobile, general

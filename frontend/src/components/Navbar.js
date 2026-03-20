@@ -66,6 +66,13 @@ const categoryItems = [
     image: "/assets/images/category_automobile.png",
     description: "Véhicules et accessoires"
   },
+  { 
+    name: "Immobilier", 
+    href: "/immobilier", 
+    icon: Building,
+    image: "/assets/images/category_immobilier.jpg",
+    description: "Location et vente"
+  },
 ];
 
 const navItems = [

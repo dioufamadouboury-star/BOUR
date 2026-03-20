@@ -98,8 +98,16 @@ export default function ImmobilierPage() {
       />
 
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] text-white py-16 px-4">
-        <div className="max-w-6xl mx-auto text-center">
+      <section className="relative text-white py-16 px-4 overflow-hidden min-h-[420px] flex items-center">
+        {/* Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url('/assets/images/category_immobilier.jpg')` }}
+        />
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#1B4332]/80 via-[#1B4332]/70 to-[#1B4332]/90" />
+
+        <div className="max-w-6xl mx-auto text-center relative z-10 w-full">
           <motion.h1
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             className="text-4xl sm:text-5xl font-bold mb-4 tracking-tight"
