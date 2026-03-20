@@ -237,7 +237,7 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
             >
-              Le meilleur du Sénégal, réuni pour vous.
+              Le meilleur du Sénégal,<br />réuni pour vous.
             </motion.h1>
             <motion.p 
               className="text-body-lg mb-10"
@@ -245,9 +245,7 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.5 }}
             >
-              Électronique, maison, mode, automobile et immobilier.
-              <br />
-              Sélectionnés avec exigence.
+              Électronique, électroménager, décoration, mode,<br />automobile et immobilier — tout en un seul endroit.
             </motion.p>
             <motion.div 
               className="flex flex-col sm:flex-row items-start gap-4"

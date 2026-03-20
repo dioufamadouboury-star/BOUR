@@ -144,6 +144,10 @@ function AppRouter() {
       <Route path="/admin/promo-codes" element={<AdminPage />} />
       <Route path="/admin/abandoned-carts" element={<AdminPage />} />
       <Route path="/admin/immobilier" element={<AdminPage />} />
+      <Route path="/admin/automobile" element={<AdminPage />} />
+      <Route path="/admin/sms" element={<AdminPage />} />
+      <Route path="/admin/whatsapp" element={<AdminPage />} />
+      <Route path="/admin/immobilier" element={<AdminPage />} />
 
       {/* Public Pages */}
       <Route

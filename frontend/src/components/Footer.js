@@ -43,8 +43,7 @@ export default function Footer() {
               />
             </Link>
             <p className="text-muted-foreground mb-6 leading-relaxed">
-              Le meilleur du Sénégal, réuni pour vous. Électronique, maison, mode, automobile et immobilier.
-              quotidien, sélectionnés avec exigence.
+              Le meilleur du Sénégal, réuni pour vous. Électronique, maison, mode, automobile et immobilier — tout en un seul endroit.
             </p>
             <div className="flex flex-wrap gap-3">
               <a

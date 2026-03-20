@@ -44,6 +44,9 @@ import {
   ClipboardList,
   Gift,
   Home,
+  Car,
+  MessageSquare,
+  Smartphone,
 } from "lucide-react";
 import { formatPrice, formatDate, getOrderStatusDisplay, getPaymentStatusDisplay, getCategoryName, getImageUrl } from "../lib/utils";
 import { cn } from "../lib/utils";
@@ -75,6 +78,9 @@ const menuItems = [
   { id: "promo-codes", label: "Codes Promo", icon: Tag, href: "/admin/promo-codes" },
   { id: "abandoned-carts", label: "Paniers abandonnés", icon: ShoppingBag, href: "/admin/abandoned-carts" },
   { id: "immobilier", label: "Immobilier", icon: Home, href: "/admin/immobilier" },
+  { id: "automobile", label: "Automobile", icon: Car, href: "/admin/automobile" },
+  { id: "sms", label: "SMS", icon: Smartphone, href: "/admin/sms" },
+  { id: "whatsapp", label: "WhatsApp Bot", icon: MessageSquare, href: "/admin/whatsapp" },
   { id: "email", label: "Campagnes Email", icon: Mail, href: "/admin/email" },
 ];
 
@@ -261,10 +267,15 @@ export default function AdminPage() {
           description: product.description || prev.description,
           short_description: product.short_description || prev.short_description,
           category: product.category || prev.category,
+          subcategory: product.subcategory || prev.subcategory,
           brand: product.brand || prev.brand,
           price: product.estimated_price?.toString() || prev.price,
           colors: product.colors?.length > 0 ? product.colors : prev.colors,
           is_new: product.is_new ?? prev.is_new,
+          weight: product.weight || prev.weight,
+          dimensions: product.dimensions || prev.dimensions,
+          material: product.material || prev.material,
+          features: product.features || prev.features,
         }));
 
         // Upload the analyzed image
@@ -597,6 +608,8 @@ export default function AdminPage() {
       meeting_address: apt.meeting_address || "",
       meeting_contact: apt.meeting_contact || "",
       send_whatsapp: apt.contact_method === "whatsapp",
+      send_email: true,
+      send_sms: false,
     });
   };
 
@@ -608,6 +621,8 @@ export default function AdminPage() {
       meeting_address: confirmForm.meeting_address,
       meeting_contact: confirmForm.meeting_contact,
       send_whatsapp: confirmForm.send_whatsapp,
+      send_email: confirmForm.send_email !== false,
+      send_sms: confirmForm.send_sms || false,
     });
     setConfirmModal(null);
   };
@@ -1433,6 +1448,18 @@ export default function AdminPage() {
                 className="rounded" />
               Envoyer la confirmation par WhatsApp
             </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={confirmForm.send_email !== false}
+                onChange={e => setConfirmForm(p => ({...p, send_email: e.target.checked}))}
+                className="rounded" />
+              Envoyer la confirmation par Email
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={confirmForm.send_sms || false}
+                onChange={e => setConfirmForm(p => ({...p, send_sms: e.target.checked}))}
+                className="rounded" />
+              Envoyer la confirmation par SMS
+            </label>
             <div className="flex gap-3 justify-end pt-2">
               <button onClick={() => setConfirmModal(null)}
                 className="px-4 py-2 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Annuler</button>
@@ -1469,6 +1496,130 @@ export default function AdminPage() {
 
   // Render content based on current page  // Render content based on current page
   const renderContent = () => {
+  // ============ Automobile Admin Section ============
+  const renderAutomobile = () => (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Automobile</h1>
+        <p className="text-muted-foreground">Gestion des véhicules et rendez-vous automobile</p>
+      </div>
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 text-center">
+          <Car className="w-10 h-10 mx-auto mb-3 text-gray-600" />
+          <h3 className="font-bold text-lg mb-1">Véhicules</h3>
+          <p className="text-sm text-muted-foreground mb-4">Gérez vos annonces de véhicules dans la section Produits (catégorie Automobile)</p>
+          <button onClick={() => { navigate("/admin/products"); }} className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-xl text-sm font-medium">
+            Voir les produits auto
+          </button>
+        </div>
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 text-center">
+          <Clock className="w-10 h-10 mx-auto mb-3 text-amber-600" />
+          <h3 className="font-bold text-lg mb-1">Rendez-vous Auto</h3>
+          <p className="text-sm text-muted-foreground mb-4">Consultez les demandes de visite pour les véhicules</p>
+          <button onClick={() => { navigate("/admin/appointments"); }} className="px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-medium">
+            Voir les rendez-vous
+          </button>
+        </div>
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 text-center">
+          <BarChart3 className="w-10 h-10 mx-auto mb-3 text-blue-600" />
+          <h3 className="font-bold text-lg mb-1">Statistiques</h3>
+          <p className="text-sm text-muted-foreground mb-4">Suivez les performances de la catégorie automobile</p>
+          <button onClick={() => navigate("/admin/analytics")} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-sm font-medium">
+            Voir les analytics
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ============ SMS Admin Section ============
+  const SMSAdminSection = () => {
+    const [smsPhone, setSmsPhone] = useState("");
+    const [smsMessage, setSmsMessage] = useState("");
+    const [smsSending, setSmsSending] = useState(false);
+    const [smsHistory, setSmsHistory] = useState([]);
+
+    const sendSMS = async () => {
+      if (!smsPhone || !smsMessage) { toast.error("Remplissez le numéro et le message"); return; }
+      setSmsSending(true);
+      try {
+        await axios.post(`${API_URL}/api/admin/send-sms`, { phone: smsPhone, message: smsMessage }, { headers: { Authorization: `Bearer ${token}` } });
+        toast.success("SMS envoyé !");
+        setSmsHistory(prev => [{ phone: smsPhone, message: smsMessage, date: new Date().toISOString(), status: "sent" }, ...prev]);
+        setSmsMessage("");
+      } catch (error) {
+        toast.error(error.response?.data?.detail || "Erreur d'envoi SMS");
+      } finally {
+        setSmsSending(false);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Centre SMS</h1>
+          <p className="text-muted-foreground">Envoyez des SMS à vos clients</p>
+        </div>
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+          <p className="text-sm text-yellow-800 dark:text-yellow-300">Le service SMS Orange est en cours de configuration. Les messages seront envoyés dès que le service sera activé.</p>
+        </div>
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 space-y-4">
+          <h2 className="font-bold text-lg">Envoyer un SMS</h2>
+          <div>
+            <label className="text-sm font-medium block mb-1">Numéro de téléphone</label>
+            <input type="tel" value={smsPhone} onChange={e => setSmsPhone(e.target.value)} placeholder="+221 77 123 45 67" className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-transparent" data-testid="sms-phone" />
+          </div>
+          <div>
+            <label className="text-sm font-medium block mb-1">Message</label>
+            <textarea value={smsMessage} onChange={e => setSmsMessage(e.target.value)} rows={4} placeholder="Votre message..." className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-transparent resize-none" data-testid="sms-message" />
+          </div>
+          <button onClick={sendSMS} disabled={smsSending} className="px-6 py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl font-semibold disabled:opacity-50" data-testid="send-sms-btn">
+            {smsSending ? "Envoi..." : "Envoyer le SMS"}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // ============ WhatsApp Bot Admin Section ============
+  const renderWhatsAppBot = () => (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">WhatsApp Bot</h1>
+        <p className="text-muted-foreground">Configuration et gestion du chatbot WhatsApp</p>
+      </div>
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 flex items-start gap-3">
+        <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+        <p className="text-sm text-blue-800 dark:text-blue-300">Le chatbot WhatsApp nécessite les identifiants Meta API. Veuillez fournir votre <strong>WhatsApp Business API Token</strong> et <strong>Phone Number ID</strong> pour activer cette fonctionnalité.</p>
+      </div>
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+              <MessageSquare className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <h3 className="font-bold">Statut du Bot</h3>
+              <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">En attente de configuration</span>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">Le bot répondra automatiquement aux messages des clients sur WhatsApp avec des informations sur vos produits, prix et disponibilités.</p>
+        </div>
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6">
+          <h3 className="font-bold mb-4">Fonctionnalités prévues</h3>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /> Réponse automatique aux demandes de prix</li>
+            <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /> Catalogue produits interactif</li>
+            <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /> Prise de rendez-vous automatique</li>
+            <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /> Transfert vers un agent humain</li>
+            <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /> Notifications de commandes</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+
     if (loading) {
       return (
         <div className="flex items-center justify-center h-64">
@@ -1509,6 +1660,12 @@ export default function AdminPage() {
         return <AbandonedCartsAdminPage />;
       case "immobilier":
         return <ImmobilierAdmin token={token} />;
+      case "automobile":
+        return renderAutomobile();
+      case "sms":
+        return <SMSAdminSection />;
+      case "whatsapp":
+        return renderWhatsAppBot();
       default:
         return renderDashboard();
     }

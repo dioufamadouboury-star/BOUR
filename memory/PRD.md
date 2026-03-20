@@ -10,6 +10,14 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 - **Deployment**: Hostinger VPS (Ubuntu), Nginx, Systemd
 - **Integrations**: Google OAuth, PayTech, MailerSend, Gemini Vision, Facebook Pixel, GA4
 
+## Recent Changes (March 2026)
+- Replaced slogan "Chaque détail compte" → "Le meilleur du Sénégal, réuni pour vous" (HomePage, Footer, SEO, AboutPage)
+- Replaced all Immobilier images (hero carousel, Nos univers, ImmobilierPage) with luxury villa/pool photo
+- AI vision (GPT-4o) for product generation
+- Restored Admin tabs: Automobile, SMS, WhatsApp Bot
+- Real Estate module deployed
+- Dark-themed category pages (Nouveautés, Promotions, Blog, Immobilier)
+
 ## What's Implemented
 
 ### Core E-commerce

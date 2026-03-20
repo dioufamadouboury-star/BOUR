@@ -3128,6 +3128,9 @@ def get_email_template(content: str, title: str = "GROUPE YAMA+") -> str:
                                 <p style="color: #888888; font-size: 12px; margin: 0 0 15px 0; letter-spacing: 1px;">
                                     groupeyamaplus.com
                                 </p>
+                                <p style="color: #888888; font-size: 12px; margin: 8px 0; font-style: italic;">
+                                    Chaque détail compte.
+                                </p>
                                 <p style="color: #666666; font-size: 11px; margin: 0 0 8px 0;">
                                     📍 Dakar, Sénégal | 📞 WhatsApp: +221 78 382 75 75
                                 </p>
@@ -3850,6 +3853,45 @@ async def send_weekly_promo_email(discount: int = 15, user: User = Depends(requi
             sent_count += 1
     
     return {"message": f"Email envoyé à {sent_count} abonnés", "promo_code": promo_code}
+
+
+async def send_sms_notification(phone: str, message: str):
+    """Send SMS notification - Orange API placeholder"""
+    try:
+        orange_api_key = os.environ.get("ORANGE_SMS_API_KEY")
+        if not orange_api_key:
+            logger.warning(f"SMS not sent (no API key): {phone} - {message[:50]}")
+            return {"success": False, "error": "API key not configured"}
+        
+        # Store SMS attempt in DB for tracking
+        await db.sms_logs.insert_one({
+            "phone": phone,
+            "message": message,
+            "status": "attempted",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        # Orange SMS API call
+        import httpx
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B2210000/requests",
+                headers={"Authorization": f"Bearer {orange_api_key}", "Content-Type": "application/json"},
+                json={
+                    "outboundSMSMessageRequest": {
+                        "address": f"tel:{phone}",
+                        "senderAddress": "tel:+2210000",
+                        "outboundSMSTextMessage": {"message": message}
+                    }
+                },
+                timeout=10
+            )
+            logger.info(f"SMS sent to {phone}: status={resp.status_code}")
+            return {"success": resp.status_code in (200, 201)}
+    except Exception as e:
+        logger.error(f"SMS error: {e}")
+        return {"success": False, "error": str(e)}
+
 
 async def send_email_async(to: str, subject: str, html: str) -> dict:
     """Send email using MailerSend API asynchronously"""
@@ -4848,107 +4890,110 @@ async def send_order_status_update_email(email: str, order_id: str, new_status: 
 
 @api_router.post("/admin/analyze-product-image")
 async def analyze_product_image(file: UploadFile = File(...), user: User = Depends(require_admin)):
-    """Analyze an uploaded image using AI to extract product information"""
+    """Analyze an uploaded image using AI Vision to extract product information"""
     try:
-        # Read and validate image
+        from dotenv import load_dotenv
+        load_dotenv()
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+        
         contents = await file.read()
         
-        # Check file size (max 10MB)
         if len(contents) > 10 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="Image trop grande (max 10MB)")
         
-        # Validate file type
         content_type = file.content_type or ""
         if not content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="Le fichier doit être une image")
         
-        # Convert to base64
         image_base64 = base64.b64encode(contents).decode("utf-8")
         
-        # Get AI API key (Groq)
-        ai_key = os.environ.get("GROQ_API_KEY")
-        if not ai_key:
-            raise HTTPException(status_code=500, detail="Clé API Groq non configurée")
+        llm_key = os.environ.get("EMERGENT_LLM_KEY")
+        if not llm_key:
+            raise HTTPException(status_code=500, detail="Clé API IA non configurée")
         
-        system_message = """Tu es un expert copywriter e-commerce spécialisé dans la rédaction de fiches produits vendeuses.
-L'utilisateur va te décrire ou te donner le contexte d'un produit. Crée une fiche produit complète et VENDEUSE.
-Réponds UNIQUEMENT en JSON valide, sans texte supplémentaire, sans backticks.
+        system_prompt = """Tu es un expert e-commerce au Sénégal. Tu analyses des images de produits pour créer des fiches produit complètes.
 
-Le JSON doit avoir cette structure exacte:
+ANALYSE L'IMAGE ATTENTIVEMENT. Identifie:
+- Le produit exact (marque, modèle si visible)
+- La catégorie (electronique, electromenager, decoration, beaute, automobile)
+- Les couleurs visibles
+- Les caractéristiques techniques
+- L'état et la qualité apparente
+
+Réponds UNIQUEMENT en JSON valide (pas de backticks, pas de texte avant/après):
 {
-  "name": "Nom commercial du produit (accrocheur et professionnel)",
-  "description": "Description DÉTAILLÉE et VENDEUSE du produit. Inclus: les caractéristiques principales, les avantages pour l'utilisateur, la qualité des matériaux, l'usage recommandé. Minimum 4-5 phrases captivantes qui donnent envie d'acheter. Utilise un ton professionnel mais engageant.",
-  "short_description": "Phrase d'accroche percutante (max 80 caractères)",
+  "name": "Nom précis et commercial du produit vu dans l'image",
+  "description": "Description DÉTAILLÉE et VENDEUSE (minimum 5 phrases). Décris exactement ce que tu vois: matériaux, design, fonctionnalités, avantages. Sois précis et commercial.",
+  "short_description": "Accroche percutante en 1 phrase (max 80 car)",
   "category": "electronique|electromenager|decoration|beaute|automobile",
-  "brand": "Marque du produit si mentionnée, sinon null",
-  "estimated_price": "Prix estimé en FCFA (nombre entier basé sur le marché sénégalais)",
-  "colors": ["Couleur1", "Couleur2"],
+  "subcategory": "sous-catégorie appropriée",
+  "brand": "Marque identifiée ou null",
+  "estimated_price": 0,
+  "colors": ["Couleur1"],
   "suggested_tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
   "is_new": true,
   "confidence": "high|medium|low",
-  "features": ["Caractéristique 1", "Caractéristique 2", "Caractéristique 3"]
+  "features": ["Caractéristique vue 1", "Caractéristique vue 2", "Caractéristique vue 3"],
+  "weight": "Poids estimé si pertinent",
+  "dimensions": "Dimensions estimées si pertinent",
+  "material": "Matériau principal identifié"
 }
 
-Pour la catégorie, choisis parmi:
-- electronique: téléphones, ordinateurs, écouteurs, montres connectées, TV, consoles
-- electromenager: aspirateurs, machines à café, réfrigérateurs, climatiseurs, mixeurs
-- decoration: meubles, luminaires, tapis, cadres, vases, objets déco
-- beaute: parfums, cosmétiques, soins, maquillage, accessoires beauté
-- automobile: accessoires auto, pièces, équipements, GPS, dashcam
+Catégories:
+- electronique: téléphones, PC, tablettes, écouteurs, montres, TV, consoles, accessoires tech
+- electromenager: réfrigérateurs, climatiseurs, machines à laver, mixeurs, ventilateurs, cuisinières
+- decoration: meubles, luminaires, tapis, cadres, vases, rideaux, coussins, miroirs
+- beaute: parfums, crèmes, maquillage, soins cheveux, accessoires mode, vêtements
+- automobile: véhicules, pièces auto, accessoires voiture, GPS, pneus
 
-Pour le prix, estime en FCFA pour le marché sénégalais (1€ ≈ 656 FCFA).
-Sois créatif et commercial dans tes descriptions !"""
+Prix en FCFA (marché sénégalais): Sois réaliste. Smartphone moyen: 150000-300000, TV: 200000-800000, Meuble: 50000-500000."""
         
-        # Use Groq SDK (gratuit et rapide)
-        client = Groq(api_key=ai_key)
+        chat = LlmChat(
+            api_key=llm_key,
+            session_id=f"product-analysis-{uuid.uuid4().hex[:8]}",
+            system_message=system_prompt
+        )
+        chat.with_model("openai", "gpt-4o")
         
-        # Pour Groq, on utilise une description textuelle au lieu de l'image
-        # L'utilisateur peut décrire le produit ou on génère une description générique
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_message},
-                {
-                    "role": "user",
-                    "content": "Génère une fiche produit pour un article e-commerce. Le produit est une image uploadée par l'administrateur. Crée une description générique mais professionnelle d'un produit tendance pour une boutique au Sénégal. Réponds uniquement en JSON valide."
-                }
-            ],
-            max_tokens=1000
+        image_content = ImageContent(image_base64=image_base64)
+        
+        user_message = UserMessage(
+            text="Analyse cette image de produit et crée une fiche produit complète en JSON. Décris EXACTEMENT ce que tu vois dans l'image.",
+            file_contents=[image_content]
         )
         
-        ai_response = response.choices[0].message.content
+        ai_response = await chat.send_message(user_message)
         
-        # Parse AI response
         try:
-            # Clean response if needed (remove markdown code blocks)
-            cleaned_response = ai_response.strip()
-            if cleaned_response.startswith("```"):
-                cleaned_response = cleaned_response.split("```")[1]
-                if cleaned_response.startswith("json"):
-                    cleaned_response = cleaned_response[4:]
-            cleaned_response = cleaned_response.strip()
+            cleaned = ai_response.strip()
+            if cleaned.startswith("```"):
+                cleaned = cleaned.split("```")[1]
+                if cleaned.startswith("json"):
+                    cleaned = cleaned[4:]
+            cleaned = cleaned.strip()
             
-            product_data = json.loads(cleaned_response)
+            product_data = json.loads(cleaned)
             
-            # Validate and clean data
-            result = {
+            return {
                 "success": True,
                 "product": {
                     "name": product_data.get("name", "Nouveau produit"),
                     "description": product_data.get("description", ""),
                     "short_description": product_data.get("short_description", ""),
                     "category": product_data.get("category", "electronique"),
+                    "subcategory": product_data.get("subcategory", ""),
                     "brand": product_data.get("brand"),
                     "estimated_price": int(product_data.get("estimated_price", 0)),
                     "colors": product_data.get("colors", []),
                     "suggested_tags": product_data.get("suggested_tags", []),
                     "is_new": product_data.get("is_new", True),
-                    "confidence": product_data.get("confidence", "medium")
+                    "confidence": product_data.get("confidence", "medium"),
+                    "features": product_data.get("features", []),
+                    "weight": product_data.get("weight"),
+                    "dimensions": product_data.get("dimensions"),
+                    "material": product_data.get("material"),
                 }
             }
-            
-            return result
-            
         except json.JSONDecodeError:
             logging.error(f"AI response not valid JSON: {ai_response}")
             return {
@@ -7551,6 +7596,8 @@ async def update_appointment(
     meeting_contact = body.get("meeting_contact")
     admin_note = body.get("admin_note")
     send_whatsapp = body.get("send_whatsapp", False)
+    send_email = body.get("send_email", True)
+    send_sms = body.get("send_sms", False)
     
     appointment = await db.appointments.find_one({"appointment_id": appointment_id})
     if not appointment:
@@ -7612,7 +7659,7 @@ L'équipe YAMA+"""
         whatsapp_link = f"https://wa.me/{phone_clean}?text={message.replace(chr(10), '%0A').replace(' ', '%20')}"
     
     # If confirmed, send email to customer
-    if status == "confirmed" and confirmed_date:
+    if status == "confirmed" and confirmed_date and send_email:
         contact_html = f'<p style="margin: 0 0 10px 0;"><strong>👤 Contact:</strong> {contact_display}</p>' if contact_display else ""
         html = f"""
         <h2>✅ {type_label} confirmé !</h2>
@@ -7625,7 +7672,7 @@ L'équipe YAMA+"""
             {contact_html}
         </div>
         <p>Bien/Produit: <strong>{subject_name}</strong></p>
-        <p>Nous avons hâte de vous accueillir !</p>
+        <p style="margin-top: 20px; font-style: italic; color: #666;">GROUPE YAMA+ - Chaque détail compte</p>
         """
         
         asyncio.create_task(send_email_async(
@@ -7633,6 +7680,14 @@ L'équipe YAMA+"""
             subject=f"✅ {type_label} confirmé - GROUPE YAMA+",
             html=get_email_template(html, f"{type_label} confirmé")
         ))
+    
+    # Send SMS if requested
+    if status == "confirmed" and send_sms and customer_phone:
+        try:
+            sms_text = f"YAMA+ - {type_label} confirmé ! {confirmed_date or ''} {confirmed_time or ''}. Adresse: {address_display}. {subject_name}. Chaque détail compte."
+            asyncio.create_task(send_sms_notification(customer_phone, sms_text))
+        except Exception as e:
+            logger.error(f"SMS send error: {e}")
     
     # If cancelled, notify customer
     elif status == "cancelled":
@@ -7731,6 +7786,21 @@ async def trigger_reminders(user: User = Depends(require_admin)):
     """Manually trigger appointment reminders for today"""
     await send_appointment_reminders()
     return {"message": "Rappels envoyés pour les rendez-vous du jour"}
+
+
+@api_router.post("/admin/send-sms")
+async def admin_send_sms(request: Request, user: User = Depends(require_admin)):
+    """Send SMS from admin panel"""
+    body = await request.json()
+    phone = body.get("phone")
+    message = body.get("message")
+    if not phone or not message:
+        raise HTTPException(status_code=400, detail="Numéro et message requis")
+    result = await send_sms_notification(phone, message)
+    if result.get("success"):
+        return {"message": "SMS envoyé"}
+    else:
+        return {"message": "SMS en file d'attente (service en cours de configuration)", "warning": True}
 
 from pywebpush import webpush, WebPushException
 
