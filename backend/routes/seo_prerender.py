@@ -322,3 +322,50 @@ async def prerender_gift_box():
     body = "<h2>Coffrets Cadeaux Personnalisés</h2>"
     body += "<p>Composez le coffret parfait en sélectionnant vos articles préférés. Ramadan, Noël, Tabaski, Saint-Valentin ou anniversaires.</p>"
     return HTMLResponse(html_template("Coffrets Cadeaux Personnalisés", desc, "/coffret-cadeau", DEFAULT_IMAGE, body_content=body))
+
+
+@router.get("/immobilier")
+async def prerender_immobilier():
+    props = await db.properties.find({"is_available": True}, {"_id": 0, "title": 1, "property_id": 1, "price": 1, "location_city": 1, "listing_type": 1}).limit(30).to_list(30)
+    desc = "Immobilier au Sénégal - Trouvez appartements, maisons, villas et terrains à Dakar, Saly, Mbour. Location courte/longue durée et vente. GROUPE YAMA+."
+    body = "<h2>Immobilier au Sénégal - Locations & Ventes</h2>"
+    body += f"<p>{desc}</p>"
+    body += "<h3>Nos biens</h3><ul>"
+    for p in props:
+        lt = "Vente" if p.get("listing_type") == "sale" else "Location"
+        body += f'<li><a href="{SITE_URL}/immobilier/{p["property_id"]}">{p["title"]}</a> - {lt} - {p.get("location_city", "Dakar")} - {p.get("price", 0):,} FCFA</li>'
+    body += "</ul>"
+    extra = '<meta name="keywords" content="immobilier Dakar, location appartement Sénégal, villa Saly, terrain Dakar, maison à louer Dakar, achat maison Sénégal" />'
+    return HTMLResponse(html_template("Immobilier - Locations & Ventes", desc, "/immobilier", DEFAULT_IMAGE, extra_head=extra, body_content=body))
+
+
+@router.get("/immobilier/{property_id}")
+async def prerender_property(property_id: str):
+    prop = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+    if not prop:
+        return HTMLResponse(html_template("Bien non trouvé", DEFAULT_DESC, f"/immobilier/{property_id}", DEFAULT_IMAGE), status_code=404)
+
+    title = prop.get("title", "")
+    price = prop.get("price", 0)
+    city = prop.get("location_city", "Dakar")
+    area = prop.get("location_area", "")
+    desc_text = prop.get("description", "")[:200]
+    images = prop.get("images", [])
+    image = images[0] if images else DEFAULT_IMAGE
+    bedrooms = prop.get("bedrooms")
+    surface = prop.get("surface")
+    listing = "Vente" if prop.get("listing_type") == "sale" else "Location"
+
+    seo_desc = f"{title} - {listing} à {area + ', ' if area else ''}{city}. {price:,} FCFA. {f'{bedrooms} chambres. ' if bedrooms else ''}{f'{surface} m². ' if surface else ''}{desc_text}"
+
+    body = f"<h2>{title}</h2><p>{desc_text}</p><p>Prix: {price:,} FCFA</p><p>Localisation: {area + ', ' if area else ''}{city}</p>"
+
+    schema = make_schema({
+        "@context": "https://schema.org", "@type": "RealEstateListing",
+        "name": title, "description": seo_desc,
+        "image": [img if img.startswith("http") else f"{SITE_URL}{img}" for img in images[:5]],
+        "url": f"{SITE_URL}/immobilier/{property_id}",
+        "offers": {"@type": "Offer", "priceCurrency": "XOF", "price": price, "availability": "https://schema.org/InStock"}
+    })
+
+    return HTMLResponse(html_template(title, seo_desc[:160], f"/immobilier/{property_id}", image, body_content=body, schema_json=schema))

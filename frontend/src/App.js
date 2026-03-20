@@ -52,6 +52,8 @@ import ServiceRequestPage from "./pages/ServiceRequestPage";
 import ProviderRegisterPage from "./pages/ProviderRegisterPage";
 import ProviderDashboardPage from "./pages/ProviderDashboardPage";
 import GiftBoxPage from "./pages/GiftBoxPage";
+import ImmobilierPage from "./pages/ImmobilierPage";
+import PropertyDetailPage from "./pages/PropertyDetailPage";
 
 import "./App.css";
 
@@ -141,6 +143,7 @@ function AppRouter() {
       <Route path="/admin/email" element={<AdminPage />} />
       <Route path="/admin/promo-codes" element={<AdminPage />} />
       <Route path="/admin/abandoned-carts" element={<AdminPage />} />
+      <Route path="/admin/immobilier" element={<AdminPage />} />
 
       {/* Public Pages */}
       <Route
@@ -376,6 +379,24 @@ function AppRouter() {
         element={
           <PublicLayout>
             <ProviderDashboardPage />
+          </PublicLayout>
+        }
+      />
+
+      {/* Real Estate */}
+      <Route
+        path="/immobilier"
+        element={
+          <PublicLayout>
+            <ImmobilierPage />
+          </PublicLayout>
+        }
+      />
+      <Route
+        path="/immobilier/:propertyId"
+        element={
+          <PublicLayout>
+            <PropertyDetailPage />
           </PublicLayout>
         }
       />

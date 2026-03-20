@@ -250,8 +250,10 @@ api_router = APIRouter(prefix="/api")
 from routes.gift_box import router as gift_box_router
 from routes.blog import router as blog_router
 from routes.seo_prerender import router as seo_prerender_router
+from routes.real_estate import router as real_estate_router
 api_router.include_router(gift_box_router)
 api_router.include_router(blog_router)
+api_router.include_router(real_estate_router)
 
 # SEO Prerender router (served at /api/prerender/ for bot detection by Nginx)
 prerender_router = APIRouter(prefix="/api/prerender")
@@ -6908,6 +6910,7 @@ async def get_sitemap():
         {"loc": "/nouveautes", "priority": "0.8", "changefreq": "daily"},
         {"loc": "/promotions", "priority": "0.8", "changefreq": "daily"},
         {"loc": "/coffret-cadeau", "priority": "0.7", "changefreq": "weekly"},
+        {"loc": "/immobilier", "priority": "0.8", "changefreq": "daily"},
         {"loc": "/blog", "priority": "0.7", "changefreq": "weekly"},
         {"loc": "/a-propos", "priority": "0.5", "changefreq": "monthly"},
         {"loc": "/contact", "priority": "0.6", "changefreq": "monthly"},

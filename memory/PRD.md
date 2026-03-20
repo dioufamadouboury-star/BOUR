@@ -9,13 +9,16 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with:
 - WhatsApp AI Chatbot with human handoff
 - Facebook Pixel tracking & SEO optimization
 - Social media share buttons on product pages
+- Real Estate module (Immobilier)
+- Google Analytics 4 integration
+- Ad campaigns guides (Facebook, Google, YouTube)
 
 ## Current Tech Stack
 - **Frontend**: React.js, TailwindCSS, Framer Motion, Axios
 - **Backend**: FastAPI (Python), Motor (async MongoDB)
 - **Database**: MongoDB
 - **Deployment**: Hostinger VPS (Ubuntu), Nginx, Systemd
-- **Integrations**: Google OAuth, PayTech, MailerSend, Gemini Vision, Facebook Pixel
+- **Integrations**: Google OAuth, PayTech, MailerSend, Gemini Vision, Facebook Pixel, GA4
 
 ## What's Implemented
 
@@ -41,111 +44,71 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with:
 - Flash sales management
 - Automobile section (appointments, rentals, carpooling)
 - Analytics dashboard
+- Immobilier admin section
 
 ### Marketing Features
 - Wheel of Fortune (Temu-style) - black/gold/blue colors, 30s delay
 - Newsletter popup
 - WhatsApp integration
 
-### Automobile Module
-- Car visit appointments booking
-- Car rentals listing
-- Carpooling trips with vehicle details and recurrence
-- Admin management for all above
-
 ### Facebook Pixel Integration (Mar 20, 2026)
 - Pixel ID: 3225886221025264
-- Events configured:
-  - PageView (automatic on every page)
-  - ViewContent (product page visit)
-  - AddToCart (add item to cart)
-  - RemoveFromCart (remove item from cart)
-  - AddToWishlist (add to favorites)
-  - InitiateCheckout (begin order process)
-  - Purchase (order completed)
-  - Search (product search)
-  - CompleteRegistration (new account)
-  - Lead (newsletter signup)
-  - Contact (WhatsApp click)
-  - Login (email + Google)
+- Events: PageView, ViewContent, AddToCart, RemoveFromCart, AddToWishlist, InitiateCheckout, Purchase, Search, CompleteRegistration, Lead, Contact, Login
 
-### Social Share Buttons (Mar 20, 2026)
-- ShareButtons component on product pages
-- Facebook, Twitter/X, WhatsApp, Copy Link
-- Dropdown UI with animations
+### Google Analytics 4 (Mar 20, 2026)
+- Measurement ID: G-MWD2FB6LEL
+- Client-side & server-side tracking
 
 ### SEO Enhancements (Mar 20, 2026)
-- Schema.org JSON-LD structured data (Organization + WebSite)
-- Open Graph meta tags
-- Twitter Card meta tags
-- Geo tags for local SEO
-- Canonical URLs
+- Schema.org JSON-LD structured data
+- Open Graph & Twitter Card meta tags
+- Dynamic prerendering for search engine bots (Googlebot, Bingbot, etc.)
+- Sitemap XML with 20+ URLs including /immobilier
+- robots.txt optimized
 
-## Configuration Required
+### Real Estate Module (Mar 20, 2026) - DEPLOYED TO PRODUCTION
+- Property listings page (/immobilier) with filters (listing type, property type, city, price, bedrooms)
+- Property detail page (/immobilier/:propertyId) with gallery, specs, contact (WhatsApp/phone)
+- Admin dashboard for property CRUD (create, edit, delete, toggle featured/availability)
+- Backend API: GET /api/properties, GET /api/properties/:id, POST/PUT/DELETE /api/admin/properties
+- SEO: Added to sitemap, Nginx prerender for bots
+- 3 test properties seeded (studio Saly, villa Almadies, appartement Plateau)
 
-### Google Analytics 4
-- Waiting for Measurement ID (format G-XXXXXXXXXX)
-- Placeholder code is in index.html
-- analytics.js has all GA4 event tracking ready
-
-### WhatsApp Business API Setup
-1. Create Meta App at developers.facebook.com
-2. Enable WhatsApp product
-3. Configure webhook URL and verify token
-4. Add credentials to backend .env
-
-## P0 - Pending
-- ~~Google Analytics~~ - Configuré avec G-MWD2FB6LEL ✅
-- ~~Facebook Pixel~~ - Configuré avec 3225886221025264 ✅
-
-## SEO Prerendering (Mar 20, 2026)
-- Dynamic prerender system for search engine bots deployed to production
-- Nginx detects bots (Googlebot, Bingbot, etc.) and serves pre-rendered HTML
-- Routes: /, /product/*, /category/*, /promotions, /nouveautes, /blog, /a-propos, /contact, /aide, /coffret-cadeau
-- Sitemap XML fixed and expanded (19+ URLs)
-- SEO added to all pages: AboutPage, ContactPage, PromotionsPage, NewProductsPage, FAQPage, SearchPage
-- FAQ Schema.org rich snippets, robots.txt optimized
-
-## Refactoring Progress (Mar 20, 2026)
-- Extracted Gift Box routes to `/app/backend/routes/gift_box.py` (~435 lines)
-- Extracted Blog routes to `/app/backend/routes/blog.py` (~191 lines)
-- Created shared modules: `database.py`, `auth_deps.py`
+### Refactoring Progress
+- Extracted Gift Box routes to `/app/backend/routes/gift_box.py`
+- Extracted Blog routes to `/app/backend/routes/blog.py`
+- Extracted Real Estate routes to `/app/backend/routes/real_estate.py`
 - server.py reduced from ~10,000 to ~9,000 lines
-- All tests pass after refactoring
 
-## P1 - Next Tasks
-1. Verify Wheel of Fortune design (user verification pending)
-2. System de promotions/réductions - confirmer si ventes flash suffisent
-3. Configure WhatsApp Chatbot (pending Meta API credentials)
+## P0 - Completed
+- Google Analytics 4 configured
+- Facebook Pixel configured
+- Real Estate Module deployed to production
+
+## P1 - Pending Tasks
+1. Provide step-by-step guide for Facebook/Google/YouTube ad campaigns (user explicitly requested)
+2. Continue refactoring server.py (extract products, orders, auth modules)
+3. Add more products to the catalog
 
 ## P2 - Future Tasks
-1. Recreate Orange SMS module
-2. Recreate WhatsApp chatbot module
-3. Real Estate Module
-4. Refactor server.py (~10000 lines) into modular routers
-5. Mobile App (React Native/Expo - postponed)
-6. SSH key authentication setup
+1. Configure WhatsApp Chatbot (pending Meta API credentials)
+2. Mobile App (React Native/Expo - postponed)
+3. Fix car appointment details persistence (meeting_address, meeting_contact)
 
-## Key Files
-- `/app/frontend/public/index.html` - FB Pixel + SEO Schema
-- `/app/frontend/src/lib/analytics.js` - Analytics event tracking module
-- `/app/frontend/src/components/ShareButtons.js` - Social share buttons
-- `/app/frontend/src/pages/ProductPage.js` - Product page with share integration
-- `/app/frontend/src/contexts/CartContext.js` - Cart with analytics tracking
-- `/app/frontend/src/contexts/AuthContext.js` - Auth with analytics tracking
-- `/app/frontend/src/contexts/WishlistContext.js` - Wishlist with analytics tracking
-- `/app/frontend/src/pages/CheckoutPage.js` - Checkout with analytics tracking
-- `/app/frontend/src/pages/SearchPage.js` - Search with analytics tracking
-- `/app/frontend/src/components/NewsletterPopup.js` - Newsletter with analytics tracking
-- `/app/frontend/src/components/WhatsAppButton.js` - WhatsApp with contact tracking
-- `/app/backend/server.py` - Main backend (~10000 lines)
+## Known Issues
+- Browser caching causes users to not see updates (use Ctrl+Shift+R)
+- server.py is extremely large (~9000 lines) - needs more refactoring
+- Orange SMS delivery issue (external - Orange Support needed, BLOCKED)
 
 ## Credentials
 - Admin: admin@yamaplus.com / Admin123!
 - VPS: root@76.13.58.76
+- Production URL: https://groupeyamaplus.com
 
-## Known Issues
-- Browser caching causes users to not see updates (use Ctrl+Shift+R)
-- server.py is extremely large (~10000 lines) - needs refactoring
-- Orange SMS delivery issue (external - Orange Support needed)
-- Google Analytics placeholder - waiting for Measurement ID
+## Key Files
+- `/app/backend/routes/real_estate.py` - Real Estate APIs
+- `/app/frontend/src/pages/ImmobilierPage.js` - Property listings
+- `/app/frontend/src/pages/PropertyDetailPage.js` - Property detail
+- `/app/frontend/src/components/Admin/ImmobilierAdmin.js` - Admin panel
+- `/app/backend/routes/seo_prerender.py` - SEO bot prerendering
+- `/app/backend/server.py` - Main backend (~9000 lines)

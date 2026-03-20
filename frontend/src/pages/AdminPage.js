@@ -43,6 +43,7 @@ import {
   Briefcase,
   ClipboardList,
   Gift,
+  Home,
 } from "lucide-react";
 import { formatPrice, formatDate, getOrderStatusDisplay, getPaymentStatusDisplay, getCategoryName, getImageUrl } from "../lib/utils";
 import { cn } from "../lib/utils";
@@ -55,6 +56,7 @@ import AbandonedCartsAdminPage from "./AbandonedCartsAdminPage";
 import { ServiceProvidersAdmin, ServiceRequestsAdmin } from "./ServiceAdminComponents";
 import { CommercialDashboard } from "./CommercialDashboard";
 import GiftBoxAdmin from "../components/Admin/GiftBoxAdmin";
+import ImmobilierAdmin from "../components/Admin/ImmobilierAdmin";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -72,6 +74,7 @@ const menuItems = [
   { id: "users", label: "Utilisateurs", icon: Users, href: "/admin/users" },
   { id: "promo-codes", label: "Codes Promo", icon: Tag, href: "/admin/promo-codes" },
   { id: "abandoned-carts", label: "Paniers abandonnés", icon: ShoppingBag, href: "/admin/abandoned-carts" },
+  { id: "immobilier", label: "Immobilier", icon: Home, href: "/admin/immobilier" },
   { id: "email", label: "Campagnes Email", icon: Mail, href: "/admin/email" },
 ];
 
@@ -1389,6 +1392,8 @@ export default function AdminPage() {
         return <PromoCodesAdminPage />;
       case "abandoned-carts":
         return <AbandonedCartsAdminPage />;
+      case "immobilier":
+        return <ImmobilierAdmin token={token} />;
       default:
         return renderDashboard();
     }
