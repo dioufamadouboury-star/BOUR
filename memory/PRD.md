@@ -95,7 +95,8 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with:
 4. Add credentials to backend .env
 
 ## P0 - Pending
-1. Google Analytics - waiting for user's Measurement ID
+- ~~Google Analytics~~ - Configuré avec G-MWD2FB6LEL ✅
+- ~~Facebook Pixel~~ - Configuré avec 3225886221025264 ✅
 
 ## P1 - Next Tasks
 1. Verify Wheel of Fortune design (user verification pending)
