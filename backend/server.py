@@ -7401,7 +7401,10 @@ async def seed_database():
 class AppointmentRequest(BaseModel):
     product_id: Optional[str] = None
     product_name: Optional[str] = None
+    property_id: Optional[str] = None
+    property_title: Optional[str] = None
     category: Optional[str] = None
+    appointment_type: str = "general"  # general, immobilier, automobile
     name: str
     email: EmailStr
     phone: str
@@ -7416,10 +7419,17 @@ async def create_appointment(data: AppointmentRequest):
     appointment_id = f"rdv_{uuid.uuid4().hex[:10]}"
     now = datetime.now(timezone.utc)
     
+    # Determine display name for the appointment subject
+    subject_name = data.product_name or data.property_title or "Non spécifié"
+    type_labels = {"immobilier": "Visite immobilier", "automobile": "Rendez-vous automobile", "general": "Rendez-vous"}
+
     appointment_doc = {
         "appointment_id": appointment_id,
+        "appointment_type": data.appointment_type,
         "product_id": data.product_id,
         "product_name": data.product_name,
+        "property_id": data.property_id,
+        "property_title": data.property_title,
         "category": data.category,
         "customer": {
             "name": data.name,
@@ -7430,10 +7440,12 @@ async def create_appointment(data: AppointmentRequest):
         "preferred_time": data.preferred_time,
         "message": data.message,
         "contact_method": data.contact_method,
-        "status": "pending",  # pending, confirmed, completed, cancelled
+        "status": "pending",
         "confirmed_date": None,
         "confirmed_time": None,
-        "location": None,
+        "meeting_address": None,
+        "meeting_contact": None,
+        "reminder_sent": False,
         "created_at": now.isoformat(),
         "updated_at": now.isoformat()
     }
@@ -7441,42 +7453,43 @@ async def create_appointment(data: AppointmentRequest):
     await db.appointments.insert_one(appointment_doc)
     
     # Send notification email to admin
+    type_label = type_labels.get(data.appointment_type, "Rendez-vous")
     admin_html = f"""
-    <h2>🗓️ Nouvelle demande de rendez-vous</h2>
+    <h2>🗓️ {type_label}</h2>
+    <p><strong>Type:</strong> {type_label}</p>
     <p><strong>Client:</strong> {data.name}</p>
     <p><strong>Téléphone:</strong> {data.phone}</p>
     <p><strong>Email:</strong> {data.email}</p>
     <p><strong>Date souhaitée:</strong> {data.preferred_date} à {data.preferred_time}</p>
-    <p><strong>Produit:</strong> {data.product_name or 'Non spécifié'}</p>
-    <p><strong>Catégorie:</strong> {data.category or 'Non spécifiée'}</p>
+    <p><strong>Bien/Produit:</strong> {subject_name}</p>
     <p><strong>Contact préféré:</strong> {data.contact_method}</p>
     <p><strong>Message:</strong> {data.message or 'Aucun'}</p>
     <hr/>
     <p>Connectez-vous à l'admin pour confirmer ce rendez-vous.</p>
     """
-    
-    # Send to admin
+
     asyncio.create_task(send_email_async(
         to=ADMIN_NOTIFICATION_EMAIL,
-        subject=f"🗓️ Nouveau RDV - {data.name} - {data.preferred_date}",
-        html=get_email_template(admin_html, "Nouvelle demande de rendez-vous")
+        subject=f"🗓️ {type_label} - {data.name} - {data.preferred_date}",
+        html=get_email_template(admin_html, type_label)
     ))
-    
+
     # Send confirmation to customer
     customer_html = f"""
-    <h2>Demande de rendez-vous reçue !</h2>
+    <h2>Demande de {type_label.lower()} reçue !</h2>
     <p>Bonjour {data.name},</p>
     <p>Nous avons bien reçu votre demande de visite pour le <strong>{data.preferred_date}</strong> à <strong>{data.preferred_time}</strong>.</p>
+    <p><strong>Bien/Produit:</strong> {subject_name}</p>
     <p>Notre équipe vous contactera très bientôt par {'WhatsApp' if data.contact_method == 'whatsapp' else 'email'} pour confirmer le rendez-vous et vous communiquer l'adresse.</p>
     <div style="background: #f8f8f8; padding: 20px; border-radius: 12px; margin: 20px 0;">
         <p style="margin: 0;"><strong>Numéro de demande:</strong> {appointment_id}</p>
     </div>
     <p>À très bientôt !</p>
     """
-    
+
     asyncio.create_task(send_email_async(
         to=data.email,
-        subject="📅 Demande de rendez-vous reçue - GROUPE YAMA+",
+        subject=f"📅 {type_label} reçue - GROUPE YAMA+",
         html=get_email_template(customer_html, "Confirmation de demande")
     ))
     
@@ -7485,6 +7498,7 @@ async def create_appointment(data: AppointmentRequest):
 @api_router.get("/admin/appointments")
 async def get_appointments(
     status: Optional[str] = None,
+    appointment_type: Optional[str] = None,
     limit: int = 50,
     user: User = Depends(require_admin)
 ):
@@ -7492,6 +7506,8 @@ async def get_appointments(
     query = {}
     if status:
         query["status"] = status
+    if appointment_type:
+        query["appointment_type"] = appointment_type
     
     appointments = await db.appointments.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     return appointments
@@ -7531,7 +7547,9 @@ async def update_appointment(
     status = body.get("status")
     confirmed_date = body.get("confirmed_date")
     confirmed_time = body.get("confirmed_time")
-    location = body.get("location")
+    meeting_address = body.get("meeting_address") or body.get("location")
+    meeting_contact = body.get("meeting_contact")
+    admin_note = body.get("admin_note")
     send_whatsapp = body.get("send_whatsapp", False)
     
     appointment = await db.appointments.find_one({"appointment_id": appointment_id})
@@ -7547,8 +7565,12 @@ async def update_appointment(
         update_data["confirmed_date"] = confirmed_date
     if confirmed_time:
         update_data["confirmed_time"] = confirmed_time
-    if location:
-        update_data["location"] = location
+    if meeting_address:
+        update_data["meeting_address"] = meeting_address
+    if meeting_contact:
+        update_data["meeting_contact"] = meeting_contact
+    if admin_note:
+        update_data["admin_note"] = admin_note
     
     await db.appointments.update_one(
         {"appointment_id": appointment_id},
@@ -7559,25 +7581,30 @@ async def update_appointment(
     customer_phone = customer.get('phone', '')
     customer_email = customer.get('email', '')
     customer_name = customer.get('name', '')
-    product_name = appointment.get('product_name', 'votre produit')
+    subject_name = appointment.get('product_name') or appointment.get('property_title') or 'votre bien/produit'
+    apt_type = appointment.get('appointment_type', 'general')
+    type_labels = {"immobilier": "Visite immobilier", "automobile": "Rendez-vous automobile", "general": "Rendez-vous"}
+    type_label = type_labels.get(apt_type, "Rendez-vous")
+    address_display = meeting_address or appointment.get("meeting_address") or STORE_ADDRESS
+    contact_display = meeting_contact or appointment.get("meeting_contact") or ""
     
     # Build WhatsApp message link if requested
     whatsapp_link = None
     if send_whatsapp and customer_phone and status == "confirmed":
-        # Format phone for WhatsApp (remove spaces and special chars, add country code if needed)
         phone_clean = customer_phone.replace(" ", "").replace("-", "").replace("+", "")
         if not phone_clean.startswith("221"):
             phone_clean = "221" + phone_clean.lstrip("0")
         
+        contact_line = f"\n👤 Contact sur place: {contact_display}" if contact_display else ""
         message = f"""Bonjour {customer_name} ! 🎉
 
-Votre rendez-vous chez GROUPE YAMA+ est confirmé !
+Votre {type_label.lower()} chez GROUPE YAMA+ est confirmé !
 
 📅 Date: {confirmed_date or 'À confirmer'}
 🕐 Heure: {confirmed_time or 'À confirmer'}
-📍 Adresse: {location or STORE_ADDRESS}
+📍 Adresse: {address_display}{contact_line}
 
-Produit: {product_name}
+Bien/Produit: {subject_name}
 
 À très bientôt !
 L'équipe YAMA+"""
@@ -7586,23 +7613,25 @@ L'équipe YAMA+"""
     
     # If confirmed, send email to customer
     if status == "confirmed" and confirmed_date:
+        contact_html = f'<p style="margin: 0 0 10px 0;"><strong>👤 Contact:</strong> {contact_display}</p>' if contact_display else ""
         html = f"""
-        <h2>✅ Rendez-vous confirmé !</h2>
+        <h2>✅ {type_label} confirmé !</h2>
         <p>Bonjour {customer_name},</p>
-        <p>Votre rendez-vous a été confirmé !</p>
+        <p>Votre {type_label.lower()} a été confirmé !</p>
         <div style="background: #d4edda; padding: 20px; border-radius: 12px; margin: 20px 0;">
             <p style="margin: 0 0 10px 0;"><strong>📅 Date:</strong> {confirmed_date}</p>
             <p style="margin: 0 0 10px 0;"><strong>🕐 Heure:</strong> {confirmed_time}</p>
-            <p style="margin: 0;"><strong>📍 Adresse:</strong> {location or STORE_ADDRESS}</p>
+            <p style="margin: 0 0 10px 0;"><strong>📍 Adresse:</strong> {address_display}</p>
+            {contact_html}
         </div>
-        <p>Produit concerné: <strong>{product_name}</strong></p>
+        <p>Bien/Produit: <strong>{subject_name}</strong></p>
         <p>Nous avons hâte de vous accueillir !</p>
         """
         
         asyncio.create_task(send_email_async(
             to=customer_email,
-            subject="✅ Rendez-vous confirmé - GROUPE YAMA+",
-            html=get_email_template(html, "Rendez-vous confirmé")
+            subject=f"✅ {type_label} confirmé - GROUPE YAMA+",
+            html=get_email_template(html, f"{type_label} confirmé")
         ))
     
     # If cancelled, notify customer
@@ -7625,7 +7654,83 @@ L'équipe YAMA+"""
         "whatsapp_link": whatsapp_link
     }
 
+# ============== APPOINTMENT REMINDERS ==============
+
+async def send_appointment_reminders():
+    """Send reminder emails for appointments happening today"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    # Find confirmed appointments for today that haven't had reminders sent
+    appointments = await db.appointments.find({
+        "status": "confirmed",
+        "confirmed_date": today,
+        "reminder_sent": {"$ne": True}
+    }).to_list(100)
+    
+    for apt in appointments:
+        customer = apt.get("customer", {})
+        customer_name = customer.get("name", "")
+        customer_email = customer.get("email", "")
+        subject_name = apt.get("product_name") or apt.get("property_title") or "votre bien/produit"
+        address = apt.get("meeting_address") or STORE_ADDRESS
+        contact = apt.get("meeting_contact") or ""
+        confirmed_time = apt.get("confirmed_time", "")
+        apt_type = apt.get("appointment_type", "general")
+        type_labels = {"immobilier": "visite immobilier", "automobile": "rendez-vous automobile", "general": "rendez-vous"}
+        type_label = type_labels.get(apt_type, "rendez-vous")
+        
+        contact_html = f'<p style="margin: 0 0 10px 0;"><strong>👤 Contact:</strong> {contact}</p>' if contact else ""
+        html = f"""
+        <h2>⏰ Rappel - Votre {type_label} est aujourd'hui !</h2>
+        <p>Bonjour {customer_name},</p>
+        <p>Nous vous rappelons que votre {type_label} est prévu <strong>aujourd'hui</strong> !</p>
+        <div style="background: #fff3cd; padding: 20px; border-radius: 12px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>📅 Date:</strong> {today}</p>
+            <p style="margin: 0 0 10px 0;"><strong>🕐 Heure:</strong> {confirmed_time}</p>
+            <p style="margin: 0 0 10px 0;"><strong>📍 Adresse:</strong> {address}</p>
+            {contact_html}
+        </div>
+        <p>Bien/Produit: <strong>{subject_name}</strong></p>
+        <p>Nous avons hâte de vous accueillir !</p>
+        """
+        
+        if customer_email:
+            asyncio.create_task(send_email_async(
+                to=customer_email,
+                subject=f"⏰ Rappel - Votre {type_label} est aujourd'hui !",
+                html=get_email_template(html, "Rappel de rendez-vous")
+            ))
+        
+        # Mark reminder as sent
+        await db.appointments.update_one(
+            {"appointment_id": apt["appointment_id"]},
+            {"$set": {"reminder_sent": True}}
+        )
+    
+    logger.info(f"Sent {len(appointments)} appointment reminders for {today}")
+
+# Background task to run reminders daily
+async def reminder_scheduler():
+    """Run reminder check every hour"""
+    while True:
+        try:
+            await send_appointment_reminders()
+        except Exception as e:
+            logger.error(f"Reminder scheduler error: {e}")
+        await asyncio.sleep(3600)  # Check every hour
+
+
 # ============== PUSH NOTIFICATIONS ==============
+@app.on_event("startup")
+async def start_reminder_scheduler():
+    asyncio.create_task(reminder_scheduler())
+
+# Manual trigger for admin
+@api_router.post("/admin/appointments/send-reminders")
+async def trigger_reminders(user: User = Depends(require_admin)):
+    """Manually trigger appointment reminders for today"""
+    await send_appointment_reminders()
+    return {"message": "Rappels envoyés pour les rendez-vous du jour"}
 
 from pywebpush import webpush, WebPushException
 

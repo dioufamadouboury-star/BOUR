@@ -722,6 +722,7 @@ export default function ProductPage() {
         isOpen={showAppointmentModal}
         onClose={() => setShowAppointmentModal(false)}
         product={product}
+        appointmentType={product?.category === "automobile" ? "automobile" : "general"}
       />
     </main>
   );

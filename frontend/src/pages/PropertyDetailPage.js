@@ -5,6 +5,7 @@ import axios from "axios";
 import { MapPin, BedDouble, Bath, Maximize, Home, ChevronLeft, ChevronRight, Phone, MessageCircle, Share2, Star, Calendar, Check, Building } from "lucide-react";
 import SEO from "../components/SEO";
 import ShareButtons from "../components/ShareButtons";
+import AppointmentModal from "../components/AppointmentModal";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const PRICE_LABEL = { per_night: "/nuit", per_month: "/mois", per_year: "/an", total: "" };
@@ -24,6 +25,7 @@ export default function PropertyDetailPage() {
   const [similar, setSimilar] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentImage, setCurrentImage] = useState(0);
+  const [showVisitModal, setShowVisitModal] = useState(false);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -229,6 +231,15 @@ export default function PropertyDetailPage() {
                     Appeler
                   </a>
                 )}
+
+                <button
+                  onClick={() => setShowVisitModal(true)}
+                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#FFD700] text-[#1B4332] font-semibold hover:bg-[#FFC107] transition-colors"
+                  data-testid="request-visit-btn"
+                >
+                  <Calendar className="w-5 h-5" />
+                  Demander une visite
+                </button>
               </div>
 
               <p className="text-xs text-muted-foreground text-center mt-4">
@@ -272,6 +283,14 @@ export default function PropertyDetailPage() {
           </section>
         )}
       </div>
+
+      {/* Visit Appointment Modal */}
+      <AppointmentModal
+        isOpen={showVisitModal}
+        onClose={() => setShowVisitModal(false)}
+        property={property}
+        appointmentType="immobilier"
+      />
     </main>
   );
 }

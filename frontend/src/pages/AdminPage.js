@@ -437,7 +437,8 @@ export default function AdminPage() {
       }
 
       if (currentPage === "appointments") {
-        const response = await axios.get(`${API_URL}/api/admin/appointments`, { headers });
+        const typeParam = appointmentFilter ? `?appointment_type=${appointmentFilter}` : "";
+        const response = await axios.get(`${API_URL}/api/admin/appointments${typeParam}`, { headers });
         setAppointments(Array.isArray(response.data) ? response.data : []);
         const statsRes = await axios.get(`${API_URL}/api/admin/appointments/stats`, { headers });
         setAppointmentStats(statsRes.data);
@@ -577,6 +578,41 @@ export default function AdminPage() {
       toast.error("Erreur lors de la mise à jour");
     }
   };
+
+  // Confirmation modal state for appointments
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [confirmForm, setConfirmForm] = useState({
+    confirmed_date: "",
+    confirmed_time: "",
+    meeting_address: "",
+    meeting_contact: "",
+    send_whatsapp: true,
+  });
+
+  const openConfirmModal = (apt) => {
+    setConfirmModal(apt);
+    setConfirmForm({
+      confirmed_date: apt.preferred_date || "",
+      confirmed_time: apt.preferred_time || "",
+      meeting_address: apt.meeting_address || "",
+      meeting_contact: apt.meeting_contact || "",
+      send_whatsapp: apt.contact_method === "whatsapp",
+    });
+  };
+
+  const handleConfirmSubmit = () => {
+    if (!confirmModal) return;
+    handleAppointmentUpdate(confirmModal.appointment_id, "confirmed", {
+      confirmed_date: confirmForm.confirmed_date,
+      confirmed_time: confirmForm.confirmed_time,
+      meeting_address: confirmForm.meeting_address,
+      meeting_contact: confirmForm.meeting_contact,
+      send_whatsapp: confirmForm.send_whatsapp,
+    });
+    setConfirmModal(null);
+  };
+
+  const [appointmentFilter, setAppointmentFilter] = useState("");
 
   // Fix all image URLs in database
   const handleFixImages = async () => {
@@ -1204,11 +1240,28 @@ export default function AdminPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Rendez-vous</h1>
+          <h1 className="text-2xl font-bold">Rendez-vous & Visites</h1>
           <p className="text-muted-foreground">
             {appointmentStats?.pending || 0} en attente · {appointmentStats?.confirmed || 0} confirmé(s)
           </p>
         </div>
+      </div>
+
+      {/* Type Filter */}
+      <div className="flex gap-2 flex-wrap">
+        {[
+          { id: "", label: "Tous" },
+          { id: "immobilier", label: "Immobilier" },
+          { id: "automobile", label: "Automobile" },
+          { id: "general", label: "Général" },
+        ].map(f => (
+          <button key={f.id} onClick={() => { setAppointmentFilter(f.id); }}
+            className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+              appointmentFilter === f.id ? "bg-black text-white dark:bg-white dark:text-black" : "bg-gray-100 dark:bg-gray-800"
+            )} data-testid={`filter-apt-${f.id || "all"}`}>
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {/* Stats Cards */}
@@ -1237,37 +1290,46 @@ export default function AdminPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-black/5 dark:border-white/5">
+                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Type</th>
                 <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Client</th>
-                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Produit</th>
-                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Date souhaitée</th>
-                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Contact</th>
+                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Bien/Produit</th>
+                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Date</th>
+                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Adresse RDV</th>
                 <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Statut</th>
                 <th className="text-right p-4 text-sm font-semibold text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5 dark:divide-white/5">
-              {appointments.map((apt) => (
-                <tr key={apt.appointment_id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+              {appointments.map((apt) => {
+                const typeBadge = apt.appointment_type === "immobilier"
+                  ? { label: "Immobilier", cls: "bg-emerald-100 text-emerald-700" }
+                  : apt.appointment_type === "automobile"
+                  ? { label: "Automobile", cls: "bg-gray-200 text-gray-700" }
+                  : { label: "Général", cls: "bg-blue-100 text-blue-700" };
+                return (
+                <tr key={apt.appointment_id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                  data-testid={`apt-row-${apt.appointment_id}`}>
+                  <td className="p-4">
+                    <span className={cn("px-2 py-1 rounded-lg text-xs font-bold", typeBadge.cls)}>
+                      {typeBadge.label}
+                    </span>
+                  </td>
                   <td className="p-4">
                     <p className="font-medium text-sm">{apt.customer?.name}</p>
                     <p className="text-xs text-muted-foreground">{apt.customer?.phone}</p>
                     <p className="text-xs text-muted-foreground">{apt.customer?.email}</p>
                   </td>
                   <td className="p-4">
-                    <p className="text-sm">{apt.product_name || 'Non spécifié'}</p>
+                    <p className="text-sm">{apt.product_name || apt.property_title || 'Non spécifié'}</p>
                     <p className="text-xs text-muted-foreground">{apt.category || ''}</p>
                   </td>
                   <td className="p-4">
-                    <p className="text-sm font-medium">{apt.preferred_date}</p>
-                    <p className="text-xs text-muted-foreground">{apt.preferred_time}</p>
+                    <p className="text-sm font-medium">{apt.confirmed_date || apt.preferred_date}</p>
+                    <p className="text-xs text-muted-foreground">{apt.confirmed_time || apt.preferred_time}</p>
                   </td>
                   <td className="p-4">
-                    <span className={cn(
-                      "px-2 py-1 rounded-lg text-xs font-medium",
-                      apt.contact_method === "whatsapp" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
-                    )}>
-                      {apt.contact_method === "whatsapp" ? "WhatsApp" : "Email"}
-                    </span>
+                    <p className="text-sm">{apt.meeting_address || apt.location || '-'}</p>
+                    {apt.meeting_contact && <p className="text-xs text-muted-foreground">{apt.meeting_contact}</p>}
                   </td>
                   <td className="p-4">
                     <select
@@ -1291,13 +1353,9 @@ export default function AdminPage() {
                     <div className="flex items-center justify-end gap-2">
                       {apt.status === "pending" && (
                         <button
-                          onClick={() => handleAppointmentUpdate(apt.appointment_id, "confirmed", {
-                            confirmed_date: apt.preferred_date,
-                            confirmed_time: apt.preferred_time,
-                            location: STORE_ADDRESS,
-                            send_whatsapp: apt.contact_method === "whatsapp"
-                          })}
+                          onClick={() => openConfirmModal(apt)}
                           className="px-3 py-1.5 bg-green-500 text-white text-xs font-medium rounded-lg hover:bg-green-600 transition-colors"
+                          data-testid={`confirm-btn-${apt.appointment_id}`}
                         >
                           Confirmer
                         </button>
@@ -1318,7 +1376,7 @@ export default function AdminPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </div>
@@ -1328,6 +1386,63 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setConfirmModal(null)} data-testid="confirm-modal-overlay">
+          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4"
+            onClick={e => e.stopPropagation()} data-testid="confirm-modal">
+            <h3 className="text-lg font-bold">Confirmer le rendez-vous</h3>
+            <p className="text-sm text-muted-foreground">Client: {confirmModal.customer?.name} - {confirmModal.product_name || confirmModal.property_title || "Non spécifié"}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium block mb-1">Date confirmée</label>
+                <input type="date" value={confirmForm.confirmed_date}
+                  onChange={e => setConfirmForm(p => ({...p, confirmed_date: e.target.value}))}
+                  className="w-full px-3 py-2 rounded-lg border border-black/10 dark:border-white/10 bg-transparent text-sm"
+                  data-testid="confirm-date" />
+              </div>
+              <div>
+                <label className="text-xs font-medium block mb-1">Heure confirmée</label>
+                <input type="time" value={confirmForm.confirmed_time}
+                  onChange={e => setConfirmForm(p => ({...p, confirmed_time: e.target.value}))}
+                  className="w-full px-3 py-2 rounded-lg border border-black/10 dark:border-white/10 bg-transparent text-sm"
+                  data-testid="confirm-time" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">Adresse du rendez-vous *</label>
+              <input type="text" value={confirmForm.meeting_address}
+                onChange={e => setConfirmForm(p => ({...p, meeting_address: e.target.value}))}
+                placeholder="Adresse complète du lieu de visite"
+                className="w-full px-3 py-2 rounded-lg border border-black/10 dark:border-white/10 bg-transparent text-sm"
+                data-testid="confirm-address" />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1">Contact sur place</label>
+              <input type="text" value={confirmForm.meeting_contact}
+                onChange={e => setConfirmForm(p => ({...p, meeting_contact: e.target.value}))}
+                placeholder="Nom et téléphone du contact"
+                className="w-full px-3 py-2 rounded-lg border border-black/10 dark:border-white/10 bg-transparent text-sm"
+                data-testid="confirm-contact" />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={confirmForm.send_whatsapp}
+                onChange={e => setConfirmForm(p => ({...p, send_whatsapp: e.target.checked}))}
+                className="rounded" />
+              Envoyer la confirmation par WhatsApp
+            </label>
+            <div className="flex gap-3 justify-end pt-2">
+              <button onClick={() => setConfirmModal(null)}
+                className="px-4 py-2 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Annuler</button>
+              <button onClick={handleConfirmSubmit}
+                className="px-5 py-2 rounded-lg bg-green-500 text-white text-sm font-semibold hover:bg-green-600"
+                data-testid="confirm-submit">Confirmer et envoyer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
