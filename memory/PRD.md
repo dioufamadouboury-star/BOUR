@@ -47,7 +47,11 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 - **Trigger manuel**: POST /api/admin/appointments/send-reminders
 - **Product page**: appointmentType="automobile" quand category=automobile
 
-### Refactoring Progress
+### Pages Redesign - Dark Theme (Mar 20, 2026) - DEPLOYED
+- **Nouveautés** (/nouveautes): Thème sombre, image fond magasin tech, "Fraîchement Arrivés" en jaune, onglets 7 catégories, showcase services YAMA+
+- **Promotions** (/promotions): Thème sombre, "Promotions Exceptionnelles" en rouge/orange, icônes promo (-50%, Ventes flash, Offres spéciales), onglets catégories
+- **Blog** (/blog): Thème sombre, "Guides & Conseils" en jaune, barre de recherche, onglets blog, articles avec images, section services YAMA+
+- Toutes les pages montrent les 6 catégories du site (Électronique, Électroménager, Décoration, Mode & Beauté, Automobile, Immobilier)
 - Extracted: gift_box.py, blog.py, real_estate.py to /backend/routes/
 - server.py ~9000 lines (needs more extraction)
 
