@@ -98,6 +98,13 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with:
 - ~~Google Analytics~~ - Configuré avec G-MWD2FB6LEL ✅
 - ~~Facebook Pixel~~ - Configuré avec 3225886221025264 ✅
 
+## Refactoring Progress (Mar 20, 2026)
+- Extracted Gift Box routes to `/app/backend/routes/gift_box.py` (~435 lines)
+- Extracted Blog routes to `/app/backend/routes/blog.py` (~191 lines)
+- Created shared modules: `database.py`, `auth_deps.py`
+- server.py reduced from ~10,000 to ~9,000 lines
+- All tests pass after refactoring
+
 ## P1 - Next Tasks
 1. Verify Wheel of Fortune design (user verification pending)
 2. System de promotions/réductions - confirmer si ventes flash suffisent
