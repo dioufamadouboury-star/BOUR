@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import ProductCard from "../components/ProductCard";
+import SEO from "../components/SEO";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -27,6 +28,12 @@ export default function PromotionsPage() {
 
   return (
     <main className="min-h-screen pt-20" data-testid="promotions-page">
+      <SEO 
+        title="Promotions & Bonnes Affaires"
+        description="Les meilleures promotions au Sénégal ! Réductions sur l'électronique, l'électroménager, la décoration et la beauté. Livraison rapide Dakar. Paiement Wave, Orange Money."
+        url="/promotions"
+        keywords={["promo Dakar", "promotion Sénégal", "réduction électronique", "soldes Dakar", "bonnes affaires Sénégal", "promo iPhone Dakar"]}
+      />
       {/* Header */}
       <section className="py-16 md:py-24 bg-black text-white">
         <div className="container-lumina">

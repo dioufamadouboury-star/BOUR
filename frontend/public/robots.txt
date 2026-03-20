@@ -3,6 +3,17 @@
 
 User-agent: *
 Allow: /
+Allow: /product/
+Allow: /category/
+Allow: /blog/
+Allow: /promotions
+Allow: /nouveautes
+Allow: /coffret-cadeau
+Allow: /a-propos
+Allow: /contact
+Allow: /aide
+Allow: /politique-livraison
+Allow: /politique-retour
 
 # Disallow admin and private pages
 Disallow: /admin
@@ -10,16 +21,22 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /checkout
 Disallow: /account
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /auth/
+Disallow: /panier
 
-# Allow important pages
-Allow: /category/
-Allow: /product/
-Allow: /a-propos
-Allow: /contact
-Allow: /aide
+# Disallow search results (prevent thin content indexing)
+Disallow: /recherche?
 
-# Crawl-delay for polite crawling
+# Crawl-delay
 Crawl-delay: 1
 
-# Sitemap location
-Sitemap: https://groupeyamaplus.com/sitemap.xml
+# Googlebot specific
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+# Sitemap
+Sitemap: https://groupeyamaplus.com/api/sitemap.xml

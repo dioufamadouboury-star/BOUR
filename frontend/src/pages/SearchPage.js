@@ -5,6 +5,7 @@ import axios from "axios";
 import ProductCard from "../components/ProductCard";
 import { Search as SearchIcon } from "lucide-react";
 import Analytics from "../lib/analytics";
+import SEO from "../components/SEO";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -43,6 +44,12 @@ export default function SearchPage() {
 
   return (
     <main className="min-h-screen pt-20" data-testid="search-page">
+      <SEO 
+        title={query ? `Recherche : ${query}` : "Rechercher"}
+        description={query ? `Résultats de recherche pour "${query}" sur GROUPE YAMA+ Sénégal. Trouvez les meilleurs prix à Dakar.` : "Recherchez parmi nos produits premium au Sénégal."}
+        url={`/recherche?q=${query || ""}`}
+        noIndex={true}
+      />
       {/* Header */}
       <section className="py-12 md:py-16 bg-[#F5F5F7] dark:bg-[#1C1C1E]">
         <div className="container-lumina">

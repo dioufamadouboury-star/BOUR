@@ -6888,7 +6888,7 @@ async def get_categories():
 @api_router.get("/sitemap.xml")
 async def get_sitemap():
     """Generate dynamic sitemap.xml"""
-    base_url = "{SITE_URL}"
+    base_url = "https://groupeyamaplus.com"
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
     # Static pages
@@ -6901,17 +6901,28 @@ async def get_sitemap():
         {"loc": "/category/automobile", "priority": "0.9", "changefreq": "daily"},
         {"loc": "/nouveautes", "priority": "0.8", "changefreq": "daily"},
         {"loc": "/promotions", "priority": "0.8", "changefreq": "daily"},
+        {"loc": "/coffret-cadeau", "priority": "0.7", "changefreq": "weekly"},
+        {"loc": "/blog", "priority": "0.7", "changefreq": "weekly"},
         {"loc": "/a-propos", "priority": "0.5", "changefreq": "monthly"},
-        {"loc": "/contact", "priority": "0.5", "changefreq": "monthly"},
+        {"loc": "/contact", "priority": "0.6", "changefreq": "monthly"},
         {"loc": "/aide", "priority": "0.5", "changefreq": "monthly"},
+        {"loc": "/recherche", "priority": "0.5", "changefreq": "daily"},
+        {"loc": "/politique-livraison", "priority": "0.4", "changefreq": "monthly"},
+        {"loc": "/politique-retour", "priority": "0.4", "changefreq": "monthly"},
+        {"loc": "/conditions-generales", "priority": "0.3", "changefreq": "yearly"},
+        {"loc": "/politique-confidentialite", "priority": "0.3", "changefreq": "yearly"},
     ]
     
     # Get all products
-    products = await db.products.find({}, {"product_id": 1, "updated_at": 1}).to_list(1000)
+    products = await db.products.find({}, {"product_id": 1, "updated_at": 1, "_id": 0}).to_list(5000)
+    
+    # Get blog posts
+    blog_posts = await db.blog_posts.find({"is_published": True}, {"slug": 1, "updated_at": 1, "_id": 0}).to_list(500)
     
     # Build XML
     xml_content = '<?xml version="1.0" encoding="UTF-8"?>\n'
-    xml_content += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    xml_content += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n'
+    xml_content += '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n'
     
     # Add static pages
     for page in static_pages:
@@ -6927,14 +6938,33 @@ async def get_sitemap():
         product_date = product.get("updated_at", now)
         if isinstance(product_date, str):
             product_date = product_date[:10]
+        elif hasattr(product_date, 'strftime'):
+            product_date = product_date.strftime("%Y-%m-%d")
         else:
-            product_date = product_date.strftime("%Y-%m-%d") if hasattr(product_date, 'strftime') else now
+            product_date = now
         
         xml_content += f'''  <url>
     <loc>{base_url}/product/{product["product_id"]}</loc>
     <lastmod>{product_date}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+  </url>\n'''
+    
+    # Add blog posts
+    for post in blog_posts:
+        post_date = post.get("updated_at", now)
+        if isinstance(post_date, str):
+            post_date = post_date[:10]
+        elif hasattr(post_date, 'strftime'):
+            post_date = post_date.strftime("%Y-%m-%d")
+        else:
+            post_date = now
+        
+        xml_content += f'''  <url>
+    <loc>{base_url}/blog/{post["slug"]}</loc>
+    <lastmod>{post_date}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>\n'''
     
     xml_content += '</urlset>'

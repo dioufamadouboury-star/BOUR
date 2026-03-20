@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Check, Target, Heart, Shield } from "lucide-react";
+import SEO from "../components/SEO";
 
 const values = [
   {
@@ -23,6 +24,12 @@ const values = [
 export default function AboutPage() {
   return (
     <main className="min-h-screen pt-20" data-testid="about-page">
+      <SEO 
+        title="À propos de GROUPE YAMA+"
+        description="GROUPE YAMA+ - Votre boutique premium au Sénégal. Découvrez notre histoire, notre mission et nos valeurs. Électronique, décoration, beauté à Dakar."
+        url="/a-propos"
+        keywords={["à propos yama+", "boutique premium Dakar", "shopping Sénégal", "qui sommes nous yama"]}
+      />
       {/* Hero */}
       <section className="py-24 md:py-32 bg-[#F5F5F7] dark:bg-[#1C1C1E]">
         <div className="container-lumina">

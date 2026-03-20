@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Phone, Mail, MapPin, MessageCircle, Send } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
+import SEO from "../components/SEO";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -43,6 +44,12 @@ export default function ContactPage() {
 
   return (
     <main className="min-h-screen pt-20" data-testid="contact-page">
+      <SEO 
+        title="Contactez-nous"
+        description="Contactez GROUPE YAMA+ à Dakar, Sénégal. WhatsApp, téléphone, email. Service client réactif. Fass Paillote, Dakar. +221 78 382 75 75."
+        url="/contact"
+        keywords={["contact yama+ Dakar", "service client Sénégal", "WhatsApp yama+", "téléphone yama plus"]}
+      />
       {/* Hero */}
       <section className="py-16 md:py-24 bg-[#F5F5F7] dark:bg-[#1C1C1E]">
         <div className="container-lumina">

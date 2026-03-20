@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import ProductCard from "../components/ProductCard";
 import { ArrowRight } from "lucide-react";
+import SEO from "../components/SEO";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -28,6 +29,12 @@ export default function NewProductsPage() {
 
   return (
     <main className="min-h-screen pt-20" data-testid="new-products-page">
+      <SEO 
+        title="Nouveautés - Derniers Produits"
+        description="Découvrez les derniers produits arrivés chez GROUPE YAMA+. Nouveautés électronique, décoration, beauté au Sénégal. Livraison rapide à Dakar."
+        url="/nouveautes"
+        keywords={["nouveautés Dakar", "nouveaux produits Sénégal", "dernières arrivées", "nouveauté tech Dakar"]}
+      />
       {/* Header */}
       <section className="py-16 md:py-24 bg-[#F5F5F7] dark:bg-[#1C1C1E]">
         <div className="container-lumina">

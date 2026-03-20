@@ -6,6 +6,7 @@ import {
   AccordionTrigger,
 } from "../components/ui/accordion";
 import { MessageCircle, CreditCard, Truck, RotateCcw, HelpCircle } from "lucide-react";
+import SEO from "../components/SEO";
 
 const faqCategories = [
   {
@@ -103,8 +104,31 @@ const faqCategories = [
 ];
 
 export default function FAQPage() {
+  // Generate FAQ schema for Google rich snippets
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqCategories.flatMap(cat => 
+      cat.questions.map(q => ({
+        "@type": "Question",
+        "name": q.q,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": q.a
+        }
+      }))
+    )
+  };
+
   return (
     <main className="min-h-screen pt-20" data-testid="faq-page">
+      <SEO 
+        title="FAQ - Questions Fréquentes"
+        description="Réponses à vos questions sur GROUPE YAMA+ : paiement Wave/Orange Money, livraison Dakar et régions, retours, garantie produits. Service client réactif."
+        url="/aide"
+        keywords={["FAQ yama+ Sénégal", "aide commande Dakar", "livraison Sénégal", "paiement Wave", "retour produit Dakar"]}
+      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       {/* Hero */}
       <section className="py-16 md:py-24 bg-[#F5F5F7] dark:bg-[#1C1C1E]">
         <div className="container-lumina">
