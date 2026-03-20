@@ -13,6 +13,8 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 ## Recent Changes (March 2026)
 - Replaced slogan "Chaque détail compte" → "Le meilleur du Sénégal, réuni pour vous" (HomePage, Footer, SEO, AboutPage)
 - Replaced all Immobilier images (hero carousel, Nos univers, ImmobilierPage) with luxury villa/pool photo
+- Fixed Admin sidebar overflow (min-h-0 on nav) — tous les onglets visibles
+- Analytics reset to zero: orders, appointments, carts, abandoned_cart_stats vidés
 - AI vision (GPT-4o) for product generation
 - Restored Admin tabs: Automobile, SMS, WhatsApp Bot
 - Real Estate module deployed

@@ -715,7 +715,7 @@ export default function AdminPage() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto min-h-0">
           {menuItems.map((item) => {
             const isActive = currentPage === item.id || 
               (currentPage === "admin" && item.id === "dashboard");
