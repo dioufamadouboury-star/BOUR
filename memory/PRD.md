@@ -6,17 +6,18 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with:
 - Admin panel for automobile features (appointments, rentals, carpooling)
 - Temu-style "Wheel of Fortune" marketing game
 - Email notification system for orders
-- **WhatsApp AI Chatbot with human handoff**
+- WhatsApp AI Chatbot with human handoff
+- Facebook Pixel tracking & SEO optimization
+- Social media share buttons on product pages
 
 ## Current Tech Stack
 - **Frontend**: React.js, TailwindCSS, Framer Motion, Axios
 - **Backend**: FastAPI (Python), Motor (async MongoDB)
 - **Database**: MongoDB
 - **Deployment**: Hostinger VPS (Ubuntu), Nginx, Systemd
-- **AI**: Emergent LLM Key (GPT-4o) for WhatsApp chatbot
-- **Integrations**: Google OAuth, PayTech, MailerSend, Gemini Vision, Meta WhatsApp Business API
+- **Integrations**: Google OAuth, PayTech, MailerSend, Gemini Vision, Facebook Pixel
 
-## What's Implemented (as of Mar 18, 2026)
+## What's Implemented
 
 ### Core E-commerce
 - Product catalog with categories and subcategories
@@ -39,7 +40,7 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with:
 - Promo codes management
 - Flash sales management
 - Automobile section (appointments, rentals, carpooling)
-- **NEW: WhatsApp Bot management section**
+- Analytics dashboard
 
 ### Marketing Features
 - Wheel of Fortune (Temu-style) - black/gold/blue colors, 30s delay
@@ -52,54 +53,76 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with:
 - Carpooling trips with vehicle details and recurrence
 - Admin management for all above
 
-### WhatsApp AI Chatbot (NEW - Mar 18, 2026)
-- AI-powered responses using GPT-4o via Emergent LLM
-- Product search and pricing information
-- Order assistance
-- Human handoff when customer requests
-- Admin interface to manage conversations
-- Real-time message display
-- Transfer back to bot after human assistance
+### Facebook Pixel Integration (Mar 20, 2026)
+- Pixel ID: 3225886221025264
+- Events configured:
+  - PageView (automatic on every page)
+  - ViewContent (product page visit)
+  - AddToCart (add item to cart)
+  - RemoveFromCart (remove item from cart)
+  - AddToWishlist (add to favorites)
+  - InitiateCheckout (begin order process)
+  - Purchase (order completed)
+  - Search (product search)
+  - CompleteRegistration (new account)
+  - Lead (newsletter signup)
+  - Contact (WhatsApp click)
+  - Login (email + Google)
+
+### Social Share Buttons (Mar 20, 2026)
+- ShareButtons component on product pages
+- Facebook, Twitter/X, WhatsApp, Copy Link
+- Dropdown UI with animations
+
+### SEO Enhancements (Mar 20, 2026)
+- Schema.org JSON-LD structured data (Organization + WebSite)
+- Open Graph meta tags
+- Twitter Card meta tags
+- Geo tags for local SEO
+- Canonical URLs
 
 ## Configuration Required
+
+### Google Analytics 4
+- Waiting for Measurement ID (format G-XXXXXXXXXX)
+- Placeholder code is in index.html
+- analytics.js has all GA4 event tracking ready
 
 ### WhatsApp Business API Setup
 1. Create Meta App at developers.facebook.com
 2. Enable WhatsApp product
-3. Configure webhook:
-   - URL: https://groupeyamaplus.com/api/whatsapp/webhook
-   - Verify Token: yamaplus_webhook_verify_2024
-4. Add credentials to /var/www/yamaplus/backend/.env:
-   - WHATSAPP_PHONE_NUMBER_ID
-   - WHATSAPP_ACCESS_TOKEN
+3. Configure webhook URL and verify token
+4. Add credentials to backend .env
 
-## P0 - Pending User Verification
-1. Wheel of Fortune - verify new design (Ctrl+Shift+R to refresh)
-2. Email notifications - test order status update emails
-3. **WhatsApp Chatbot - configure Meta API and test**
+## P0 - Pending
+1. Google Analytics - waiting for user's Measurement ID
 
 ## P1 - Next Tasks
-1. Complete WhatsApp Business API configuration
-2. Test chatbot with real WhatsApp messages
-3. Verify meeting_address/meeting_contact persistence for car appointments
+1. Verify Wheel of Fortune design (user verification pending)
+2. System de promotions/réductions - confirmer si ventes flash suffisent
+3. Configure WhatsApp Chatbot (pending Meta API credentials)
 
 ## P2 - Future Tasks
-1. Real Estate Module (short/long term rentals)
-2. Refactor server.py into modular routers (now 10400+ lines)
-3. SSH key authentication setup
-4. Enhanced promotion system with product-level discounts
+1. Recreate Orange SMS module
+2. Recreate WhatsApp chatbot module
+3. Real Estate Module
+4. Refactor server.py (~10000 lines) into modular routers
+5. Mobile App (React Native/Expo - postponed)
+6. SSH key authentication setup
 
 ## Key Files
-- `/var/www/yamaplus/backend/whatsapp_chatbot.py` - NEW: WhatsApp chatbot module
-- `/var/www/yamaplus/frontend/src/components/WhatsAppAdminSection.js` - NEW: Admin UI
-- `/var/www/yamaplus/frontend/src/components/WheelOfFortune.js` - Updated colors
-- `/var/www/yamaplus/frontend/src/components/AutomobileAdminSection.js`
-- `/var/www/yamaplus/frontend/src/pages/AdminPage.js` - Updated with WhatsApp tab
-- `/var/www/yamaplus/backend/server.py` - Added WhatsApp endpoints
-
-## Database Collections (NEW)
-- `whatsapp_conversations` - Stores conversation state
-- `whatsapp_messages` - Stores message history
+- `/app/frontend/public/index.html` - FB Pixel + SEO Schema
+- `/app/frontend/src/lib/analytics.js` - Analytics event tracking module
+- `/app/frontend/src/components/ShareButtons.js` - Social share buttons
+- `/app/frontend/src/pages/ProductPage.js` - Product page with share integration
+- `/app/frontend/src/contexts/CartContext.js` - Cart with analytics tracking
+- `/app/frontend/src/contexts/AuthContext.js` - Auth with analytics tracking
+- `/app/frontend/src/contexts/WishlistContext.js` - Wishlist with analytics tracking
+- `/app/frontend/src/pages/CheckoutPage.js` - Checkout with analytics tracking
+- `/app/frontend/src/pages/SearchPage.js` - Search with analytics tracking
+- `/app/frontend/src/components/NewsletterPopup.js` - Newsletter with analytics tracking
+- `/app/frontend/src/components/WhatsAppButton.js` - WhatsApp with contact tracking
+- `/app/backend/server.py` - Main backend (~10000 lines)
 
 ## Credentials
 - Admin: admin@yamaplus.com / Admin123!
@@ -107,4 +130,6 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with:
 
 ## Known Issues
 - Browser caching causes users to not see updates (use Ctrl+Shift+R)
-- server.py is extremely large (~10400 lines) - needs refactoring
+- server.py is extremely large (~10000 lines) - needs refactoring
+- Orange SMS delivery issue (external - Orange Support needed)
+- Google Analytics placeholder - waiting for Measurement ID
