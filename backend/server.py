@@ -28,6 +28,7 @@ import jwt
 from mailersend import MailerSendClient, EmailBuilder
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from ga4_tracking import track_purchase, track_order_status
 
 # Image compression
 from PIL import Image as PILImage
@@ -5568,6 +5569,9 @@ async def create_order(order_data: OrderCreate, request: Request):
     # Send notification to admin
     asyncio.create_task(send_admin_order_notification(order_doc))
     
+    # GA4 server-side purchase tracking
+    asyncio.create_task(track_purchase(order_doc))
+    
     # Send push notification to user if subscribed
     if user:
         asyncio.create_task(send_push_to_user(
@@ -6072,6 +6076,11 @@ async def update_order_status(
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Commande non trouvée")
+    
+    # GA4 server-side order status tracking
+    order_for_tracking = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if order_for_tracking and order_status:
+        asyncio.create_task(track_order_status(order_id, order_status, order_for_tracking.get("user_id")))
     
     # Send shipping notification email if status changed to shipped
     if order_status == "shipped":
