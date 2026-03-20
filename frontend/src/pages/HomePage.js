@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Smartphone, Home, Sparkles, Sofa, Car } from "lucide-react";
+import { ArrowRight, Smartphone, Home, Sparkles, Sofa, Car, Building } from "lucide-react";
 import axios from "axios";
 import ProductCard from "../components/ProductCard";
 import FlashSalesSection from "../components/FlashSalesSection";
@@ -53,6 +53,15 @@ const categories = [
     image: "/assets/images/category_automobile.png",
     featured: true,
   },
+  {
+    id: "immobilier",
+    name: "Immobilier",
+    description: "Location et vente de biens",
+    icon: Building,
+    image: "/assets/images/category_immobilier.jpg",
+    featured: false,
+    href: "/immobilier",
+  },
 ];
 
 // Hero carousel images - Une image pour chaque univers YAMA+
@@ -86,6 +95,12 @@ const heroImages = [
     alt: "Automobile - Mercedes-Benz et véhicules premium",
     category: "Automobile",
     link: "/category/automobile"
+  },
+  {
+    url: "/assets/images/immobilier_hero.jpg",
+    alt: "Immobilier - Villas, appartements et terrains au Sénégal",
+    category: "Immobilier",
+    link: "/immobilier"
   }
 ];
 
@@ -222,7 +237,7 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
             >
-              Le shopping, autrement.
+              Le meilleur du Sénégal, réuni pour vous.
             </motion.h1>
             <motion.p 
               className="text-body-lg mb-10"
@@ -230,7 +245,7 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.5 }}
             >
-              Électronique, maison et essentiels du quotidien.
+              Électronique, maison, mode, automobile et immobilier.
               <br />
               Sélectionnés avec exigence.
             </motion.p>
@@ -289,7 +304,7 @@ export default function HomePage() {
                 className={category.featured ? "md:col-span-2 md:row-span-2" : ""}
               >
                 <Link
-                  to={`/category/${category.id}`}
+                  to={category.href || `/category/${category.id}`}
                   className={`group block relative overflow-hidden rounded-3xl ${
                     category.featured ? "aspect-square" : "aspect-[4/3]"
                   } bg-[#F5F5F7] dark:bg-[#1C1C1E]`}

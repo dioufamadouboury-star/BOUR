@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ShoppingBag, Check } from "lucide-react";
+import { Heart, ShoppingBag, Check, Phone, MessageCircle, Calendar } from "lucide-react";
 import { formatPrice, calculateDiscount, getImageUrls, cn } from "../lib/utils";
 import { useCart } from "../contexts/CartContext";
 import { useWishlist } from "../contexts/WishlistContext";
 
-export default function ProductCard({ product, index = 0 }) {
+export default function ProductCard({ product, index = 0, onRequestVisit }) {
   const { addToCart, loading: cartLoading } = useCart();
   const { isInWishlist, toggleWishlist, loading: wishlistLoading } = useWishlist();
   const [addedToCart, setAddedToCart] = useState(false);
@@ -165,7 +165,36 @@ export default function ProductCard({ product, index = 0 }) {
           )}
         </div>
         
-        {/* Add to cart button - Compact */}
+        {/* Add to cart / Contact buttons */}
+        {product.category === "automobile" ? (
+          <div className="flex items-center gap-1.5">
+            <a
+              href={`https://wa.me/221783827575?text=Bonjour, je suis intéressé par : ${product.name}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg flex items-center justify-center gap-1 bg-green-500 text-white hover:bg-green-600 transition-colors"
+              data-testid={`whatsapp-btn-${product.product_id}`}
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">WhatsApp</span>
+            </a>
+            <Link
+              to={`/product/${product.product_id}`}
+              className="flex-1 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg flex items-center justify-center gap-1 bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+              data-testid={`visit-btn-${product.product_id}`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Visite</span>
+            </Link>
+            <a
+              href="tel:+221783827575"
+              className="py-1.5 sm:py-2 px-2.5 text-xs sm:text-sm font-semibold rounded-lg flex items-center justify-center bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity"
+              data-testid={`call-btn-${product.product_id}`}
+            >
+              <Phone className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        ) : (
         <motion.button
           onClick={handleAddToCart}
           disabled={cartLoading || product.stock === 0}
@@ -191,6 +220,7 @@ export default function ProductCard({ product, index = 0 }) {
             </>
           )}
         </motion.button>
+        )}
       </div>
     </motion.div>
   );

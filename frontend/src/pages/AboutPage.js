@@ -40,7 +40,7 @@ export default function AboutPage() {
           >
             <p className="text-caption mb-4">À propos</p>
             <h1 className="heading-hero mb-6">
-              Le shopping, autrement.
+              Le meilleur du Sénégal, réuni pour vous.
             </h1>
             <p className="text-body-lg">
               YAMA+ est né d'une vision simple : offrir aux Sénégalais une 

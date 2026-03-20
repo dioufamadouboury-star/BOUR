@@ -17,7 +17,7 @@ export default function SEO({
   noIndex = false,
   keywords = []
 }) {
-  const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} - Le shopping, autrement`;
+  const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} - Le meilleur du Sénégal, réuni pour vous`;
   const fullUrl = url ? `${SITE_URL}${url}` : SITE_URL;
   const fullImage = image.startsWith('http') ? image : `${SITE_URL}${image}`;
   
