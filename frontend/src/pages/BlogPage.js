@@ -4,17 +4,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { Calendar, Clock, Search, ArrowRight, BookOpen, Smartphone, Home, Sofa, Sparkles, Car, Building, Star, PenTool, MessageCircle } from "lucide-react";
 import SEO from "../components/SEO";
+import CategoryHero from "../components/CategoryHero";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-const HERO_IMAGE = "https://images.unsplash.com/photo-1626031467757-d3dc6c836224?w=1400";
-
 const BLOG_CATEGORIES = [
-  { id: "all", label: "Tous", icon: Star, color: "from-amber-500 to-yellow-500" },
-  { id: "guides", label: "Guides d'achat", icon: BookOpen, color: "from-blue-500 to-indigo-600" },
-  { id: "tendances", label: "Tendances", icon: Sparkles, color: "from-pink-500 to-rose-600" },
-  { id: "conseils", label: "Conseils", icon: PenTool, color: "from-emerald-500 to-teal-600" },
-  { id: "nouveautes", label: "Nouveautés", icon: Star, color: "from-orange-500 to-red-500" },
+  { id: "all", label: "Tous", icon: Star },
+  { id: "guides", label: "Guides d'achat", icon: BookOpen },
+  { id: "tendances", label: "Tendances", icon: Sparkles },
+  { id: "conseils", label: "Conseils", icon: PenTool },
+  { id: "nouveautes", label: "Nouveautés", icon: Star },
 ];
 
 export default function BlogPage() {
@@ -61,75 +60,33 @@ export default function BlogPage() {
       />
 
       {/* Hero Section */}
-      <div className="relative pt-24 pb-16 overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: `url(${HERO_IMAGE})` }} />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-slate-900/40 to-slate-900" />
-        <div className="relative max-w-6xl mx-auto px-4 text-center">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-            <span className="inline-block px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-sm text-white/80 mb-6">
-              GROUPE YAMA+ Blog
-            </span>
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
-              Guides &{" "}
-              <span className="bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">
-                Conseils
-              </span>
-            </h1>
-            <p className="text-xl text-white/70 max-w-2xl mx-auto mb-8">
-              Guides d'achat, tendances et conseils pour faire les meilleurs choix
-            </p>
+      <CategoryHero
+        image="/assets/images/hero_blog.jpg"
+        gradient="from-gray-950/90 via-gray-900/70 to-gray-950/85"
+        accent="text-amber-400"
+        badge="GROUPE YAMA+ Blog"
+        title="Guides & Conseils"
+        subtitle="Guides d'achat, tendances et conseils pour faire les meilleurs choix au Sénégal"
+        filters={BLOG_CATEGORIES}
+        activeFilter={activeTab}
+        onFilterChange={setActiveTab}
+      />
 
-            {/* Search */}
-            <div className="relative max-w-xl mx-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-              <input
-                type="text"
-                placeholder="Rechercher un article..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-amber-400/50 transition-colors"
-                data-testid="blog-search"
-              />
-            </div>
-          </motion.div>
+      {/* Search */}
+      <div className="max-w-xl mx-auto px-4 -mt-4 relative z-10 mb-6">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input type="text" placeholder="Rechercher un article..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/10 dark:border-white/10 text-sm focus:outline-none focus:border-amber-400/60"
+            data-testid="blog-search" />
         </div>
       </div>
-
-      {/* Category Tabs */}
-      <div className="max-w-7xl mx-auto px-4 -mt-8 relative z-10">
-        <div className="flex justify-center gap-2 md:gap-3 flex-wrap">
-          {BLOG_CATEGORIES.map((tab, i) => (
-            <motion.button
-              key={tab.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => setActiveTab(tab.id)}
-              className={`group relative px-4 md:px-5 py-3 rounded-2xl font-medium text-sm transition-all duration-300 ${
-                activeTab === tab.id
-                  ? "text-white shadow-2xl scale-105"
-                  : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-              }`}
-              data-testid={`tab-${tab.id}`}
-            >
-              {activeTab === tab.id && (
-                <div className={`absolute inset-0 bg-gradient-to-r ${tab.color} rounded-2xl`} />
-              )}
-              <span className="relative flex items-center gap-2">
-                <tab.icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </span>
-            </motion.button>
-          ))}
-        </div>
-      </div>
-
       {/* Posts Grid */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-white">{activeTabInfo.label}</h2>
-            <p className="text-white/50">{filteredPosts.length} article{filteredPosts.length > 1 ? "s" : ""}</p>
+            <h2 className="text-xl font-bold">{BLOG_CATEGORIES.find(t => t.id === activeTab)?.label || "Tous les articles"}</h2>
+            <p className="text-muted-foreground text-sm">{filteredPosts.length} article{filteredPosts.length > 1 ? "s" : ""}</p>
           </div>
         </div>
 

@@ -5,6 +5,7 @@ import axios from "axios";
 import ProductCard from "../components/ProductCard";
 import { Sparkles, Smartphone, Home, Sofa, Car, Building, Star, ArrowRight, ShoppingBag, Percent, Tag, Zap, Gift, Clock } from "lucide-react";
 import SEO from "../components/SEO";
+import CategoryHero from "../components/CategoryHero";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -60,83 +61,23 @@ export default function PromotionsPage() {
       />
 
       {/* Hero Section */}
-      <div className="relative pt-24 pb-16 overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: `url(${HERO_IMAGE})` }} />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-slate-900/40 to-slate-900" />
-        <div className="relative max-w-6xl mx-auto px-4 text-center">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-            <span className="inline-block px-4 py-2 bg-red-500/20 backdrop-blur-sm rounded-full text-sm text-red-300 mb-6">
-              Offres limitées
-            </span>
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
-              Promotions{" "}
-              <span className="bg-gradient-to-r from-red-400 to-orange-500 bg-clip-text text-transparent">
-                Exceptionnelles
-              </span>
-            </h1>
-            <p className="text-xl text-white/70 max-w-2xl mx-auto">
-              Profitez de réductions incroyables sur toutes nos catégories - Quantités limitées !
-            </p>
-
-            {/* Promo highlights */}
-            <div className="flex justify-center gap-6 md:gap-10 mt-8">
-              <div className="text-center">
-                <div className="w-14 h-14 mx-auto mb-2 bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl flex items-center justify-center">
-                  <Percent className="w-7 h-7 text-white" />
-                </div>
-                <p className="text-sm text-white/50">Jusqu'à -50%</p>
-              </div>
-              <div className="text-center">
-                <div className="w-14 h-14 mx-auto mb-2 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-2xl flex items-center justify-center">
-                  <Zap className="w-7 h-7 text-white" />
-                </div>
-                <p className="text-sm text-white/50">Ventes flash</p>
-              </div>
-              <div className="text-center">
-                <div className="w-14 h-14 mx-auto mb-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center">
-                  <Gift className="w-7 h-7 text-white" />
-                </div>
-                <p className="text-sm text-white/50">Offres spéciales</p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Category Tabs */}
-      <div className="max-w-7xl mx-auto px-4 -mt-8 relative z-10">
-        <div className="flex justify-center gap-2 md:gap-3 flex-wrap">
-          {CATEGORY_TABS.map((tab, i) => (
-            <motion.button
-              key={tab.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => handleTabChange(tab.id)}
-              className={`group relative px-4 md:px-5 py-3 rounded-2xl font-medium text-sm transition-all duration-300 ${
-                activeTab === tab.id
-                  ? "text-white shadow-2xl scale-105"
-                  : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-              }`}
-              data-testid={`tab-${tab.id}`}
-            >
-              {activeTab === tab.id && (
-                <div className={`absolute inset-0 bg-gradient-to-r ${tab.color} rounded-2xl`} />
-              )}
-              <span className="relative flex items-center gap-2">
-                <tab.icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </span>
-            </motion.button>
-          ))}
-        </div>
-      </div>
+      <CategoryHero
+        image="/assets/images/hero_promotions.jpg"
+        gradient="from-red-950/90 via-orange-950/70 to-red-950/85"
+        accent="text-orange-400"
+        badge="Offres Limitées"
+        title="Promotions Exceptionnelles"
+        subtitle="Profitez de réductions incroyables sur toutes nos catégories — Quantités limitées !"
+        filters={CATEGORY_TABS.map(t => ({ id: t.id, label: t.label, icon: t.icon }))}
+        activeFilter={activeTab}
+        onFilterChange={(id) => handleTabChange(id)}
+      />
 
       {/* Products Grid */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-white">{activeTabInfo.label}</h2>
+            <h2 className="text-xl font-bold">{activeTabInfo.label}</h2>
             <p className="text-white/50">{products.length} promotion{products.length > 1 ? "s" : ""}</p>
           </div>
         </div>

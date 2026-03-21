@@ -39,7 +39,7 @@ const CATEGORY_HERO = {
     ],
   },
   electromenager: {
-    image: "/assets/images/hero_electronique.jpg",
+    image: "/assets/images/hero_electromenager.jpg",
     gradient: "from-zinc-900/90 via-gray-800/70 to-zinc-900/80",
     accent: "text-cyan-400",
     title: "Électroménager",

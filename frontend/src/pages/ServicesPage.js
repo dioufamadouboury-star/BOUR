@@ -160,9 +160,9 @@ export default function ServicesPage() {
       </Helmet>
 
       {/* Hero Section with enhanced animations */}
-      <section className="relative bg-gradient-to-br from-black via-gray-900 to-black text-white py-16 lg:py-24 overflow-hidden">
-        {/* Animated background pattern */}
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920')] opacity-10 bg-cover bg-center" />
+      <section className="relative text-white overflow-hidden" style={{ minHeight: "420px" }}>
+        <img src="/assets/images/hero_services.jpg" alt="Services" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/65 to-black/90" />
         <motion.div 
           className="absolute inset-0 opacity-20"
           initial={{ backgroundPosition: "0% 0%" }}
