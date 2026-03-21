@@ -11,14 +11,16 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 - **Integrations**: Google OAuth, PayTech, MailerSend, Gemini Vision, Facebook Pixel, GA4
 
 ## Recent Changes (March 2026)
-- Replaced slogan "Chaque détail compte" → "Le meilleur du Sénégal, réuni pour vous" (HomePage, Footer, SEO, AboutPage)
-- Replaced all Immobilier images (hero carousel, Nos univers, ImmobilierPage) with luxury villa/pool photo
-- Fixed Admin sidebar overflow (min-h-0 on nav) — tous les onglets visibles
-- Analytics reset to zero: orders, appointments, carts, abandoned_cart_stats vidés
-- AI vision (GPT-4o) for product generation
-- Restored Admin tabs: Automobile, SMS, WhatsApp Bot
-- Real Estate module deployed
-- Dark-themed category pages (Nouveautés, Promotions, Blog, Immobilier)
+- Nouveau logo YAMA+ (bleu/blanc) déployé partout : site, PDFs backend (logo_yama.png)
+- Page connexion premium redessinée : dark split-screen villa + bouton bleu (#1A56C0)
+- Newsletter popup supprimée, roue conservée
+- SMS Admin : 3 workflows (Promotions, Confirmation RDV, Prestataires) avec templates prédéfinis
+- Automobile → transformé en Covoiturage complet : routes Dakar↔régions + AIBD, info véhicule, chauffeur, image upload
+- Immobilier form: floor_number, total_floors, year_built, location_address, video_url, google_maps_url, is_available, +10 équipements
+- Backend : endpoints /api/admin/trips, /api/trips, /api/admin/sms/bulk, /api/admin/sms/providers
+- Slogan "Le meilleur du Sénégal, réuni pour vous"
+- Analytics remis à zéro (orders, appointments, carts)
+- VPS groupeyamaplus.com déployé et actif
 
 ## What's Implemented
 

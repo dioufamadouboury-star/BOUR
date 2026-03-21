@@ -9190,3 +9190,96 @@ async def startup_event():
 async def shutdown_db_client():
     scheduler.shutdown()
     client.close()
+
+# ============================================================
+# COVOITURAGE (TRIPS) ENDPOINTS
+# ============================================================
+
+class TripCreate(BaseModel):
+    route_from: str
+    route_to: str
+    route_label: Optional[str] = None
+    departure_time: Optional[str] = None
+    return_time: Optional[str] = None
+    price_per_seat: int = 0
+    total_seats: int = 4
+    driver_name: Optional[str] = None
+    driver_phone: Optional[str] = None
+    vehicle_model: Optional[str] = None
+    vehicle_plate: Optional[str] = None
+    vehicle_image: Optional[str] = None
+    is_available: bool = True
+    is_recurring: bool = False
+    days_of_week: Optional[List[str]] = []
+    notes: Optional[str] = None
+
+@api_router.post("/admin/trips")
+async def create_trip(trip: TripCreate, user: User = Depends(require_admin)):
+    trip_id = f"trip_{uuid.uuid4().hex[:12]}"
+    doc = {
+        "trip_id": trip_id,
+        **trip.dict(),
+        "booked_seats": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.trips.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+@api_router.get("/admin/trips")
+async def list_trips_admin(user: User = Depends(require_admin)):
+    trips = await db.trips.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return {"trips": trips, "total": len(trips)}
+
+@api_router.put("/admin/trips/{trip_id}")
+async def update_trip(trip_id: str, trip: TripCreate, user: User = Depends(require_admin)):
+    result = await db.trips.update_one({"trip_id": trip_id}, {"$set": {**trip.dict(), "updated_at": datetime.now(timezone.utc).isoformat()}})
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Trajet non trouvé")
+    return {"message": "Trajet mis à jour"}
+
+@api_router.delete("/admin/trips/{trip_id}")
+async def delete_trip(trip_id: str, user: User = Depends(require_admin)):
+    await db.trips.delete_one({"trip_id": trip_id})
+    return {"message": "Trajet supprimé"}
+
+@api_router.get("/trips")
+async def list_trips_public(route_from: Optional[str] = None, route_to: Optional[str] = None):
+    query = {"is_available": True}
+    if route_from: query["route_from"] = {"$regex": route_from, "$options": "i"}
+    if route_to: query["route_to"] = {"$regex": route_to, "$options": "i"}
+    trips = await db.trips.find(query, {"_id": 0}).sort("departure_time", 1).to_list(100)
+    return {"trips": trips, "total": len(trips)}
+
+# ============================================================
+# SMS BULK & WORKFLOW ENDPOINTS
+# ============================================================
+
+@api_router.post("/admin/sms/bulk")
+async def send_bulk_sms(request: Request, user: User = Depends(require_admin)):
+    body = await request.json()
+    phones = body.get("phones", [])
+    message = body.get("message", "")
+    results = []
+    for phone in phones[:50]:
+        r = await send_sms_notification(phone, message)
+        results.append({"phone": phone, "success": r.get("success", False)})
+    success_count = sum(1 for r in results if r["success"])
+    await db.sms_history.insert_one({
+        "type": "bulk",
+        "message": message,
+        "phones_count": len(phones),
+        "success_count": success_count,
+        "sent_at": datetime.now(timezone.utc).isoformat()
+    })
+    return {"sent": success_count, "total": len(phones), "results": results}
+
+@api_router.get("/admin/sms/history")
+async def get_sms_history(user: User = Depends(require_admin)):
+    history = await db.sms_history.find({}, {"_id": 0}).sort("sent_at", -1).to_list(100)
+    return {"history": history}
+
+@api_router.get("/admin/sms/providers")
+async def get_providers_for_sms(user: User = Depends(require_admin)):
+    providers = await db.service_providers.find({"phone": {"$exists": True, "$ne": None}}, {"_id": 0, "name": 1, "phone": 1, "email": 1, "category": 1}).to_list(200)
+    return {"providers": providers}
+

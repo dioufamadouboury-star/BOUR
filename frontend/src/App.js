@@ -100,7 +100,6 @@ function PublicLayout({ children }) {
       {children}
       {!isAdminPage && <Footer />}
       <CartDrawer />
-      {!isAdminPage && <NewsletterPopup />}
       {!isAdminPage && <GameFloatingButton />}
       {!isAdminPage && <CompareFloatingBar />}
       {!isAdminPage && <WhatsAppButton />}

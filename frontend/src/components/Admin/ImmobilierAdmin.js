@@ -25,6 +25,8 @@ const AMENITIES_OPTIONS = [
   "WiFi", "Piscine", "Parking", "Climatisation", "Sécurité 24h", "Jardin",
   "Terrasse", "Meublé", "Cuisine équipée", "Machine à laver", "Groupe électrogène",
   "Eau courante", "Ascenseur", "Vue mer", "Balcon", "Garage",
+  "Salle de sport", "Conciergerie", "Domotique", "Vidéosurveillance", "Interphone",
+  "Digicode", "Fibre optique", "Panneaux solaires", "Citerne d'eau", "Fosse septique",
 ];
 
 const CITIES = ["Dakar", "Thiès", "Saint-Louis", "Mbour", "Saly", "Somone", "Rufisque", "Pikine", "Ziguinchor", "Kaolack"];
@@ -197,7 +199,8 @@ function PropertyFormModal({ property, token, onClose, onSaved }) {
     title: "", description: "", property_type: "apartment", listing_type: "rent_long",
     price: "", price_period: "per_month", location_city: "Dakar", location_area: "",
     location_address: "", surface: "", rooms: "", bedrooms: "", bathrooms: "",
-    amenities: [], is_furnished: false, contact_phone: "", contact_whatsapp: "",
+    floor_number: "", total_floors: "", year_built: "", video_url: "", google_maps_url: "",
+    amenities: [], is_furnished: false, is_available: true, contact_phone: "", contact_whatsapp: "",
     contact_name: "", images: [], featured: false,
     ...(property || {}),
     price: property?.price?.toString() || "",
@@ -205,6 +208,9 @@ function PropertyFormModal({ property, token, onClose, onSaved }) {
     rooms: property?.rooms?.toString() || "",
     bedrooms: property?.bedrooms?.toString() || "",
     bathrooms: property?.bathrooms?.toString() || "",
+    floor_number: property?.floor_number?.toString() || "",
+    total_floors: property?.total_floors?.toString() || "",
+    year_built: property?.year_built?.toString() || "",
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -258,6 +264,9 @@ function PropertyFormModal({ property, token, onClose, onSaved }) {
       rooms: form.rooms ? parseInt(form.rooms) : null,
       bedrooms: form.bedrooms ? parseInt(form.bedrooms) : null,
       bathrooms: form.bathrooms ? parseInt(form.bathrooms) : null,
+      floor_number: form.floor_number ? parseInt(form.floor_number) : null,
+      total_floors: form.total_floors ? parseInt(form.total_floors) : null,
+      year_built: form.year_built ? parseInt(form.year_built) : null,
     };
 
     try {
@@ -370,7 +379,45 @@ function PropertyFormModal({ property, token, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* Description */}
+          {/* Additional Specs */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs font-medium mb-1 block">Étage n°</label>
+              <input type="number" value={form.floor_number} onChange={(e) => handleChange("floor_number", e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-black/10 dark:border-white/10 bg-transparent text-sm" placeholder="ex: 3" />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1 block">Nb étages total</label>
+              <input type="number" value={form.total_floors} onChange={(e) => handleChange("total_floors", e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-black/10 dark:border-white/10 bg-transparent text-sm" placeholder="ex: 5" />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1 block">Année de construction</label>
+              <input type="number" value={form.year_built} onChange={(e) => handleChange("year_built", e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-black/10 dark:border-white/10 bg-transparent text-sm" placeholder="ex: 2020" />
+            </div>
+          </div>
+
+          {/* Address */}
+          <div>
+            <label className="text-sm font-medium mb-1 block">Adresse complète</label>
+            <input value={form.location_address} onChange={(e) => handleChange("location_address", e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-black/10 dark:border-white/10 bg-transparent text-sm" placeholder="ex: 12 Rue du Plateau, Dakar" />
+          </div>
+
+          {/* Video & Maps */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Lien vidéo / visite virtuelle</label>
+              <input value={form.video_url} onChange={(e) => handleChange("video_url", e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-black/10 dark:border-white/10 bg-transparent text-sm" placeholder="https://youtube.com/..." />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Lien Google Maps</label>
+              <input value={form.google_maps_url} onChange={(e) => handleChange("google_maps_url", e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-black/10 dark:border-white/10 bg-transparent text-sm" placeholder="https://maps.google.com/..." />
+            </div>
+          </div>
           <div>
             <label className="text-sm font-medium mb-1 block">Description</label>
             <textarea value={form.description} onChange={(e) => handleChange("description", e.target.value)}
@@ -414,14 +461,18 @@ function PropertyFormModal({ property, token, onClose, onSaved }) {
           </div>
 
           {/* Options */}
-          <div className="flex gap-6">
-            <label className="flex items-center gap-2 text-sm">
+          <div className="flex flex-wrap gap-5">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" checked={form.is_furnished} onChange={(e) => handleChange("is_furnished", e.target.checked)} className="rounded" />
               Meublé
             </label>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" checked={form.featured} onChange={(e) => handleChange("featured", e.target.checked)} className="rounded" />
               Mettre en avant
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={form.is_available !== false} onChange={(e) => handleChange("is_available", e.target.checked)} className="rounded" />
+              Disponible
             </label>
           </div>
 

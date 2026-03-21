@@ -60,6 +60,7 @@ import { ServiceProvidersAdmin, ServiceRequestsAdmin } from "./ServiceAdminCompo
 import { CommercialDashboard } from "./CommercialDashboard";
 import GiftBoxAdmin from "../components/Admin/GiftBoxAdmin";
 import ImmobilierAdmin from "../components/Admin/ImmobilierAdmin";
+import CovoiturageAdmin from "../components/Admin/CovoiturageAdmin";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -1496,88 +1497,237 @@ export default function AdminPage() {
 
   // Render content based on current page  // Render content based on current page
   const renderContent = () => {
-  // ============ Automobile Admin Section ============
+  // ============ Automobile / Covoiturage Admin Section ============
   const renderAutomobile = () => (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Automobile</h1>
-        <p className="text-muted-foreground">Gestion des véhicules et rendez-vous automobile</p>
-      </div>
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 text-center">
-          <Car className="w-10 h-10 mx-auto mb-3 text-gray-600" />
-          <h3 className="font-bold text-lg mb-1">Véhicules</h3>
-          <p className="text-sm text-muted-foreground mb-4">Gérez vos annonces de véhicules dans la section Produits (catégorie Automobile)</p>
-          <button onClick={() => { navigate("/admin/products"); }} className="px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-xl text-sm font-medium">
-            Voir les produits auto
-          </button>
-        </div>
-        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 text-center">
-          <Clock className="w-10 h-10 mx-auto mb-3 text-amber-600" />
-          <h3 className="font-bold text-lg mb-1">Rendez-vous Auto</h3>
-          <p className="text-sm text-muted-foreground mb-4">Consultez les demandes de visite pour les véhicules</p>
-          <button onClick={() => { navigate("/admin/appointments"); }} className="px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-medium">
-            Voir les rendez-vous
-          </button>
-        </div>
-        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 text-center">
-          <BarChart3 className="w-10 h-10 mx-auto mb-3 text-blue-600" />
-          <h3 className="font-bold text-lg mb-1">Statistiques</h3>
-          <p className="text-sm text-muted-foreground mb-4">Suivez les performances de la catégorie automobile</p>
-          <button onClick={() => navigate("/admin/analytics")} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-sm font-medium">
-            Voir les analytics
-          </button>
-        </div>
-      </div>
-    </div>
+    <CovoiturageAdmin token={token} />
   );
 
-  // ============ SMS Admin Section ============
+  // ============ SMS Admin Section — Workflows ============
   const SMSAdminSection = () => {
+    const [activeTab, setActiveTab] = useState("promo");
     const [smsPhone, setSmsPhone] = useState("");
     const [smsMessage, setSmsMessage] = useState("");
     const [smsSending, setSmsSending] = useState(false);
+    const [providers, setProviders] = useState([]);
+    const [selectedProviders, setSelectedProviders] = useState([]);
+    const [bulkMessage, setBulkMessage] = useState("");
+    const [bulkSending, setBulkSending] = useState(false);
     const [smsHistory, setSmsHistory] = useState([]);
 
-    const sendSMS = async () => {
+    const SMS_TEMPLATES = {
+      rdv_confirm: "Bonjour {{nom}}, votre rendez-vous du {{date}} à {{heure}} est confirmé. GROUPE YAMA+ - 78 382 75 75",
+      rdv_rappel: "Rappel : votre rendez-vous YAMA+ est demain {{date}} à {{heure}}. Contactez-nous au 78 382 75 75 pour toute modification.",
+      rdv_cancel: "Votre rendez-vous du {{date}} a été annulé. Pour replanifier : 78 382 75 75. GROUPE YAMA+",
+      presta_mission: "Bonjour {{nom}}, une nouvelle mission vous a été assignée. Connectez-vous sur votre espace YAMA+ pour les détails. Répondez OUI pour confirmer.",
+      presta_paiement: "Bonjour {{nom}}, votre paiement de {{montant}} FCFA a été effectué. Merci pour votre collaboration. GROUPE YAMA+",
+      promo_general: "YAMA+ : Profitez de nos offres exclusives ! Jusqu'à -30% sur une sélection de produits. Commandez sur groupeyamaplus.com",
+      promo_flash: "FLASH SALE YAMA+ : Offre valable 24h seulement ! -{{reduction}}% sur {{produit}}. Ne ratez pas cette opportunité !",
+    };
+
+    const fetchProviders = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/admin/sms/providers`, { headers: { Authorization: `Bearer ${token}` } });
+        setProviders(res.data.providers || []);
+      } catch (e) { console.error(e); }
+    };
+
+    useEffect(() => { if (activeTab === "prestataires") fetchProviders(); }, [activeTab]);
+
+    const sendSingle = async () => {
       if (!smsPhone || !smsMessage) { toast.error("Remplissez le numéro et le message"); return; }
       setSmsSending(true);
       try {
         await axios.post(`${API_URL}/api/admin/send-sms`, { phone: smsPhone, message: smsMessage }, { headers: { Authorization: `Bearer ${token}` } });
         toast.success("SMS envoyé !");
-        setSmsHistory(prev => [{ phone: smsPhone, message: smsMessage, date: new Date().toISOString(), status: "sent" }, ...prev]);
-        setSmsMessage("");
-      } catch (error) {
-        toast.error(error.response?.data?.detail || "Erreur d'envoi SMS");
-      } finally {
-        setSmsSending(false);
-      }
+        setSmsMessage(""); setSmsPhone("");
+      } catch (e) { toast.error(e.response?.data?.detail || "Erreur d'envoi SMS"); }
+      setSmsSending(false);
     };
+
+    const sendBulk = async (phones) => {
+      if (!bulkMessage || phones.length === 0) { toast.error("Message et destinataires requis"); return; }
+      setBulkSending(true);
+      try {
+        const res = await axios.post(`${API_URL}/api/admin/sms/bulk`, { phones, message: bulkMessage }, { headers: { Authorization: `Bearer ${token}` } });
+        toast.success(`${res.data.sent}/${res.data.total} SMS envoyés`);
+        setBulkMessage(""); setSelectedProviders([]);
+      } catch (e) { toast.error("Erreur envoi bulk"); }
+      setBulkSending(false);
+    };
+
+    const tabCls = (t) => `px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === t ? "bg-black dark:bg-white text-white dark:text-black" : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5"}`;
+    const inputCls = "w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-transparent text-sm focus:border-blue-500 outline-none";
 
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Centre SMS</h1>
-          <p className="text-muted-foreground">Envoyez des SMS à vos clients</p>
+          <p className="text-muted-foreground">Workflows et campagnes SMS automatiques</p>
         </div>
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-          <p className="text-sm text-yellow-800 dark:text-yellow-300">Le service SMS Orange est en cours de configuration. Les messages seront envoyés dès que le service sera activé.</p>
+
+        {/* Tabs */}
+        <div className="flex gap-2 flex-wrap">
+          <button className={tabCls("promo")} onClick={() => setActiveTab("promo")}>Promotions</button>
+          <button className={tabCls("rdv")} onClick={() => setActiveTab("rdv")}>Confirmations RDV</button>
+          <button className={tabCls("prestataires")} onClick={() => setActiveTab("prestataires")}>Prestataires</button>
+          <button className={tabCls("manuel")} onClick={() => setActiveTab("manuel")}>SMS Manuel</button>
         </div>
-        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 space-y-4">
-          <h2 className="font-bold text-lg">Envoyer un SMS</h2>
-          <div>
-            <label className="text-sm font-medium block mb-1">Numéro de téléphone</label>
-            <input type="tel" value={smsPhone} onChange={e => setSmsPhone(e.target.value)} placeholder="+221 77 123 45 67" className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-transparent" data-testid="sms-phone" />
+
+        {/* ─── TAB PROMO ─── */}
+        {activeTab === "promo" && (
+          <div className="space-y-4">
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 space-y-4">
+              <h2 className="font-bold text-lg">Campagne Promotionnelle</h2>
+              <div>
+                <label className="text-sm font-medium block mb-2">Templates prédéfinis</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "promo_general", label: "Promo générale" },
+                    { key: "promo_flash", label: "Flash Sale" },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => setBulkMessage(SMS_TEMPLATES[t.key])}
+                      className="px-3 py-2 text-xs rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-left hover:bg-blue-100 transition-colors">
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Message ({bulkMessage.length}/160 caractères)</label>
+                <textarea value={bulkMessage} onChange={e => setBulkMessage(e.target.value)} rows={4}
+                  className={`${inputCls} resize-none`} placeholder="Votre message promotionnel..." maxLength={320} />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Destinataires (un numéro par ligne)</label>
+                <textarea rows={3} className={`${inputCls} resize-none`} placeholder="+221771234567&#10;+221781234567"
+                  id="bulk-phones-promo" />
+              </div>
+              <button disabled={bulkSending} onClick={() => {
+                const phones = document.getElementById("bulk-phones-promo").value.split("\n").map(p => p.trim()).filter(Boolean);
+                sendBulk(phones);
+              }} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold disabled:opacity-50 flex items-center gap-2">
+                {bulkSending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Envoyer la campagne
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium block mb-1">Message</label>
-            <textarea value={smsMessage} onChange={e => setSmsMessage(e.target.value)} rows={4} placeholder="Votre message..." className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-transparent resize-none" data-testid="sms-message" />
+        )}
+
+        {/* ─── TAB RDV ─── */}
+        {activeTab === "rdv" && (
+          <div className="space-y-4">
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 space-y-4">
+              <h2 className="font-bold text-lg">Confirmation & Rappel Rendez-vous</h2>
+              <div>
+                <label className="text-sm font-medium block mb-2">Templates RDV</label>
+                <div className="grid gap-2">
+                  {[
+                    { key: "rdv_confirm", label: "Confirmation RDV", color: "green" },
+                    { key: "rdv_rappel", label: "Rappel RDV (veille)", color: "blue" },
+                    { key: "rdv_cancel", label: "Annulation RDV", color: "red" },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => setSmsMessage(SMS_TEMPLATES[t.key])}
+                      className={`px-4 py-3 text-xs rounded-xl text-left hover:opacity-80 transition-opacity ${
+                        t.color === "green" ? "bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300" :
+                        t.color === "blue" ? "bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300" :
+                        "bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300"
+                      }`}>
+                      <span className="font-semibold block mb-1">{t.label}</span>
+                      <span className="opacity-80">{SMS_TEMPLATES[t.key]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium block mb-1">Numéro du client</label>
+                  <input type="tel" value={smsPhone} onChange={e => setSmsPhone(e.target.value)} className={inputCls} placeholder="+221 77 123 45 67" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Personnaliser le message</label>
+                  <textarea value={smsMessage} onChange={e => setSmsMessage(e.target.value)} rows={2}
+                    className={`${inputCls} resize-none`} placeholder="Message..." />
+                </div>
+              </div>
+              <button onClick={sendSingle} disabled={smsSending} className="px-6 py-3 bg-green-600 text-white rounded-xl font-semibold disabled:opacity-50 flex items-center gap-2">
+                {smsSending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Envoyer la confirmation
+              </button>
+            </div>
           </div>
-          <button onClick={sendSMS} disabled={smsSending} className="px-6 py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl font-semibold disabled:opacity-50" data-testid="send-sms-btn">
-            {smsSending ? "Envoi..." : "Envoyer le SMS"}
-          </button>
-        </div>
+        )}
+
+        {/* ─── TAB PRESTATAIRES ─── */}
+        {activeTab === "prestataires" && (
+          <div className="space-y-4">
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 space-y-4">
+              <h2 className="font-bold text-lg">Notifications Prestataires</h2>
+              <div>
+                <label className="text-sm font-medium block mb-2">Templates prestataires</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "presta_mission", label: "Nouvelle mission" },
+                    { key: "presta_paiement", label: "Paiement effectué" },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => setBulkMessage(SMS_TEMPLATES[t.key])}
+                      className="px-3 py-2 text-xs rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 text-left hover:bg-purple-100 transition-colors">
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-2">Sélectionner les prestataires</label>
+                {providers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Aucun prestataire avec numéro de téléphone.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {providers.map(p => (
+                      <label key={p.name} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                        <input type="checkbox"
+                          checked={selectedProviders.includes(p.phone)}
+                          onChange={e => setSelectedProviders(prev => e.target.checked ? [...prev, p.phone] : prev.filter(ph => ph !== p.phone))}
+                          className="rounded" />
+                        <span className="text-sm font-medium">{p.name}</span>
+                        <span className="text-xs text-muted-foreground">{p.phone}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Message ({bulkMessage.length}/160)</label>
+                <textarea value={bulkMessage} onChange={e => setBulkMessage(e.target.value)} rows={3}
+                  className={`${inputCls} resize-none`} placeholder="Message pour les prestataires sélectionnés..." />
+              </div>
+              <button onClick={() => sendBulk(selectedProviders)} disabled={bulkSending}
+                className="px-6 py-3 bg-purple-600 text-white rounded-xl font-semibold disabled:opacity-50 flex items-center gap-2">
+                {bulkSending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Envoyer aux prestataires ({selectedProviders.length})
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB MANUEL ─── */}
+        {activeTab === "manuel" && (
+          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 p-6 space-y-4">
+            <h2 className="font-bold text-lg">Envoyer un SMS Manuel</h2>
+            <div>
+              <label className="text-sm font-medium block mb-1">Numéro de téléphone</label>
+              <input type="tel" value={smsPhone} onChange={e => setSmsPhone(e.target.value)} className={inputCls} placeholder="+221 77 123 45 67" />
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Message ({smsMessage.length}/160)</label>
+              <textarea value={smsMessage} onChange={e => setSmsMessage(e.target.value)} rows={4}
+                className={`${inputCls} resize-none`} placeholder="Votre message..." />
+            </div>
+            <button onClick={sendSingle} disabled={smsSending} className="px-6 py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl font-semibold disabled:opacity-50 flex items-center gap-2">
+              {smsSending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              Envoyer le SMS
+            </button>
+          </div>
+        )}
       </div>
     );
   };
