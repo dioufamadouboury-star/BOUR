@@ -8,7 +8,15 @@ import AppointmentModal from "../components/AppointmentModal";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-const HERO_IMAGE = "/assets/images/immobilier_hero.jpg";
+const HERO_IMAGE = "/assets/images/immobilier_hero.jpg?v=3";
+
+// Hero filters matching other category pages (Électronique style)
+const HERO_FILTERS = [
+  { id: "all", label: "Tous", icon: Home },
+  { id: "rent_short", label: "Courte durée", icon: Star },
+  { id: "rent_long", label: "Longue durée", icon: Building },
+  { id: "sale", label: "Vente", icon: Landmark },
+];
 
 const LISTING_TYPES = [
   { id: "all", label: "Tous", icon: Home, color: "from-amber-500 to-yellow-500" },
@@ -88,7 +96,7 @@ export default function ImmobilierPage() {
   const activeListingType = LISTING_TYPES.find(t => t.id === activeTab) || LISTING_TYPES[0];
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" data-testid="immobilier-page">
+    <main className="min-h-screen bg-[#F5F5F7] dark:bg-black" data-testid="immobilier-page">
       <SEO
         title="Immobilier - GROUPE YAMA+"
         description="Trouvez votre bien immobilier au Sénégal. Appartements, maisons, villas, terrains à Dakar, Saly, Mbour."
@@ -96,92 +104,102 @@ export default function ImmobilierPage() {
         keywords={["immobilier Dakar", "location appartement Sénégal", "villa Saly", "terrain Dakar"]}
       />
 
-      {/* Hero Section */}
-      <div className="relative pt-24 pb-16 overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: `url(${HERO_IMAGE})` }} />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-slate-900/40 to-slate-900" />
-        <div className="relative max-w-6xl mx-auto px-4 text-center">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-            <span className="inline-block px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-sm text-white/80 mb-6">
-              GROUPE YAMA+ Immobilier
-            </span>
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
-              Votre Bien Idéal{" "}
-              <span className="bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">
-                au Sénégal
-              </span>
-            </h1>
-            <p className="text-xl text-white/70 max-w-2xl mx-auto">
-              Appartements, Villas, Maisons - Location courte & longue durée, Vente
-            </p>
+      {/* ─── CATEGORY HERO (same structure as Électronique) ─── */}
+      <div className="relative w-full h-[400px] md:h-[480px] overflow-hidden">
+        <img
+          src={HERO_IMAGE}
+          alt="Immobilier YAMA+"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-amber-950/90 via-stone-900/70 to-stone-950/85" />
+        {/* Content */}
+        <div className="relative z-10 h-full flex flex-col justify-between px-6 md:px-16 py-10 pt-28">
+          <div>
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-xs font-semibold tracking-widest uppercase mb-2 text-amber-400"
+            >
+              GROUPE YAMA+
+            </motion.p>
+            <motion.h1
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-3xl md:text-5xl font-bold text-white mb-3 max-w-xl leading-tight"
+            >
+              Immobilier
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-white/60 text-sm md:text-base max-w-lg"
+            >
+              Appartements, villas, maisons — location courte & longue durée, vente au Sénégal
+            </motion.p>
+          </div>
 
-            {/* Quick Stats */}
-            {stats && stats.total > 0 && (
-              <div className="flex justify-center gap-8 mt-8">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-amber-400">{stats.total}</div>
-                  <div className="text-sm text-white/50">Biens disponibles</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-amber-400">{stats.cities?.length || 0}</div>
-                  <div className="text-sm text-white/50">Villes</div>
-                </div>
-              </div>
-            )}
+          {/* Filter tabs (same style as Électronique) */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex gap-2 flex-wrap"
+          >
+            {HERO_FILTERS.map(f => {
+              const Icon = f.icon;
+              const active = activeTab === f.id;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => handleTabChange(f.id)}
+                  data-testid={`filter-${f.id}`}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
+                    active
+                      ? "bg-white text-black shadow-lg"
+                      : "bg-white/10 backdrop-blur text-white border border-white/20 hover:bg-white/20"
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${active ? "text-black" : "text-amber-400"}`} />
+                  {f.label}
+                </button>
+              );
+            })}
           </motion.div>
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="max-w-7xl mx-auto px-4 -mt-8 relative z-10">
-        <div className="flex justify-center gap-2 md:gap-4 flex-wrap">
-          {LISTING_TYPES.map((tab, i) => (
-            <motion.button
-              key={tab.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => handleTabChange(tab.id)}
-              className={`group relative px-4 md:px-6 py-3 rounded-2xl font-medium text-sm md:text-base transition-all duration-300 ${
-                activeTab === tab.id
-                  ? "text-white shadow-2xl scale-105"
-                  : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-              }`}
-              data-testid={`filter-${tab.id}`}
+      {/* ─── PROPERTIES SECTION (same container style as Électronique) ─── */}
+      <div className="container-lumina pt-8">
+        {/* City filter + Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+            <Link to="/" className="hover:text-foreground transition-colors">Accueil</Link>
+            <span>/</span>
+            <span>Immobilier</span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-3xl font-bold">{activeListingType.label}</h2>
+              <p className="text-muted-foreground mt-1">
+                {total} bien{total > 1 ? "s" : ""} disponible{total > 1 ? "s" : ""}
+              </p>
+            </div>
+            
+            {/* City Filter */}
+            <select
+              value={cityFilter}
+              onChange={(e) => handleCityChange(e.target.value)}
+              className="px-5 py-2.5 bg-white dark:bg-[#1C1C1E] rounded-xl border border-black/10 dark:border-white/10 font-medium text-sm cursor-pointer"
+              data-testid="city-filter"
             >
-              {activeTab === tab.id && (
-                <div className={`absolute inset-0 bg-gradient-to-r ${tab.color} rounded-2xl`} />
-              )}
-              <span className="relative flex items-center gap-2">
-                <tab.icon className="w-5 h-5" />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </span>
-            </motion.button>
-          ))}
-        </div>
-
-        {/* City Filter */}
-        <div className="flex justify-center mt-4">
-          <select
-            value={cityFilter}
-            onChange={(e) => handleCityChange(e.target.value)}
-            className="px-5 py-2.5 bg-white/10 backdrop-blur-sm text-white rounded-xl border border-white/10 focus:outline-none focus:border-amber-400/50 text-sm"
-            data-testid="city-filter"
-          >
-            <option value="" className="text-gray-900">Toutes les villes</option>
-            {CITIES.map((c) => (
-              <option key={c} value={c} className="text-gray-900">{c}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Properties Grid */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-white">{activeListingType.label}</h2>
-            <p className="text-white/50">{total} bien{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}</p>
+              <option value="">Toutes les villes</option>
+              {CITIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -192,10 +210,10 @@ export default function ImmobilierPage() {
                 <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : properties.length === 0 ? (
-              <div className="text-center py-20">
-                <Building className="w-20 h-20 mx-auto text-white/20 mb-4" />
-                <p className="text-white/50 text-xl">Aucun bien disponible</p>
-                <p className="text-white/30 mt-2">Revenez bientôt pour découvrir nos nouvelles offres</p>
+              <div className="text-center py-20 bg-white dark:bg-[#1C1C1E] rounded-2xl">
+                <Building className="w-20 h-20 mx-auto text-gray-300 dark:text-white/20 mb-4" />
+                <p className="text-muted-foreground text-xl">Aucun bien disponible</p>
+                <p className="text-muted-foreground/60 mt-2">Revenez bientôt pour découvrir nos nouvelles offres</p>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -215,7 +233,7 @@ export default function ImmobilierPage() {
       </div>
 
       {/* Bottom CTA */}
-      <div className="max-w-6xl mx-auto px-4 pb-20">
+      <div className="container-lumina pb-20 pt-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -267,7 +285,7 @@ function PropertyCard({ property, index, isWished, onToggleWishlist }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.05 }}
       >
-        <div className="group bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-3xl overflow-hidden border border-white/10 hover:border-amber-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10"
+        <div className="group bg-white dark:bg-[#1C1C1E] rounded-3xl overflow-hidden border border-black/5 dark:border-white/10 hover:border-amber-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10"
           data-testid={`property-card-${property.property_id}`}>
           <Link to={`/immobilier/${property.property_id}`} className="block relative aspect-[4/3] overflow-hidden">
             <img
@@ -315,13 +333,13 @@ function PropertyCard({ property, index, isWished, onToggleWishlist }) {
           {/* Info */}
           <div className="p-5">
             <Link to={`/immobilier/${property.property_id}`}>
-              <h3 className="text-lg font-bold text-white mb-3 line-clamp-2 group-hover:text-amber-400 transition-colors min-h-[3.5rem]">
+              <h3 className="text-lg font-bold text-foreground mb-3 line-clamp-2 group-hover:text-amber-500 transition-colors min-h-[3.5rem]">
                 {property.title}
               </h3>
             </Link>
 
             {/* Specs */}
-            <div className="flex items-center gap-4 text-white/50 text-sm mb-4">
+            <div className="flex items-center gap-4 text-muted-foreground text-sm mb-4">
               {property.bedrooms > 0 && (
                 <span className="flex items-center gap-1"><BedDouble className="w-4 h-4" />{property.bedrooms}</span>
               )}
@@ -334,12 +352,12 @@ function PropertyCard({ property, index, isWished, onToggleWishlist }) {
             </div>
 
             {/* Price + Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-white/10">
+            <div className="flex items-center justify-between pt-3 border-t border-black/5 dark:border-white/10">
               <div>
-                <p className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">
+                <p className="text-2xl font-bold bg-gradient-to-r from-amber-500 to-yellow-500 bg-clip-text text-transparent">
                   {property.price?.toLocaleString("fr-FR")} <span className="text-sm">FCFA</span>
                 </p>
-                {priceLabel && <p className="text-xs text-white/40">{priceLabel}</p>}
+                {priceLabel && <p className="text-xs text-muted-foreground">{priceLabel}</p>}
               </div>
               <div className="flex gap-2">
                 <button

@@ -19,10 +19,50 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const CATEGORIES = [
   { id: "electronique", name: "Électronique" },
   { id: "electromenager", name: "Électroménager" },
-  { id: "decoration", name: "Décoration" },
-  { id: "beaute", name: "Beauté" },
+  { id: "decoration", name: "Décoration & Mobilier" },
+  { id: "beaute", name: "Mode & Beauté" },
   { id: "automobile", name: "Automobile" },
+  { id: "immobilier", name: "Immobilier" },
+  { id: "services", name: "Services" },
 ];
+
+const SUBCATEGORIES = {
+  electronique: [
+    "Smartphones", "TV & Écrans", "Ordinateurs & PC", "Tablettes",
+    "Audio & Casques", "Appareils Photo", "Gaming & Consoles",
+    "Accessoires téléphone", "Câbles & Chargeurs", "Montres connectées", "Autres"
+  ],
+  electromenager: [
+    "Réfrigérateurs", "Congélateurs", "Machine à laver", "Sèche-linge",
+    "Climatiseur", "Ventilateur", "Chauffage", "Micro-ondes", "Four",
+    "Hotte aspirante", "Lave-vaisselle", "Mixeur & Blender", "Fer à repasser",
+    "Aspirateur", "Cuisinière", "Chauffe-eau", "Autres"
+  ],
+  decoration: [
+    "Salons & Canapés", "Chambres & Lits", "Lustres & Lampes", "Cadres & Art",
+    "Plantes & Vases", "Coussins & Tapis", "Rideaux", "Miroirs",
+    "Tables & Chaises", "Rangements", "Cuisine & Salle de bain", "Autres"
+  ],
+  beaute: [
+    "Vêtements Femme", "Vêtements Homme", "Vêtements Enfant", "Chaussures",
+    "Sacs & Maroquinerie", "Bijoux & Montres", "Parfums", "Cosmétiques & Maquillage",
+    "Soins cheveux", "Soins corps", "Accessoires mode", "Autres"
+  ],
+  automobile: [
+    "Voitures neuves", "Voitures d'occasion", "Motos & Scooters",
+    "Pièces & Accessoires", "Pneus & Jantes", "Audio auto",
+    "Location courte durée", "Location longue durée", "Covoiturage", "Autres"
+  ],
+  immobilier: [
+    "Appartements", "Villas & Maisons", "Terrains", "Bureaux & Commerces",
+    "Magasins", "Entrepôts", "Location courte durée", "Location longue durée", "Autres"
+  ],
+  services: [
+    "Plomberie", "Électricité", "Climatisation", "Peinture", "Menuiserie",
+    "Nettoyage", "Jardinage", "Déménagement", "Sécurité", "Informatique",
+    "Couture", "Coiffure", "Autres"
+  ],
+};
 
 const AVAILABLE_COLORS = [
   "Noir", "Blanc", "Gris", "Argent", "Or", "Rose", "Bleu", "Rouge", "Vert", "Violet"
@@ -414,7 +454,7 @@ const ProductFormModal = memo(({
                     <select
                       required
                       value={form.category}
-                      onChange={(e) => updateField('category', e.target.value)}
+                      onChange={(e) => { updateField('category', e.target.value); updateField('subcategory', ''); }}
                       className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-transparent focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 outline-none"
                     >
                       {CATEGORIES.map((cat) => (
@@ -423,15 +463,29 @@ const ProductFormModal = memo(({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Marque</label>
-                    <input
-                      type="text"
-                      value={form.brand}
-                      onChange={(e) => updateField('brand', e.target.value)}
+                    <label className="block text-sm font-medium mb-2">Sous-catégorie</label>
+                    <select
+                      value={form.subcategory}
+                      onChange={(e) => updateField('subcategory', e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-transparent focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 outline-none"
-                      placeholder="Ex: Apple, Samsung, Nike..."
-                    />
+                    >
+                      <option value="">-- Sélectionner --</option>
+                      {(SUBCATEGORIES[form.category] || []).map((sub) => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Marque</label>
+                  <input
+                    type="text"
+                    value={form.brand}
+                    onChange={(e) => updateField('brand', e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-transparent focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 outline-none"
+                    placeholder="Ex: Apple, Samsung, Nike..."
+                  />
                 </div>
 
                 <div>

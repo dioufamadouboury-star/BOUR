@@ -1,119 +1,104 @@
-<analysis>**original_problem_statement:** 
-The user requested the deployment of the Real Estate module to production, redesigning specific category pages (Nouveautés, Promotions, Blog, Immobilier) to match a dark theme style, updating the homepage tagline and categories, fixing the AI product generation to properly read images, restoring missing tabs on the Admin Dashboard (Automobile, SMS, WhatsApp Bot), adding SMS/WhatsApp/Email checkboxes to the appointment confirmation modal, and resetting all analytics data to zero.
+<analysis>**original_problem_statement:**
+The user requested UI/UX improvements across the e-commerce platform, including a premium redesign of the Login page, applying a consistent Hero Image design to all category/informational pages (Électronique, Automobile, Blog, Promotions, Nouveautés, etc.) using specific user-provided images, integrating new logos across the site and PDF invoices, fixing Admin dashboard bugs (sidebar truncation), resetting all analytics to zero, and adding new operational features (SMS Workflows, Automobile Covoiturage, expanded Real Estate fields). All changes must be deployed to the production VPS.
 
-**User's preferred language**: French (You MUST respond to the user in French).
+**User's preferred language**: French (You MUST INSTRUCT the next agent to respond in the user's preferred language only: FRENCH).
 
-**what currently exists?** 
-A full-stack e-commerce platform (React + FastAPI + MongoDB). The application features dark-themed product category pages, a functional Real Estate and Automobile appointment booking system, an Admin Dashboard with newly restored tabs, and a vision-capable AI (GPT-4o via Emergent LLM Key) for automated product creation from images.
+**what currently exists?**
+A full-stack e-commerce platform (React + FastAPI + MongoDB) deployed on a VPS. The application features a newly deployed premium UI for Login and Category pages with consistent Hero sections. The Admin dashboard is fully functional with restored tabs, zeroed analytics, advanced Real Estate product creation fields, Covoiturage (carpooling) management, and SMS workflow templates. 
 
 **Last working item**:
-- **Last item agent was working**: The agent was finalizing the implementation of the AI product generation (upgrading to GPT-4o vision), restoring the missing Admin Dashboard tabs, adding SMS/WhatsApp options for appointments, and copying these final updates to the production VPS. 
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: Y (Tested locally via screenshots).
-- **Which testing method agent to use?** Frontend testing agent for the Admin Sidebar, Manual testing via curl/screenshots for the Analytics reset and VPS deployment validation.
-- **User Testing Done**: N
+    - **Last item agent was working**: Adding dynamic Sous-catégories (Subcategories like Climatiseur, Réfrigérateur, etc.) to the  (for Admin product creation) and  (for frontend filtering) based on a user-provided screenshot.
+    - **Status**: IN PROGRESS
+    - **Agent Testing Done**: N (Context window ended immediately after modifying the files).
+    - **Which testing method agent to use?** Frontend testing agent (to verify the Product Form Modal and Category Filters) AND manual screenshot tool.
+    - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Admin Sidebar items are hidden/truncated (P0)
-  Issue 2: Orange SMS messages are not delivered (External Blocker)
-
-  **Issues Detail**:
-  - **Issue 1: Admin Sidebar items are hidden/truncated**
-     - **Attempted fixes**: The agent noticed the issue via screenshots at the very end of the session but ran out of context before fixing it. The bottom tabs (Immobilier, Automobile, SMS, WhatsApp) are cut off.
-     - **Next debug checklist**: Add  to the sidebar container in .
-     - **Why fix this issue and what will be achieved with the fix?** Allows the admin to actually click and access the newly restored tabs.
-     - **Status**: NOT STARTED
+  Issue 1: Subcategory (Sous-catégorie) UI Verification & VPS Deployment (P0)
+  Issue 2: Google OAuth Login is failing (P1)
+  
+  Issues Detail:
+  - **Issue 1: Subcategory UI Verification & VPS Deployment**
+     - **Attempted fixes**: The agent updated  and  with the subcategory mapping, but ran out of context before testing or pushing to the VPS.
+     - **Next debug checklist**: Open the Admin Panel -> Add a Product -> Verify the Category and Subcategory dropdowns work conditionally. Test frontend Category page filters. Run  to deploy to VPS.
+     - **Why fix this issue and what will be achieved with the fix?** Completes the user's latest request to allow detailed categorization of products.
+     - **Status**: TESTING PENDING
      - **Is recurring issue?** N
      - **Should Test frontend/backend/both after fix?** Frontend
-     - **Blocked on other issue:** NA
-  - **Issue 2: Orange SMS messages are not delivered to recipients**
-     - **Attempted fixes**: API calls succeed, balance deducts, but phones don't ring. External block on Orange's side. UI and backend logic are functional.
-     - **Next debug checklist**: NONE. Do not debug code. User must contact Orange Developer Support.
-     - **Why fix this issue?** Enables order/appointment confirmation via SMS.
-     - **Status**: BLOCKED
-     - **Is recurring issue?** Y
-     - **Should Test frontend/backend/both after fix?** NA
-     - **Blocked on other issue:** NA
+     - **Blocked on other issue:** None.
+  
+  - **Issue 2: Google OAuth Login is failing**
+     - **Attempted fixes**: Agent verified backend routes. The issue stems from an invalid/missing Callback URI configured in the Google Cloud Console.
+     - **Next debug checklist**: Provide explicit instructions to the user on how to add the correct authorized redirect URIs in their Google Cloud Console.
+     - **Why fix this issue and what will be achieved with the fix?** Restores social login functionality.
+     - **Status**: BLOCKED (Requires user action in Google Console).
+     - **Is recurring issue?** N
+     - **Should Test frontend/backend/both after fix?** Both
+     - **Blocked on other issue:** None.
 
 **In progress Task List**:
-  Task 1: Finalize VPS Deployment and Restart Services (P0)
-  Task 2: Reset Analytics and Dashboard Stats to Zero (P0)
-  Task 3: Provide Ads Campaign Tutorial (P1)
+  Task 1: Finalize VPS Deployment for Subcategories (P0)
 
- **Task Detail**:
-  - **Task 1: Finalize VPS Deployment and Restart Services**
-     - **Where to resume**: The agent executed the  command to copy frontend/backend files to the VPS but the context window ended before they could restart the  service and build the frontend on the VPS.
-     - **What will be achieved with this?** The production website will reflect the latest AI vision and dashboard changes.
-     - **Status**: IN PROGRESS
-     - **Should Test frontend/backend/both after fix?** Both
-     - **Blocked on something**: NA
-  - **Task 2: Reset Analytics and Dashboard Stats to Zero**
-     - **Where to resume**: The user explicitly requested analytics je veux tout à zéro le site et le rapport mensuelle fonctionnel. Drop or reset collections like , ,  (or specific test data) in the MongoDB database to reset the dashboard stats. 
-     - **What will be achieved with this?** A clean slate for the user to start tracking real production metrics.
+ Task Detail:
+  - **Task 1: Finalize VPS Deployment for Subcategories**
+     - **Where to resume**: Build the React frontend (yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.) and deploy via / to the VPS. 
+     - **What will be achieved with this?** The production site will have the newly coded subcategory features.
      - **Status**: NOT STARTED
-     - **Should Test frontend/backend/both after fix?** Backend/Frontend
-     - **Blocked on something**: NA
-  - **Task 3: Provide Ads Campaign Tutorial**
-     - **Where to resume**: The user previously asked for explication etape par etape pour les campagnes facebook ads google ads youtube ads. Still pending.
-     - **What will be achieved with this?** Fulfilling a repeated user request.
-     - **Status**: NOT STARTED
-     - **Should Test frontend/backend/both after fix?** NA
-     - **Blocked on something**: NA
+     - **Should Test frontend/backend/both after fix?** Frontend
+     - **Blocked on something**: Depends on Issue 1 testing.
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - (P1) Add Real Products to the site catalog.
-    - (P2) Refactor  (continue extracting modules like orders, products, auth into ).
+    - (P1) Add Real Products to the site catalog (Since analytics and dummy data were wiped, the site currently displays 0 products).
+    - (P2) Provide Ads Campaign Tutorial (User previously asked for step-by-step Facebook/Google/YouTube ads instructions).
     
     Future Tasks:
     - (P3) Configure WhatsApp Chatbot (Waiting for Meta API credentials from the user).
-    - (P4) Mobile App Development using React Native/Expo (Postponed).
+    - (P4) Refactor  (Extract remaining modules into ).
 
 **Completed work in this session**
-- Deployed Real Estate module to production VPS (, Immobilier pages).
-- Added Automobile and Immobilier appointment types with specialized frontend handling.
-- Redesigned , , , and  to utilize dark-theme matching .
-- Updated Homepage tagline to Chaque détail compte and added Immobilier to the Explorez nos univers section.
-- Modified Automobile  to show WhatsApp/Appelez/Visite instead of Ajouter au panier.
-- Upgraded AI Product Generation to use GPT-4o with Vision (via Emergent LLM Key) for accurate image processing.
-- Restored , , and  tabs in .
-- Added SMS, WhatsApp, and Email checkboxes to the Admin appointment confirmation modal.
+- Reset all analytics, orders, and carts to zero in MongoDB.
+- Fixed Admin Sidebar overflow (tabs are now clickable).
+- Redesigned Login Page (Split screen, premium dark theme matching user mockup).
+- Updated the YAMA+ Logo globally (Navbar, Footer, Login, and Backend PDF Generator).
+- Deployed Automobile Covoiturage (Trips) feature to Admin and Frontend.
+- Added SMS Workflows UI to Admin page.
+- Created  and completely refactored all informational/category pages (Électronique, Décoration, Mode, Automobile, Blog, Promotions, Nouveautés, Services) using user-provided images.
+- Successfully executed multiple SSH deployments to the VPS and bypassed browser caching issues using  query parameters.
 
 **Earlier issues found/mentioned but not fixed**
-   - Issue 1: Admin Sidebar truncation
-     - Debug checklist:  (needs  or  on the sidebar navigation list).
-     - Why to solve this issue and what will be achieved with this? Essential for dashboard usability.
-     - Should Test frontend/backend/both after fix: Frontend
-     - Is recurring issue? N
+   - None explicitly ignored, though Caching is a major friction point.
 
 **Known issue recurrence from previous fork**
-  - Browser Caching: Users frequently fail to see frontend updates due to PWA/React caching.
-  - Recurrence count: 2
-  - Status: RESOLVED (Keep in mind if UI issues arise on production).
+  - **Issue recurrence in previous fork**: Aggressive Browser/Nginx Caching. The user repeatedly stated Je le vois pas (I don't see it) after VPS deployments.
+  - **Recurrence count**: 3
+  - **Status**: RESOLVED (Agent used cache-busting  on image URLs and Nginx reloads, but next agent must be vigilant about clearing cache or using cache-busters when updating static assets).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- React.js frontend with Tailwind CSS.
+- React.js frontend with Tailwind CSS and Framer Motion.
 - FastAPI backend with AsyncIOMotorClient (MongoDB).
-- GPT-4o Vision Integration via .
+- VPS Deployment via bash  and .
 
 **key DB schema**
-  - : 
+  - : added  logic.
+  -  (Covoiturage): 
 
 **changes in tech stack**
-  - Replaced Groq SDK with  (GPT-4o) for AI product generation to leverage image vision.
+  - Added Gemini Image Generation (via Emergent LLM Key) to create the Login Page background.
 
 **All files of reference** 
-  -  (Appointments, AI vision endpoint)
-  -  (Dashboard UI, Sidebar)
-  -  (Hero carousel, Tagline)
-  -  (Automobile CTA)
+  -  (Last edited file, needs testing)
+  -  (Last edited file, needs testing)
+  -  (Newly created component)
+  -  (Heavily modified)
 
 **Areas that need refactoring**: 
-  -  remains extremely bloated (~9000 lines). Needs continued extraction.
-  -  is quite large (~1600 lines); child components (like SMS admin, WhatsApp admin) are implemented inline and should be extracted to .
+  -  remains extremely bloated (~9000 lines).
+  -  is becoming quite large and complex with nested tabs and filters.
 
 **key api endpoints**
   - 
@@ -121,39 +106,41 @@ A full-stack e-commerce platform (React + FastAPI + MongoDB). The application fe
   - 
 
 **Critical Info for New Agent** 
-- **Production VPS Setup**: You must  into the VPS to restart the  service and build the frontend using yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. for the latest changes to take effect.
-- **Analytics Reset**: The user specifically requested a total data wipe for analytics (tout à zéro). You will need to carefully drop or empty the relevant MongoDB collections (, , , etc.) to reset the dashboard counters to 0.
-- **Do not debug Orange SMS**: The issue is strictly an account/network block on Orange's side.
+- **VPS Deployment Protocol**: To push changes to production, you MUST use the bash terminal to build the frontend (yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.) and deploy using  and  using the credentials provided in the chat history. Afterward, reload Nginx or restart the backend service if necessary.
+- **Caching**: If you update an image or static asset, you MUST append a cache-buster query string (e.g., ) in the React code, otherwise, the user will not see the changes on their device.
+- **Images**: Do not use generic images. The user has provided highly specific mockups and assets for almost every page.
 
 **documents and test reports created in this job** 
   - 
-  - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - User:  (Agent implemented AI vision and restored tabs, but stopped before restarting VPS and resolving the sidebar scroll).
- - User:  (PENDING - Agent did not reset analytics).
- - User:  (DONE locally).
+ 1. User asked for specific image for Automobile tab. (Done)
+ 2. User asked for specific mockup design for Nouveautés. (Done)
+ 3. User asked for specific mockup design for Promotions (Image 1). (Done)
+ 4. User asked for specific mockup design for Promotions (Image 2). (Done)
+ 5. User asked to implement Subcategories (Climatiseur, Réfrigérateur, etc.) across all categories in the Add Product modal and category tabs. (IN PROGRESS - Code implemented, needs testing and VPS deployment).
 
 **Project Health Check:**
-- Broken: Admin Sidebar (Overflow hides bottom tabs).
+- Broken: Google OAuth (Requires external Google Console configuration).
 - Mocked: Orange SMS (Blocked by provider), WhatsApp Chatbot.
 
 **3rd Party Integrations** 
- - Emergent LLM Key — used via  for GPT-4o Vision (AI Product Generation).
+ - Emergent LLM Key — used via  for Gemini Image Generation (Login background) and GPT-4o Vision.
  - Google Analytics 4 & Facebook Pixel — require User provided keys.
  - Orange Developer SMS — requires User API Key.
+ - Google OAuth — requires User API Key (and Console config).
 
 **Testing status**
-  - Testing agent used after significant changes: YES
+  - Testing agent used after significant changes: NO (The previous agent did a massive UI refactor across 10 pages and ONLY used screenshots. Testing agent MUST be called).
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
-  - Known regressions: Admin sidebar missing scroll.
+  - Known regressions: None yet, but high risk due to lack of E2E testing on the category refactor.
 
 **Credentials to test flow:**
-  - Standard Admin/VPS credentials as provided in earlier workflows.
+  - Standard Admin credentials as established in previous environments.
+  - SSH Credentials for VPS are available in the bash history (do not expose them in external text).
 
 **What agent forgot to execute**
-- Did not reset the analytics/dashboard data to zero as the user explicitly requested.
-- Missed adding  to the  sidebar, making the newly restored tabs inaccessible.
-- Forgot to restart backend/frontend services on the VPS after the final file transfer.</analysis>
+- The agent completely forgot to use the  after rewriting the UI for over 8 major pages (Categories, Login, Promotions, etc.).
+- The agent successfully injected the Subcategory code in the final step but forgot to test it locally before finishing the turn.</analysis>

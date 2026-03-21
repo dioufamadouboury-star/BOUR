@@ -89,9 +89,49 @@ const categories = [
   { id: "electronique", name: "Électronique" },
   { id: "electromenager", name: "Électroménager" },
   { id: "decoration", name: "Décoration & Mobilier" },
-  { id: "beaute", name: "Beauté & Bien-être" },
+  { id: "beaute", name: "Mode & Beauté" },
   { id: "automobile", name: "Automobile" },
+  { id: "immobilier", name: "Immobilier" },
+  { id: "services", name: "Services" },
 ];
+
+const SUBCATEGORIES = {
+  electronique: [
+    "Smartphones", "TV & Écrans", "Ordinateurs & PC", "Tablettes",
+    "Audio & Casques", "Appareils Photo", "Gaming & Consoles",
+    "Accessoires téléphone", "Câbles & Chargeurs", "Montres connectées", "Autres"
+  ],
+  electromenager: [
+    "Réfrigérateurs", "Congélateurs", "Machine à laver", "Sèche-linge",
+    "Climatiseur", "Ventilateur", "Chauffage", "Micro-ondes", "Four",
+    "Hotte aspirante", "Lave-vaisselle", "Mixeur & Blender", "Fer à repasser",
+    "Aspirateur", "Cuisinière", "Chauffe-eau", "Autres"
+  ],
+  decoration: [
+    "Salons & Canapés", "Chambres & Lits", "Lustres & Lampes", "Cadres & Art",
+    "Plantes & Vases", "Coussins & Tapis", "Rideaux", "Miroirs",
+    "Tables & Chaises", "Rangements", "Cuisine & Salle de bain", "Autres"
+  ],
+  beaute: [
+    "Vêtements Femme", "Vêtements Homme", "Vêtements Enfant", "Chaussures",
+    "Sacs & Maroquinerie", "Bijoux & Montres", "Parfums", "Cosmétiques & Maquillage",
+    "Soins cheveux", "Soins corps", "Accessoires mode", "Autres"
+  ],
+  automobile: [
+    "Voitures neuves", "Voitures d'occasion", "Motos & Scooters",
+    "Pièces & Accessoires", "Pneus & Jantes", "Audio auto",
+    "Location courte durée", "Location longue durée", "Covoiturage", "Autres"
+  ],
+  immobilier: [
+    "Appartements", "Villas & Maisons", "Terrains", "Bureaux & Commerces",
+    "Magasins", "Entrepôts", "Location courte durée", "Location longue durée", "Autres"
+  ],
+  services: [
+    "Plomberie", "Électricité", "Climatisation", "Peinture", "Menuiserie",
+    "Nettoyage", "Jardinage", "Déménagement", "Sécurité", "Informatique",
+    "Couture", "Coiffure", "Autres"
+  ],
+};
 
 const defaultColors = [
   { name: "Noir", value: "#000000" },
