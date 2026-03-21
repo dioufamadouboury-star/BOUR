@@ -3,22 +3,27 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import ProductCard from "../components/ProductCard";
-import { Sparkles, Smartphone, Home, Sofa, Car, Building, Star, ArrowRight, Package, Zap, Gift } from "lucide-react";
+import { Sparkles, Smartphone, Home, Sofa, Car, Building, Star, ArrowRight, Package } from "lucide-react";
 import SEO from "../components/SEO";
-import CategoryHero from "../components/CategoryHero";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-const HERO_IMAGE = "https://images.pexels.com/photos/36285541/pexels-photo-36285541.jpeg?auto=compress&cs=tinysrgb&w=1400";
-
 const CATEGORY_TABS = [
-  { id: "all", label: "Tous", icon: Star, color: "from-amber-500 to-yellow-500" },
-  { id: "electronique", label: "Électronique", icon: Smartphone, color: "from-blue-500 to-indigo-600" },
-  { id: "electromenager", label: "Électroménager", icon: Home, color: "from-orange-500 to-red-500" },
-  { id: "decoration", label: "Décoration", icon: Sofa, color: "from-emerald-500 to-teal-600" },
-  { id: "beaute", label: "Mode & Beauté", icon: Sparkles, color: "from-pink-500 to-rose-600" },
-  { id: "automobile", label: "Automobile", icon: Car, color: "from-slate-500 to-gray-600" },
-  { id: "immobilier", label: "Immobilier", icon: Building, color: "from-cyan-500 to-blue-600" },
+  { id: "all", label: "Tous", icon: Star },
+  { id: "electronique", label: "Électronique", icon: Smartphone },
+  { id: "electromenager", label: "Électroménager", icon: Home },
+  { id: "decoration", label: "Décoration", icon: Sofa },
+  { id: "beaute", label: "Mode & Beauté", icon: Sparkles },
+  { id: "automobile", label: "Automobile", icon: Car },
+  { id: "immobilier", label: "Immobilier", icon: Building },
+];
+
+const CATEGORY_CARDS = [
+  { id: "electronique", label: "Électronique", image: "/assets/images/hero_electronique.jpg?v=2", href: "/category/electronique" },
+  { id: "electromenager", label: "Électroménager", image: "/assets/images/hero_electromenager.jpg?v=2", href: "/category/electromenager" },
+  { id: "decoration", label: "Décoration", image: "/assets/images/hero_decoration.jpg?v=2", href: "/category/decoration" },
+  { id: "beaute", label: "Mode & Beauté", image: "/assets/images/hero_beaute.jpg?v=2", href: "/category/beaute" },
+  { id: "automobile", label: "Automobile", image: "/assets/images/hero_automobile.jpg?v=2", href: "/category/automobile" },
 ];
 
 export default function NewProductsPage() {
@@ -26,9 +31,7 @@ export default function NewProductsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  useEffect(() => { fetchProducts(); }, []);
 
   const fetchProducts = async (category) => {
     setLoading(true);
@@ -37,128 +40,108 @@ export default function NewProductsPage() {
       const catParam = cat !== "all" ? `&category=${cat}` : "";
       const response = await axios.get(`${API_URL}/api/products?is_new=true&limit=50${catParam}`);
       setProducts(response.data);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error(error); }
+    finally { setLoading(false); }
   };
 
-  const handleTabChange = (tabId) => {
-    setActiveTab(tabId);
-    fetchProducts(tabId);
-  };
-
+  const handleTabChange = (tabId) => { setActiveTab(tabId); fetchProducts(tabId); };
   const activeTabInfo = CATEGORY_TABS.find(t => t.id === activeTab) || CATEGORY_TABS[0];
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" data-testid="new-products-page">
-      <SEO
-        title="Nouveautés - Derniers Produits"
-        description="Découvrez les derniers produits arrivés chez GROUPE YAMA+. Nouveautés électronique, décoration, beauté au Sénégal. Livraison rapide à Dakar."
-        url="/nouveautes"
-        keywords={["nouveautés Dakar", "nouveaux produits Sénégal", "dernières arrivées", "nouveauté tech Dakar"]}
-      />
+    <main className="min-h-screen" data-testid="new-products-page" style={{ background: "#0D0D5B" }}>
+      <SEO title="Nouveautés - Derniers Produits" description="Découvrez les derniers produits chez GROUPE YAMA+" url="/nouveautes" />
 
-      {/* Hero Section */}
-      <CategoryHero
-        image="/assets/images/hero_nouveautes.jpg?v=2"
-        gradient="from-indigo-950/90 via-blue-950/70 to-indigo-950/85"
-        accent="text-amber-400"
-        badge="GROUPE YAMA+ Nouveautés"
-        title="Fraîchement Arrivés"
-        subtitle="Électronique, Mode, Décoration, Automobile, Immobilier — tout ce qui est nouveau chez YAMA+"
-        filters={CATEGORY_TABS.map(t => ({ id: t.id, label: t.label, icon: t.icon }))}
-        activeFilter={activeTab}
-        onFilterChange={(id) => handleTabChange(id)}
-      />
+      {/* ═══ HERO — Maquette fidèle ═══ */}
+      <div className="relative overflow-hidden pt-28 pb-10 px-6" style={{ background: "linear-gradient(160deg, #0D0D6B 0%, #1a1a8a 40%, #0D0D55 100%)" }}>
+        {/* Subtle dot pattern */}
+        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "28px 28px" }} />
 
-      {/* Products Grid */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-8">
+        <div className="relative max-w-5xl mx-auto text-center">
+          {/* Badge */}
+          <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "#F5A623" }}>
+            GROUPE YAMA+ NOUVEAUTÉS
+          </motion.p>
+
+          {/* Title */}
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="text-5xl md:text-6xl font-extrabold text-white mb-4 leading-tight">
+            Fraîchement Arrivés
+          </motion.h1>
+
+          {/* Subtitle */}
+          <motion.p initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className="text-white/60 text-base md:text-lg max-w-2xl mx-auto mb-10">
+            Électronique, Mode, Décoration, Automobile, Immobilier<br />— tout ce qui est nouveau chez YAMA+
+          </motion.p>
+
+          {/* Category Cards */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+            className="grid grid-cols-5 gap-3 mb-10">
+            {CATEGORY_CARDS.map((cat, i) => (
+              <motion.button key={cat.id} whileHover={{ scale: 1.04 }} transition={{ type: "spring", stiffness: 300 }}
+                onClick={() => handleTabChange(cat.id)}
+                className={`flex flex-col items-center gap-2 group cursor-pointer ${activeTab === cat.id ? "opacity-100" : "opacity-80 hover:opacity-100"}`}>
+                <div className="w-full aspect-square rounded-2xl overflow-hidden border-2 transition-all"
+                  style={{ borderColor: activeTab === cat.id ? "#F5A623" : "transparent" }}>
+                  <img src={cat.image} alt={cat.label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400" />
+                </div>
+                <span className="text-white font-semibold text-sm">{cat.label}</span>
+              </motion.button>
+            ))}
+          </motion.div>
+
+          {/* Filter pills */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+            className="flex justify-center gap-2 flex-wrap">
+            {CATEGORY_TABS.map(tab => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button key={tab.id} onClick={() => handleTabChange(tab.id)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all"
+                  style={{
+                    background: active ? "white" : "rgba(255,255,255,0.1)",
+                    color: active ? "#0D0D5B" : "rgba(255,255,255,0.8)",
+                    border: active ? "none" : "1px solid rgba(255,255,255,0.2)"
+                  }}>
+                  <Icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </motion.div>
+        </div>
+      </div>
+
+      {/* ═══ Products Grid ═══ */}
+      <div className="max-w-7xl mx-auto px-4 py-10">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-bold">{activeTabInfo.label}</h2>
-            <p className="text-white/50">{products.length} produit{products.length > 1 ? "s" : ""}</p>
+            <h2 className="text-xl font-bold text-white">{activeTabInfo.label}</h2>
+            <p className="text-white/40 text-sm">{products.length} produit{products.length !== 1 ? "s" : ""}</p>
           </div>
         </div>
 
         <AnimatePresence mode="wait">
-          <motion.div key={activeTab} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+          <motion.div key={activeTab} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="aspect-[4/5] rounded-3xl bg-white/5 animate-pulse" />
-                ))}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+                {[...Array(8)].map((_, i) => <div key={i} className="aspect-[4/5] rounded-3xl bg-white/5 animate-pulse" />)}
               </div>
             ) : products.length === 0 ? (
               <div className="text-center py-20">
-                <Package className="w-20 h-20 mx-auto text-white/20 mb-4" />
-                <p className="text-white/50 text-xl">Pas de nouveautés dans cette catégorie</p>
-                <p className="text-white/30 mt-2">Revenez bientôt pour de nouvelles arrivées</p>
+                <Package className="w-16 h-16 mx-auto text-white/20 mb-4" />
+                <p className="text-white/50 text-lg">Aucune nouveauté dans cette catégorie</p>
+                <p className="text-white/30 text-sm mt-1">Revenez bientôt pour de nouvelles arrivées</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {products.map((product, index) => (
-                  <ProductCard key={product.product_id} product={product} index={index} />
-                ))}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+                {products.map((product, i) => <ProductCard key={product.product_id} product={product} index={i} />)}
               </div>
             )}
           </motion.div>
         </AnimatePresence>
-      </div>
-
-      {/* Services Showcase */}
-      <div className="max-w-7xl mx-auto px-4 pb-12">
-        <h2 className="text-2xl font-bold text-white mb-8 text-center">
-          Tout ce que <span className="bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">YAMA+</span> vous propose
-        </h2>
-        <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {[
-            { icon: Smartphone, title: "Électronique", desc: "Smartphones, PC, Gadgets", href: "/category/electronique", color: "from-blue-500 to-indigo-600" },
-            { icon: Home, title: "Électroménager", desc: "Appareils du quotidien", href: "/category/electromenager", color: "from-orange-500 to-red-500" },
-            { icon: Sofa, title: "Décoration", desc: "Design et confort", href: "/category/decoration", color: "from-emerald-500 to-teal-600" },
-            { icon: Sparkles, title: "Mode & Beauté", desc: "Mode, soins, cosmétiques", href: "/category/beaute", color: "from-pink-500 to-rose-600" },
-            { icon: Car, title: "Automobile", desc: "Véhicules, accessoires", href: "/category/automobile", color: "from-slate-500 to-gray-600" },
-            { icon: Building, title: "Immobilier", desc: "Location et vente", href: "/immobilier", color: "from-cyan-500 to-blue-600" },
-          ].map((svc, i) => (
-            <Link key={i} to={svc.href}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-                className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-5 text-center hover:border-amber-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10"
-              >
-                <div className={`w-12 h-12 mx-auto mb-3 bg-gradient-to-r ${svc.color} rounded-xl flex items-center justify-center`}>
-                  <svc.icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-white font-semibold text-sm mb-1">{svc.title}</h3>
-                <p className="text-white/40 text-xs">{svc.desc}</p>
-              </motion.div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Bottom CTA */}
-      <div className="max-w-6xl mx-auto px-4 pb-20">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 to-yellow-500 p-8 md:p-12"
-        >
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "32px 32px" }} />
-          <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">Ne manquez rien !</h3>
-              <p className="text-white/90">Inscrivez-vous pour être alerté des nouvelles arrivées</p>
-            </div>
-            <Link to="/contact" className="flex items-center gap-3 px-8 py-4 bg-white text-slate-900 rounded-2xl font-bold hover:bg-white/90 transition-all hover:shadow-2xl">
-              Nous contacter <ArrowRight className="w-5 h-5" />
-            </Link>
-          </div>
-        </motion.div>
       </div>
     </main>
   );
