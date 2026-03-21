@@ -161,7 +161,7 @@ export default function ServicesPage() {
 
       {/* Hero Section with enhanced animations */}
       <section className="relative text-white overflow-hidden" style={{ minHeight: "420px" }}>
-        <img src="/assets/images/hero_services.jpg" alt="Services" className="absolute inset-0 w-full h-full object-cover" />
+        <img src="/assets/images/hero_services.jpg?v=2" alt="Services" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/65 to-black/90" />
         <motion.div 
           className="absolute inset-0 opacity-20"

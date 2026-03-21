@@ -62,7 +62,7 @@ export default function NewProductsPage() {
 
       {/* Hero Section */}
       <CategoryHero
-        image="/assets/images/hero_nouveautes.jpg"
+        image="/assets/images/hero_nouveautes.jpg?v=2"
         gradient="from-indigo-950/90 via-blue-950/70 to-indigo-950/85"
         accent="text-amber-400"
         badge="GROUPE YAMA+ Nouveautés"

@@ -61,7 +61,7 @@ export default function BlogPage() {
 
       {/* Hero Section */}
       <CategoryHero
-        image="/assets/images/hero_blog.jpg"
+        image="/assets/images/hero_blog.jpg?v=2"
         gradient="from-gray-950/90 via-gray-900/70 to-gray-950/85"
         accent="text-amber-400"
         badge="GROUPE YAMA+ Blog"

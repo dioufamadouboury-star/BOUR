@@ -25,7 +25,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 // ─── Category Hero Config ───────────────────────────────────────────────
 const CATEGORY_HERO = {
   electronique: {
-    image: "/assets/images/hero_electronique.jpg",
+    image: "/assets/images/hero_electronique.jpg?v=2",
     gradient: "from-slate-900/90 via-blue-950/70 to-slate-900/80",
     accent: "text-blue-400",
     title: "Électronique & High-Tech",
@@ -39,7 +39,7 @@ const CATEGORY_HERO = {
     ],
   },
   electromenager: {
-    image: "/assets/images/hero_electromenager.jpg",
+    image: "/assets/images/hero_electromenager.jpg?v=2",
     gradient: "from-zinc-900/90 via-gray-800/70 to-zinc-900/80",
     accent: "text-cyan-400",
     title: "Électroménager",
@@ -52,7 +52,7 @@ const CATEGORY_HERO = {
     ],
   },
   decoration: {
-    image: "/assets/images/hero_decoration.jpg",
+    image: "/assets/images/hero_decoration.jpg?v=2",
     gradient: "from-stone-900/90 via-amber-950/60 to-stone-900/80",
     accent: "text-amber-400",
     title: "Décoration & Mobilier",
@@ -68,7 +68,7 @@ const CATEGORY_HERO = {
     ],
   },
   beaute: {
-    image: "/assets/images/hero_beaute.jpg",
+    image: "/assets/images/hero_beaute.jpg?v=2",
     gradient: "from-purple-950/90 via-pink-900/60 to-purple-950/80",
     accent: "text-pink-400",
     title: "Mode & Beauté",
@@ -82,7 +82,7 @@ const CATEGORY_HERO = {
     ],
   },
   mode: {
-    image: "/assets/images/hero_beaute.jpg",
+    image: "/assets/images/hero_beaute.jpg?v=2",
     gradient: "from-purple-950/90 via-pink-900/60 to-purple-950/80",
     accent: "text-pink-400",
     title: "Mode & Beauté",
@@ -95,7 +95,7 @@ const CATEGORY_HERO = {
     ],
   },
   automobile: {
-    image: "/assets/images/hero_automobile.jpg",
+    image: "/assets/images/hero_automobile.jpg?v=2",
     gradient: "from-gray-950/90 via-blue-950/60 to-gray-950/85",
     accent: "text-blue-400",
     title: "Automobile",

@@ -62,7 +62,7 @@ export default function PromotionsPage() {
 
       {/* Hero Section */}
       <CategoryHero
-        image="/assets/images/hero_promotions.jpg"
+        image="/assets/images/hero_promotions.jpg?v=2"
         gradient="from-red-950/90 via-orange-950/70 to-red-950/85"
         accent="text-orange-400"
         badge="Offres Limitées"
