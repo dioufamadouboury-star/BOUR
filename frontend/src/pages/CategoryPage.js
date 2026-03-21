@@ -15,11 +15,99 @@ import {
   RotateCcw,
   Grid3X3,
   LayoutGrid,
-  ArrowUpDown
+  ArrowUpDown,
+  Car, DollarSign, KeyRound, Navigation, Smartphone, Tv, Cpu, Sofa, Lamp, Frame, Flower, Sparkles, Shirt, Watch, Droplets
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// ─── Category Hero Config ───────────────────────────────────────────────
+const CATEGORY_HERO = {
+  electronique: {
+    image: "/assets/images/hero_electronique.jpg",
+    gradient: "from-slate-900/90 via-blue-950/70 to-slate-900/80",
+    accent: "text-blue-400",
+    title: "Électronique & High-Tech",
+    subtitle: "Smartphones, TV, ordinateurs et accessoires — la technologie à votre portée",
+    filters: [
+      { id: "all", label: "Tous", icon: Cpu },
+      { id: "smartphones", label: "Smartphones", icon: Smartphone },
+      { id: "tv", label: "TV & Écrans", icon: Tv },
+      { id: "informatique", label: "Informatique", icon: Cpu },
+      { id: "accessoires", label: "Accessoires", icon: Watch },
+    ],
+  },
+  electromenager: {
+    image: "/assets/images/hero_electronique.jpg",
+    gradient: "from-zinc-900/90 via-gray-800/70 to-zinc-900/80",
+    accent: "text-cyan-400",
+    title: "Électroménager",
+    subtitle: "Réfrigérateurs, machines à laver, climatiseurs — équipez votre maison",
+    filters: [
+      { id: "all", label: "Tous", icon: Cpu },
+      { id: "cuisine", label: "Cuisine", icon: Cpu },
+      { id: "lavage", label: "Lavage", icon: Cpu },
+      { id: "climatisation", label: "Climatisation", icon: Cpu },
+    ],
+  },
+  decoration: {
+    image: "/assets/images/hero_decoration.jpg",
+    gradient: "from-stone-900/90 via-amber-950/60 to-stone-900/80",
+    accent: "text-amber-400",
+    title: "Décoration & Mobilier",
+    subtitle: "Sublimez votre intérieur avec nos pièces décoratives uniques",
+    filters: [
+      { id: "all", label: "Tous", icon: Sofa },
+      { id: "salons", label: "Salons", icon: Sofa },
+      { id: "chambres", label: "Chambres", icon: Sofa },
+      { id: "lustres", label: "Lustres", icon: Lamp },
+      { id: "cadres", label: "Cadres & Art", icon: Frame },
+      { id: "plantes", label: "Plantes & Vases", icon: Flower },
+      { id: "accessoires", label: "Accessoires", icon: Sparkles },
+    ],
+  },
+  beaute: {
+    image: "/assets/images/hero_beaute.jpg",
+    gradient: "from-purple-950/90 via-pink-900/60 to-purple-950/80",
+    accent: "text-pink-400",
+    title: "Mode & Beauté",
+    subtitle: "Vêtements, parfums, cosmétiques et accessoires — exprimez votre style",
+    filters: [
+      { id: "all", label: "Tous", icon: Sparkles },
+      { id: "vetements", label: "Vêtements", icon: Shirt },
+      { id: "parfums", label: "Parfums", icon: Droplets },
+      { id: "cosmetiques", label: "Cosmétiques", icon: Sparkles },
+      { id: "accessoires", label: "Accessoires", icon: Watch },
+    ],
+  },
+  mode: {
+    image: "/assets/images/hero_beaute.jpg",
+    gradient: "from-purple-950/90 via-pink-900/60 to-purple-950/80",
+    accent: "text-pink-400",
+    title: "Mode & Beauté",
+    subtitle: "Vêtements, parfums, cosmétiques et accessoires — exprimez votre style",
+    filters: [
+      { id: "all", label: "Tous", icon: Sparkles },
+      { id: "vetements", label: "Vêtements", icon: Shirt },
+      { id: "parfums", label: "Parfums", icon: Droplets },
+      { id: "accessoires", label: "Accessoires", icon: Watch },
+    ],
+  },
+  automobile: {
+    image: "/assets/images/hero_automobile.jpg",
+    gradient: "from-gray-950/90 via-blue-950/60 to-gray-950/85",
+    accent: "text-blue-400",
+    title: "Automobile",
+    subtitle: "Achat, location de véhicules et covoiturage — roulez avec YAMA+",
+    filters: [
+      { id: "vente", label: "Vente voiture", icon: DollarSign },
+      { id: "location", label: "Location", icon: KeyRound },
+      { id: "covoiturage", label: "Covoiturage", icon: Navigation },
+    ],
+  },
+};
+
 
 const priceRanges = [
   { id: "all", label: "Tous les prix", min: 0, max: Infinity },
@@ -62,6 +150,12 @@ export default function CategoryPage() {
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [gridSize, setGridSize] = useState("normal"); // "normal" or "compact"
+  const [activeHeroFilter, setActiveHeroFilter] = useState("all");
+  const [trips, setTrips] = useState([]);
+  const [tripsLoading, setTripsLoading] = useState(false);
+
+  const heroConfig = CATEGORY_HERO[categoryId];
+  const isAutoTab = categoryId === "automobile";
   
   // Filter states
   const [selectedPriceRange, setSelectedPriceRange] = useState("all");
@@ -111,9 +205,18 @@ export default function CategoryPage() {
         setLoading(false);
       }
     };
-
     fetchProducts();
+    // Reset hero filter on category change
+    setActiveHeroFilter(categoryId === "automobile" ? "vente" : "all");
   }, [categoryId]);
+
+  // Fetch trips for covoiturage
+  useEffect(() => {
+    if (categoryId === "automobile" && activeHeroFilter === "covoiturage") {
+      setTripsLoading(true);
+      axios.get(`${API_URL}/api/trips`).then(r => setTrips(r.data.trips || [])).finally(() => setTripsLoading(false));
+    }
+  }, [categoryId, activeHeroFilter]);
 
   // Apply filters and sorting
   const filteredProducts = useMemo(() => {
@@ -245,13 +348,105 @@ export default function CategoryPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#F5F5F7] dark:bg-black pt-24 pb-16">
+    <main className="min-h-screen bg-[#F5F5F7] dark:bg-black pb-16">
       <SEO 
         title={`${getCategoryName(categoryId)} - YAMA+`}
         description={`Découvrez notre sélection de produits ${getCategoryName(categoryId)}`}
       />
 
-      <div className="container-lumina">
+      {/* ─── CATEGORY HERO (dark themed) ─── */}
+      {heroConfig && (
+        <div className="relative w-full h-[400px] md:h-[480px] overflow-hidden">
+          <img
+            src={heroConfig.image}
+            alt={heroConfig.title}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className={`absolute inset-0 bg-gradient-to-b ${heroConfig.gradient}`} />
+          {/* Content */}
+          <div className="relative z-10 h-full flex flex-col justify-between px-6 md:px-16 py-10 pt-28">
+            <div>
+              <motion.p
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className={`text-xs font-semibold tracking-widest uppercase mb-2 ${heroConfig.accent}`}
+              >
+                GROUPE YAMA+
+              </motion.p>
+              <motion.h1
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="text-3xl md:text-5xl font-bold text-white mb-3 max-w-xl leading-tight"
+              >
+                {heroConfig.title}
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="text-white/60 text-sm md:text-base max-w-lg"
+              >
+                {heroConfig.subtitle}
+              </motion.p>
+            </div>
+
+            {/* Filter tabs */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="flex gap-2 flex-wrap"
+            >
+              {heroConfig.filters.map(f => {
+                const Icon = f.icon;
+                const active = activeHeroFilter === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => setActiveHeroFilter(f.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
+                      active
+                        ? "bg-white text-black shadow-lg"
+                        : "bg-white/10 backdrop-blur text-white border border-white/20 hover:bg-white/20"
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${active ? "text-black" : heroConfig.accent}`} />
+                    {f.label}
+                  </button>
+                );
+              })}
+            </motion.div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── COVOITURAGE TAB (Automobile) ─── */}
+      {isAutoTab && activeHeroFilter === "covoiturage" && (
+        <div className="container-lumina py-10">
+          <h2 className="text-2xl font-bold mb-6">Trajets disponibles</h2>
+          {tripsLoading ? (
+            <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>
+          ) : trips.length === 0 ? (
+            <div className="text-center py-16 bg-white dark:bg-[#1C1C1E] rounded-2xl">
+              <Car className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+              <p className="font-semibold">Aucun trajet disponible pour le moment</p>
+              <p className="text-sm text-gray-500 mt-1">Revenez bientôt ou contactez-nous au 78 382 75 75</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {trips.map(trip => (
+                <TripPublicCard key={trip.trip_id} trip={trip} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── PRODUCTS SECTION ─── */}
+      {(!isAutoTab || activeHeroFilter !== "covoiturage") && (
+      <div className={`container-lumina ${heroConfig ? "pt-8" : "pt-24"}`}>
         {/* Flash Sales Banner */}
         <FlashSalesBanner />
 
@@ -523,8 +718,7 @@ export default function CategoryPage() {
           </div>
         </div>
       </div>
-
-      {/* Mobile Filters Modal */}
+      )} {/* End products section condition */}
       <AnimatePresence>
         {showFilters && (
           <motion.div
@@ -651,3 +845,46 @@ export default function CategoryPage() {
     </main>
   );
 }
+
+// ─── TripPublicCard ─────────────────────────────────────────────────────
+function TripPublicCard({ trip }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 overflow-hidden hover:shadow-xl transition-all group"
+    >
+      {trip.vehicle_image && (
+        <div className="h-44 overflow-hidden">
+          <img src={trip.vehicle_image} alt={trip.vehicle_model} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        </div>
+      )}
+      <div className="p-5">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h3 className="font-bold text-base">{trip.route_label || `${trip.route_from} → ${trip.route_to}`}</h3>
+            {trip.vehicle_model && <p className="text-sm text-muted-foreground">{trip.vehicle_model}</p>}
+          </div>
+          <span className="text-lg font-bold text-blue-600">
+            {trip.price_per_seat?.toLocaleString("fr-FR")} <span className="text-xs font-normal">FCFA</span>
+          </span>
+        </div>
+        <div className="flex gap-4 text-xs text-muted-foreground mb-4">
+          {trip.departure_time && <span>Départ : {trip.departure_time}</span>}
+          <span>{trip.total_seats} places</span>
+          {trip.driver_name && <span>Chauffeur : {trip.driver_name}</span>}
+        </div>
+        {trip.notes && <p className="text-xs text-muted-foreground mb-4">{trip.notes}</p>}
+        <a
+          href={`https://wa.me/221783827575?text=Bonjour, je souhaite réserver le trajet ${trip.route_label || trip.route_from + ' → ' + trip.route_to}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
+        >
+          <Navigation className="w-4 h-4" /> Réserver via WhatsApp
+        </a>
+      </div>
+    </motion.div>
+  );
+}
+
