@@ -33,15 +33,15 @@ const SUBCATEGORIES = {
     "Accessoires téléphone", "Câbles & Chargeurs", "Montres connectées", "Autres"
   ],
   electromenager: [
-    "Réfrigérateurs", "Congélateurs", "Machine à laver", "Sèche-linge",
-    "Climatiseur", "Ventilateur", "Chauffage", "Micro-ondes", "Four",
-    "Hotte aspirante", "Lave-vaisselle", "Mixeur & Blender", "Fer à repasser",
-    "Aspirateur", "Cuisinière", "Chauffe-eau", "Autres"
+    "Climatiseur", "Réfrigérateur", "Congélateur", "Chauffage", 
+    "Micro-ondes", "Ventilateur", "Machine à laver", "Sèche-linge",
+    "Four", "Cuisinière", "Lave-vaisselle", "Aspirateur", 
+    "Mixeur & Blender", "Fer à repasser", "Chauffe-eau", "Autres"
   ],
   decoration: [
-    "Salons & Canapés", "Chambres & Lits", "Lustres & Lampes", "Cadres & Art",
-    "Plantes & Vases", "Coussins & Tapis", "Rideaux", "Miroirs",
-    "Tables & Chaises", "Rangements", "Cuisine & Salle de bain", "Autres"
+    "Salons", "Chambres à coucher", "Literie & Matelas", "Table à manger",
+    "Lustre", "Tableau", "Mobilier bureau", "Canapés", "Armoires & Rangements",
+    "Tapis & Coussins", "Rideaux", "Miroirs", "Plantes & Vases", "Autres"
   ],
   beaute: [
     "Vêtements Femme", "Vêtements Homme", "Vêtements Enfant", "Chaussures",

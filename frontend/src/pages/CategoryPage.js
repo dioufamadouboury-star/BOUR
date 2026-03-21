@@ -50,17 +50,16 @@ const CATEGORY_HERO = {
     subtitle: "Réfrigérateurs, machines à laver, climatiseurs — équipez votre maison",
     filters: [
       { id: "all", label: "Tous", icon: Cpu },
-      { id: "Réfrigérateurs", label: "Réfrigérateurs", icon: Cpu },
-      { id: "Congélateurs", label: "Congélateurs", icon: Cpu },
-      { id: "Machine à laver", label: "Machine à laver", icon: Cpu },
       { id: "Climatiseur", label: "Climatiseur", icon: Cpu },
-      { id: "Ventilateur", label: "Ventilateur", icon: Cpu },
+      { id: "Réfrigérateur", label: "Réfrigérateur", icon: Cpu },
+      { id: "Congélateur", label: "Congélateur", icon: Cpu },
       { id: "Chauffage", label: "Chauffage", icon: Cpu },
       { id: "Micro-ondes", label: "Micro-ondes", icon: Cpu },
+      { id: "Ventilateur", label: "Ventilateur", icon: Cpu },
+      { id: "Machine à laver", label: "Machine à laver", icon: Cpu },
+      { id: "Aspirateur", label: "Aspirateur", icon: Cpu },
       { id: "Four", label: "Four", icon: Cpu },
       { id: "Cuisinière", label: "Cuisinière", icon: Cpu },
-      { id: "Aspirateur", label: "Aspirateur", icon: Cpu },
-      { id: "Autres", label: "Autres", icon: Cpu },
     ],
   },
   decoration: {
@@ -71,12 +70,14 @@ const CATEGORY_HERO = {
     subtitle: "Sublimez votre intérieur avec nos pièces décoratives uniques",
     filters: [
       { id: "all", label: "Tous", icon: Sofa },
-      { id: "salons", label: "Salons", icon: Sofa },
-      { id: "chambres", label: "Chambres", icon: Sofa },
-      { id: "lustres", label: "Lustres", icon: Lamp },
-      { id: "cadres", label: "Cadres & Art", icon: Frame },
-      { id: "plantes", label: "Plantes & Vases", icon: Flower },
-      { id: "accessoires", label: "Accessoires", icon: Sparkles },
+      { id: "Salons", label: "Salons", icon: Sofa },
+      { id: "Chambres à coucher", label: "Chambres", icon: Sofa },
+      { id: "Literie & Matelas", label: "Literie", icon: Sofa },
+      { id: "Table à manger", label: "Table à manger", icon: Sofa },
+      { id: "Lustre", label: "Lustre", icon: Lamp },
+      { id: "Tableau", label: "Tableau", icon: Frame },
+      { id: "Mobilier bureau", label: "Bureau", icon: Sofa },
+      { id: "Tapis & Coussins", label: "Tapis", icon: Sparkles },
     ],
   },
   beaute: {
@@ -87,10 +88,13 @@ const CATEGORY_HERO = {
     subtitle: "Vêtements, parfums, cosmétiques et accessoires — exprimez votre style",
     filters: [
       { id: "all", label: "Tous", icon: Sparkles },
-      { id: "vetements", label: "Vêtements", icon: Shirt },
-      { id: "parfums", label: "Parfums", icon: Droplets },
-      { id: "cosmetiques", label: "Cosmétiques", icon: Sparkles },
-      { id: "accessoires", label: "Accessoires", icon: Watch },
+      { id: "Vêtements Femme", label: "Femme", icon: Shirt },
+      { id: "Vêtements Homme", label: "Homme", icon: Shirt },
+      { id: "Chaussures", label: "Chaussures", icon: Shirt },
+      { id: "Parfums", label: "Parfums", icon: Droplets },
+      { id: "Cosmétiques & Maquillage", label: "Cosmétiques", icon: Sparkles },
+      { id: "Bijoux & Montres", label: "Bijoux", icon: Watch },
+      { id: "Sacs & Maroquinerie", label: "Sacs", icon: Sparkles },
     ],
   },
   mode: {
@@ -101,9 +105,11 @@ const CATEGORY_HERO = {
     subtitle: "Vêtements, parfums, cosmétiques et accessoires — exprimez votre style",
     filters: [
       { id: "all", label: "Tous", icon: Sparkles },
-      { id: "vetements", label: "Vêtements", icon: Shirt },
-      { id: "parfums", label: "Parfums", icon: Droplets },
-      { id: "accessoires", label: "Accessoires", icon: Watch },
+      { id: "Vêtements Femme", label: "Femme", icon: Shirt },
+      { id: "Vêtements Homme", label: "Homme", icon: Shirt },
+      { id: "Chaussures", label: "Chaussures", icon: Shirt },
+      { id: "Parfums", label: "Parfums", icon: Droplets },
+      { id: "Accessoires mode", label: "Accessoires", icon: Watch },
     ],
   },
   automobile: {
@@ -234,6 +240,11 @@ export default function CategoryPage() {
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
+    // Filter by subcategory (Hero filter tabs)
+    if (activeHeroFilter && activeHeroFilter !== "all" && activeHeroFilter !== "vente" && activeHeroFilter !== "location" && activeHeroFilter !== "covoiturage") {
+      result = result.filter(p => p.subcategory === activeHeroFilter);
+    }
+
     // Filter by price range
     if (selectedPriceRange !== "all") {
       const range = priceRanges.find(r => r.id === selectedPriceRange);
@@ -294,7 +305,7 @@ export default function CategoryPage() {
     }
 
     return result;
-  }, [products, selectedPriceRange, selectedColors, selectedSizes, selectedBrands, sortBy, onlyInStock, onlyPromo]);
+  }, [products, selectedPriceRange, selectedColors, selectedSizes, selectedBrands, sortBy, onlyInStock, onlyPromo, activeHeroFilter]);
 
   // Count active filters
   const activeFiltersCount = useMemo(() => {
