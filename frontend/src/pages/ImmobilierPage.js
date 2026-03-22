@@ -16,6 +16,7 @@ const HERO_FILTERS = [
   { id: "rent_short", label: "Courte durée", icon: Star },
   { id: "rent_long", label: "Longue durée", icon: Building },
   { id: "sale", label: "Vente", icon: Landmark },
+  { id: "terrain", label: "Terrain", icon: Trees },
 ];
 
 const LISTING_TYPES = [
@@ -68,7 +69,14 @@ export default function ImmobilierPage() {
       const params = new URLSearchParams();
       const lt = listingType !== undefined ? listingType : activeTab;
       const c = city !== undefined ? city : cityFilter;
-      if (lt !== "all") params.append("listing_type", lt);
+      
+      // Handle terrain filter separately (it's a property_type, not listing_type)
+      if (lt === "terrain") {
+        params.append("property_type", "land");
+      } else if (lt !== "all") {
+        params.append("listing_type", lt);
+      }
+      
       if (c) params.append("city", c);
       params.append("sort", "newest");
       params.append("limit", "20");
