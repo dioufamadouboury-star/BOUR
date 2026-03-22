@@ -47,7 +47,10 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const WHATSAPP_NUMBER = "+221783827575";
 
 // Categories that allow visit appointments
-const APPOINTMENT_CATEGORIES = ["automobile", "mobilier", "electromenager", "automobiles", "meubles"];
+const APPOINTMENT_CATEGORIES = ["automobile", "mobilier", "electromenager", "automobiles", "meubles", "immobilier", "decoration"];
+
+// Categories that should NOT have add to cart (high-value items requiring consultation)
+const NO_CART_CATEGORIES = ["automobile", "automobiles", "immobilier"];
 
 export default function ProductPage() {
   const { productId } = useParams();
@@ -374,34 +377,49 @@ export default function ProductPage() {
 
               {/* Actions */}
               <div className="flex flex-col gap-3 mb-8">
-                {product.stock === 0 && !product.is_on_order ? (
+                {/* Add to Cart - NOT for vehicles/immobilier */}
+                {!NO_CART_CATEGORIES.includes(product.category?.toLowerCase()) && (
+                  product.stock === 0 && !product.is_on_order ? (
+                    <button
+                      onClick={() => setShowNotifyModal(true)}
+                      className="btn-primary w-full justify-center py-4 text-base bg-orange-500 border-orange-500 hover:bg-orange-600"
+                      data-testid="notify-stock-btn"
+                    >
+                      <Bell className="w-5 h-5" />
+                      Prévenez-moi quand disponible
+                    </button>
+                  ) : product.is_on_order ? (
+                    <button
+                      onClick={handleAddToCart}
+                      disabled={cartLoading}
+                      className="btn-primary w-full justify-center py-4 text-base bg-orange-500 border-orange-500 hover:bg-orange-600"
+                      data-testid="add-to-cart-btn"
+                    >
+                      <ShoppingBag className="w-5 h-5" />
+                      Commander ce produit
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleAddToCart}
+                      disabled={cartLoading}
+                      className="btn-primary w-full justify-center py-4 text-base"
+                      data-testid="add-to-cart-btn"
+                    >
+                      <ShoppingBag className="w-5 h-5" />
+                      Ajouter au panier
+                    </button>
+                  )
+                )}
+
+                {/* Appointment Button - PROMINENT for vehicles/immobilier */}
+                {APPOINTMENT_CATEGORIES.includes(product.category?.toLowerCase()) && (
                   <button
-                    onClick={() => setShowNotifyModal(true)}
-                    className="btn-primary w-full justify-center py-4 text-base bg-orange-500 border-orange-500 hover:bg-orange-600"
-                    data-testid="notify-stock-btn"
+                    onClick={() => setShowAppointmentModal(true)}
+                    className="btn-primary w-full justify-center py-4 text-base bg-gradient-to-r from-blue-600 to-indigo-600 border-0 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+                    data-testid="appointment-btn"
                   >
-                    <Bell className="w-5 h-5" />
-                    Prévenez-moi quand disponible
-                  </button>
-                ) : product.is_on_order ? (
-                  <button
-                    onClick={handleAddToCart}
-                    disabled={cartLoading}
-                    className="btn-primary w-full justify-center py-4 text-base bg-orange-500 border-orange-500 hover:bg-orange-600"
-                    data-testid="add-to-cart-btn"
-                  >
-                    <ShoppingBag className="w-5 h-5" />
-                    Commander ce produit
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleAddToCart}
-                    disabled={cartLoading}
-                    className="btn-primary w-full justify-center py-4 text-base"
-                    data-testid="add-to-cart-btn"
-                  >
-                    <ShoppingBag className="w-5 h-5" />
-                    Ajouter au panier
+                    <Calendar className="w-5 h-5" />
+                    Prendre rendez-vous pour une visite
                   </button>
                 )}
 
@@ -426,18 +444,6 @@ export default function ProductPage() {
                   <Heart className={cn("w-5 h-5", inWishlist && "fill-current")} />
                   {inWishlist ? "Retirer des favoris" : "Ajouter aux favoris"}
                 </button>
-
-                {/* Appointment Button for large items */}
-                {APPOINTMENT_CATEGORIES.includes(product.category?.toLowerCase()) && (
-                  <button
-                    onClick={() => setShowAppointmentModal(true)}
-                    className="btn-secondary w-full justify-center py-4 text-base bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100"
-                    data-testid="appointment-btn"
-                  >
-                    <Calendar className="w-5 h-5" />
-                    Prendre rendez-vous pour une visite
-                  </button>
-                )}
               </div>
 
               {/* Trust Badges */}

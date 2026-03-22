@@ -101,6 +101,8 @@ const ProductFormModal = memo(({
     specs: editingProduct?.specs || {},
     is_on_order: editingProduct?.is_on_order || false,
     order_delivery_days: editingProduct?.order_delivery_days?.toString() || "",
+    requires_appointment: editingProduct?.requires_appointment || false,
+    no_cart: editingProduct?.no_cart || false,
     meta_title: editingProduct?.meta_title || "",
     meta_description: editingProduct?.meta_description || "",
   }), [editingProduct]);
@@ -130,6 +132,8 @@ const ProductFormModal = memo(({
         specs: editingProduct?.specs ? {...editingProduct.specs} : {},
         is_on_order: editingProduct?.is_on_order || false,
         order_delivery_days: editingProduct?.order_delivery_days?.toString() || "",
+        requires_appointment: editingProduct?.requires_appointment || false,
+        no_cart: editingProduct?.no_cart || false,
         meta_title: editingProduct?.meta_title || "",
         meta_description: editingProduct?.meta_description || "",
       };
@@ -311,6 +315,8 @@ const ProductFormModal = memo(({
         specs: form.specs || {},
         is_on_order: form.is_on_order || false,
         order_delivery_days: form.order_delivery_days ? parseInt(form.order_delivery_days) : null,
+        requires_appointment: form.requires_appointment || false,
+        no_cart: form.no_cart || false,
         meta_title: form.meta_title?.trim() || null,
         meta_description: form.meta_description?.trim() || null,
       };
@@ -582,6 +588,24 @@ const ProductFormModal = memo(({
                       className="w-5 h-5 rounded border-black/20 dark:border-white/20"
                     />
                     <span className="text-sm font-medium">Sur commande</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.requires_appointment}
+                      onChange={(e) => updateField('requires_appointment', e.target.checked)}
+                      className="w-5 h-5 rounded border-black/20 dark:border-white/20"
+                    />
+                    <span className="text-sm font-medium">Nécessite un rendez-vous</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.no_cart}
+                      onChange={(e) => updateField('no_cart', e.target.checked)}
+                      className="w-5 h-5 rounded border-black/20 dark:border-white/20"
+                    />
+                    <span className="text-sm font-medium">Sans panier (contact uniquement)</span>
                   </label>
                 </div>
 
