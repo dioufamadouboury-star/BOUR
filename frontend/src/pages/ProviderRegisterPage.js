@@ -204,7 +204,7 @@ export default function ProviderRegisterPage() {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  // Upload file function
+  // Upload file function (uses public endpoint for registration)
   const handleFileUpload = async (file, type) => {
     if (!file) return null;
     
@@ -212,13 +212,13 @@ export default function ProviderRegisterPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await axios.post(`${API_URL}/api/upload/image`, fd, {
+      const res = await axios.post(`${API_URL}/api/upload/public`, fd, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       return res.data.url;
     } catch (e) {
       console.error("Upload error:", e);
-      toast.error("Erreur lors de l'upload de l'image");
+      toast.error(e.response?.data?.detail || "Erreur lors de l'upload de l'image");
       return null;
     } finally {
       setUploading(prev => ({ ...prev, [type]: false }));

@@ -1310,24 +1310,54 @@ def compress_image(content: bytes, max_size: int = MAX_IMAGE_SIZE, quality: int 
 
 @api_router.post("/upload/image")
 async def upload_image(file: UploadFile = File(...), user: User = Depends(require_admin), request: Request = None):
-    """Upload an image with automatic compression and optimization"""
+    """Upload an image with automatic compression and optimization (Admin only)"""
+    return await process_image_upload(file)
+
+@api_router.post("/upload/public")
+async def upload_image_public(file: UploadFile = File(...)):
+    """Upload an image without authentication (for provider registration)"""
+    return await process_image_upload(file)
+
+async def process_image_upload(file: UploadFile):
+    """Common image upload processing"""
     
-    # Validate file type
-    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Type de fichier non supporté. Utilisez JPG, PNG, WebP ou GIF.")
+    # Validate file type - Extended to support HEIC/HEIF from iPhones
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"]
+    content_type = file.content_type or ""
+    
+    # Also check file extension for HEIC files (some browsers don't send correct content-type)
+    filename_lower = (file.filename or "").lower()
+    is_heic = filename_lower.endswith(('.heic', '.heif'))
+    
+    if content_type not in allowed_types and not is_heic:
+        raise HTTPException(status_code=400, detail="Type de fichier non supporté. Utilisez JPG, PNG, WebP, GIF ou HEIC.")
     
     # Save file
     try:
         content = await file.read()
         original_size = len(content)
         
-        # Limit file size to 10MB before compression
-        if original_size > 10 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="Fichier trop volumineux (max 10MB)")
+        # Limit file size to 15MB before compression (increased for HEIC)
+        if original_size > 15 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Fichier trop volumineux (max 15MB)")
         
+        # Convert HEIC to JPEG if needed
+        if is_heic or content_type in ["image/heic", "image/heif"]:
+            try:
+                from PIL import Image
+                import pillow_heif
+                pillow_heif.register_heif_opener()
+                img = Image.open(io.BytesIO(content))
+                img = img.convert("RGB")
+                output = io.BytesIO()
+                img.save(output, format="JPEG", quality=85, optimize=True)
+                content = output.getvalue()
+                ext = "jpg"
+            except Exception as e:
+                logging.warning(f"HEIC conversion failed: {e}, trying as regular image")
+                content, ext = compress_image(content)
         # Compress image (skip GIFs to preserve animation)
-        if file.content_type != "image/gif":
+        elif content_type != "image/gif":
             content, ext = compress_image(content)
         else:
             ext = "gif"
@@ -1336,20 +1366,20 @@ async def upload_image(file: UploadFile = File(...), user: User = Depends(requir
         compression_ratio = round((1 - compressed_size / original_size) * 100, 1) if original_size > 0 else 0
         
         # Generate unique filename
-        filename = f"{uuid.uuid4().hex}.{ext}"
-        filepath = UPLOADS_DIR / filename
+        new_filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = UPLOADS_DIR / new_filename
         
         with open(filepath, "wb") as f:
             f.write(content)
         
         # Return relative path - frontend will handle the full URL
-        image_url = f"/api/uploads/{filename}"
+        image_url = f"/api/uploads/{new_filename}"
         
-        logging.info(f"Image uploaded: {filename} (compressed {compression_ratio}%: {original_size//1024}KB -> {compressed_size//1024}KB)")
+        logging.info(f"Image uploaded: {new_filename} (compressed {compression_ratio}%: {original_size//1024}KB -> {compressed_size//1024}KB)")
         return {
             "success": True, 
             "url": image_url, 
-            "filename": filename,
+            "filename": new_filename,
             "original_size": original_size,
             "compressed_size": compressed_size,
             "compression": f"{compression_ratio}%"
@@ -1358,6 +1388,8 @@ async def upload_image(file: UploadFile = File(...), user: User = Depends(requir
     except HTTPException:
         raise
     except Exception as e:
+        logging.error(f"Upload error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload: {str(e)}")
         logging.error(f"Error uploading image: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de l'upload")
 
