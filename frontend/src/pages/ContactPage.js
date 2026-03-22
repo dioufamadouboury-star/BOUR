@@ -94,38 +94,44 @@ export default function ContactPage() {
                     <h3 className="font-semibold mb-1 group-hover:text-[#25D366] transition-colors">
                       WhatsApp
                     </h3>
-                    <p className="text-muted-foreground">+221 77 000 00 00</p>
+                    <p className="text-muted-foreground">+221 78 382 75 75</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Réponse rapide • 9h - 21h
+                      Réponse rapide • 8h - 22h
                     </p>
                   </div>
                 </a>
 
-                <div className="flex items-start gap-4 p-6 bg-[#F5F5F7] dark:bg-[#1C1C1E] rounded-2xl">
+                <a 
+                  href="tel:+221783827575"
+                  className="flex items-start gap-4 p-6 bg-[#F5F5F7] dark:bg-[#1C1C1E] rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                >
                   <div className="w-12 h-12 bg-black dark:bg-white rounded-full flex items-center justify-center flex-shrink-0">
                     <Phone className="w-6 h-6 text-white dark:text-black" />
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1">Téléphone</h3>
-                    <p className="text-muted-foreground">+221 77 000 00 00</p>
+                    <p className="text-muted-foreground">+221 78 382 75 75</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Lundi - Samedi • 9h - 18h
+                      Lundi - Dimanche • 8h - 22h
                     </p>
                   </div>
-                </div>
+                </a>
 
-                <div className="flex items-start gap-4 p-6 bg-[#F5F5F7] dark:bg-[#1C1C1E] rounded-2xl">
+                <a 
+                  href="mailto:contact@groupeyamaplus.com"
+                  className="flex items-start gap-4 p-6 bg-[#F5F5F7] dark:bg-[#1C1C1E] rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                >
                   <div className="w-12 h-12 bg-black dark:bg-white rounded-full flex items-center justify-center flex-shrink-0">
                     <Mail className="w-6 h-6 text-white dark:text-black" />
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1">Email</h3>
-                    <p className="text-muted-foreground">contact@lumina.sn</p>
+                    <p className="text-muted-foreground">contact@groupeyamaplus.com</p>
                     <p className="text-sm text-muted-foreground mt-1">
                       Réponse sous 24h
                     </p>
                   </div>
-                </div>
+                </a>
 
                 <div className="flex items-start gap-4 p-6 bg-[#F5F5F7] dark:bg-[#1C1C1E] rounded-2xl">
                   <div className="w-12 h-12 bg-black dark:bg-white rounded-full flex items-center justify-center flex-shrink-0">
@@ -133,7 +139,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1">Adresse</h3>
-                    <p className="text-muted-foreground">Almadies, Ngor</p>
+                    <p className="text-muted-foreground">Fass Paillote</p>
                     <p className="text-muted-foreground">Dakar, Sénégal</p>
                   </div>
                 </div>
