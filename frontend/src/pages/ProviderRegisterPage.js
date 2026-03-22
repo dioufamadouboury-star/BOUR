@@ -53,6 +53,18 @@ export default function ProviderRegisterPage() {
     price_from: "",
     price_description: "",
     invitation_code: inviteCode || "",
+    // New document fields
+    profile_photo: null,
+    id_document: null,
+    address_proof: null,
+    service_photos: [],
+  });
+
+  const [uploading, setUploading] = useState({
+    profile: false,
+    id: false,
+    address: false,
+    services: false,
   });
 
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -139,6 +151,18 @@ export default function ProviderRegisterPage() {
       toast.error("Veuillez décrire vos services");
       return;
     }
+    if (!form.profile_photo) {
+      toast.error("Veuillez ajouter votre photo de profil");
+      return;
+    }
+    if (!form.id_document) {
+      toast.error("Veuillez ajouter votre pièce d'identité");
+      return;
+    }
+    if (!form.address_proof) {
+      toast.error("Veuillez ajouter votre justificatif de domicile");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -157,10 +181,13 @@ export default function ProviderRegisterPage() {
         price_from: form.price_from ? parseInt(form.price_from.replace(/\D/g, '')) : null,
         price_description: form.price_description || null,
         invitation_code: inviteCode,
-        photos: [],
+        profile_photo: form.profile_photo,
+        id_document: form.id_document,
+        address_proof: form.address_proof,
+        photos: form.service_photos,
       };
 
-      await axios.post(`${API_URL}/api/services/providers`, payload);
+      await axios.post(`${API_URL}/api/provider/register`, payload);
 
       setSubmitted(true);
       toast.success("Inscription envoyée avec succès !");
@@ -175,6 +202,70 @@ export default function ProviderRegisterPage() {
 
   const updateForm = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Upload file function
+  const handleFileUpload = async (file, type) => {
+    if (!file) return null;
+    
+    setUploading(prev => ({ ...prev, [type]: true }));
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await axios.post(`${API_URL}/api/upload/image`, fd, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      return res.data.url;
+    } catch (e) {
+      console.error("Upload error:", e);
+      toast.error("Erreur lors de l'upload de l'image");
+      return null;
+    } finally {
+      setUploading(prev => ({ ...prev, [type]: false }));
+    }
+  };
+
+  const handleProfilePhotoChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const url = await handleFileUpload(file, "profile");
+      if (url) updateForm("profile_photo", url);
+    }
+  };
+
+  const handleIdDocumentChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const url = await handleFileUpload(file, "id");
+      if (url) updateForm("id_document", url);
+    }
+  };
+
+  const handleAddressProofChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const url = await handleFileUpload(file, "address");
+      if (url) updateForm("address_proof", url);
+    }
+  };
+
+  const handleServicePhotosChange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      setUploading(prev => ({ ...prev, services: true }));
+      const uploadedUrls = [];
+      for (const file of files) {
+        const url = await handleFileUpload(file, "services");
+        if (url) uploadedUrls.push(url);
+      }
+      updateForm("service_photos", [...form.service_photos, ...uploadedUrls]);
+      setUploading(prev => ({ ...prev, services: false }));
+    }
+  };
+
+  const removeServicePhoto = (index) => {
+    const newPhotos = form.service_photos.filter((_, i) => i !== index);
+    updateForm("service_photos", newPhotos);
   };
 
   // Loading state
@@ -567,6 +658,159 @@ export default function ProviderRegisterPage() {
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Documents Section - NEW */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6">
+              <h2 className="font-semibold mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Documents requis pour validation
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Ces documents sont nécessaires pour vérifier votre identité et valider votre profil.
+              </p>
+
+              <div className="space-y-4">
+                {/* Profile Photo */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Photo de profil <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-4">
+                    {form.profile_photo ? (
+                      <div className="relative">
+                        <img src={form.profile_photo} alt="Profile" className="w-20 h-20 rounded-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => updateForm("profile_photo", null)}
+                          className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-full cursor-pointer hover:border-yellow-400 transition-colors">
+                        {uploading.profile ? (
+                          <div className="w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <Upload className="w-6 h-6 text-gray-400" />
+                            <input type="file" className="hidden" accept="image/*" onChange={handleProfilePhotoChange} />
+                          </>
+                        )}
+                      </label>
+                    )}
+                    <p className="text-sm text-muted-foreground">Photo claire de votre visage</p>
+                  </div>
+                </div>
+
+                {/* ID Document */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Pièce d'identité (CNI ou Passeport) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-4">
+                    {form.id_document ? (
+                      <div className="relative">
+                        <img src={form.id_document} alt="ID" className="w-32 h-20 rounded-lg object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => updateForm("id_document", null)}
+                          className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-32 h-20 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-yellow-400 transition-colors">
+                        {uploading.id ? (
+                          <div className="w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <Upload className="w-6 h-6 text-gray-400" />
+                            <span className="text-xs text-gray-400 mt-1">CNI / Passeport</span>
+                            <input type="file" className="hidden" accept="image/*" onChange={handleIdDocumentChange} />
+                          </>
+                        )}
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {/* Address Proof */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Justificatif de domicile <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-4">
+                    {form.address_proof ? (
+                      <div className="relative">
+                        <img src={form.address_proof} alt="Address" className="w-32 h-20 rounded-lg object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => updateForm("address_proof", null)}
+                          className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-32 h-20 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-yellow-400 transition-colors">
+                        {uploading.address ? (
+                          <div className="w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <Upload className="w-6 h-6 text-gray-400" />
+                            <span className="text-xs text-gray-400 mt-1">Certificat</span>
+                            <input type="file" className="hidden" accept="image/*" onChange={handleAddressProofChange} />
+                          </>
+                        )}
+                      </label>
+                    )}
+                    <p className="text-sm text-muted-foreground">Facture, certificat de résidence...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Service Photos Section - NEW */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6">
+              <h2 className="font-semibold mb-4 flex items-center gap-2">
+                <ImageIcon className="w-5 h-5" />
+                Photos de vos réalisations (optionnel)
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Montrez vos travaux pour attirer plus de clients. Ces photos seront visibles sur votre profil.
+              </p>
+
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {form.service_photos.map((photo, index) => (
+                  <div key={index} className="relative aspect-square">
+                    <img src={photo} alt={`Service ${index + 1}`} className="w-full h-full rounded-lg object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeServicePhoto(index)}
+                      className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {form.service_photos.length < 6 && (
+                  <label className="aspect-square border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-yellow-400 transition-colors flex flex-col items-center justify-center">
+                    {uploading.services ? (
+                      <div className="w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="w-6 h-6 text-gray-400" />
+                        <span className="text-xs text-gray-400 mt-1">Ajouter</span>
+                        <input type="file" className="hidden" accept="image/*" multiple onChange={handleServicePhotosChange} />
+                      </>
+                    )}
+                  </label>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Maximum 6 photos</p>
             </div>
 
             {/* Submit */}

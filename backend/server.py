@@ -8539,10 +8539,16 @@ async def register_provider(provider_data: ProviderCreate):
         "price_description": provider_data.price_description,
         "availability": "available",
         "experience_years": provider_data.experience_years,
-        "photos": [],
+        "photos": provider_data.photos or [],
+        # New document fields
+        "profile_photo": provider_data.profile_photo,
+        "id_document": provider_data.id_document,
+        "address_proof": provider_data.address_proof,
+        # Status fields
         "is_verified": False,
         "is_premium": False,
         "is_active": False,  # Requires admin approval
+        "verification_status": "pending",  # pending, approved, rejected
         "rating": 0.0,
         "review_count": 0,
         "completed_jobs": 0,
@@ -8552,25 +8558,65 @@ async def register_provider(provider_data: ProviderCreate):
     
     await db.service_providers.insert_one(provider)
     
-    # Notify admin
-    asyncio.create_task(send_email_async(
-        to=ADMIN_NOTIFICATION_EMAIL,
-        subject=f"🆕 Nouveau prestataire inscrit: {provider_data.name}",
-        html=get_email_template(f"""
-            <h2>Nouveau prestataire en attente d'approbation</h2>
+    # Notify admin with document links
+    admin_email_html = get_email_template(f"""
+        <h2>🆕 Nouveau prestataire en attente de validation</h2>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin: 20px 0;">
             <p><strong>Nom:</strong> {provider_data.name}</p>
             <p><strong>Métier:</strong> {provider_data.profession}</p>
+            <p><strong>Catégorie:</strong> {provider_data.category}</p>
             <p><strong>Ville:</strong> {provider_data.city}</p>
             <p><strong>Téléphone:</strong> {provider_data.phone}</p>
-            <a href="{SITE_URL}/admin/providers" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 8px;">Approuver le prestataire</a>
-        """, "Nouveau prestataire")
+            <p><strong>Email:</strong> {provider_data.email or 'Non fourni'}</p>
+        </div>
+        
+        <h3>📄 Documents fournis:</h3>
+        <ul>
+            <li><strong>Photo de profil:</strong> <a href="{provider_data.profile_photo or '#'}">Voir</a></li>
+            <li><strong>Pièce d'identité:</strong> <a href="{provider_data.id_document or '#'}">Voir</a></li>
+            <li><strong>Justificatif domicile:</strong> <a href="{provider_data.address_proof or '#'}">Voir</a></li>
+        </ul>
+        
+        <h3>📸 Photos de services ({len(provider_data.photos or [])} photos)</h3>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{SITE_URL}/admin?tab=services" style="display: inline-block; padding: 15px 30px; background: #22c55e; color: #fff; text-decoration: none; border-radius: 10px; font-weight: bold;">✅ Valider ce prestataire</a>
+        </div>
+    """, "Nouveau prestataire à valider")
+    
+    asyncio.create_task(send_email_async(
+        to=ADMIN_NOTIFICATION_EMAIL,
+        subject=f"🆕 Nouveau prestataire: {provider_data.name} - À valider",
+        html=admin_email_html
     ))
+    
+    # Send confirmation to provider
+    if provider_data.email:
+        provider_email_html = get_email_template(f"""
+            <h2>Merci pour votre inscription, {provider_data.name} !</h2>
+            <p>Nous avons bien reçu votre demande d'inscription sur <strong>YAMA+ Services</strong>.</p>
+            
+            <div style="background: #fef3c7; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <p><strong>📋 Statut:</strong> En attente de validation</p>
+                <p>Notre équipe va examiner vos documents et valider votre profil dans les prochaines 24-48h.</p>
+            </div>
+            
+            <p>Vous recevrez un email de confirmation une fois votre profil approuvé.</p>
+            
+            <p>En attendant, vous pouvez compléter votre profil et ajouter plus de photos de vos réalisations.</p>
+        """, "Inscription reçue")
+        
+        asyncio.create_task(send_email_async(
+            to=provider_data.email,
+            subject="✅ Inscription YAMA+ Services - En attente de validation",
+            html=provider_email_html
+        ))
     
     logger.info(f"Provider registered: {provider_id}")
     
     return {
         "success": True,
-        "message": "Inscription réussie ! Votre profil est en attente de validation par notre équipe.",
+        "message": "Inscription réussie ! Votre profil est en attente de validation par notre équipe. Vous recevrez un email de confirmation.",
         "provider_id": provider_id
     }
 

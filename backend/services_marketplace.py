@@ -32,6 +32,10 @@ class ProviderBase(BaseModel):
     availability: str = "available"  # available, busy, unavailable
     experience_years: Optional[int] = None
     photos: List[str] = []
+    # New document fields for verification
+    profile_photo: Optional[str] = None
+    id_document: Optional[str] = None
+    address_proof: Optional[str] = None
     
 class ProviderCreate(ProviderBase):
     password: str
