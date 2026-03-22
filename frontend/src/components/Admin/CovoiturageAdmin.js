@@ -7,18 +7,33 @@ import { toast } from "sonner";
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const ROUTES_PREDEFINIS = [
+  // Dakar ↔ AIBD
   { from: "Dakar", to: "AIBD (Aéroport)", label: "Dakar → AIBD" },
   { from: "AIBD (Aéroport)", to: "Dakar", label: "AIBD → Dakar" },
+  // Dakar ↔ Thiès
   { from: "Dakar", to: "Thiès", label: "Dakar → Thiès" },
   { from: "Thiès", to: "Dakar", label: "Thiès → Dakar" },
+  // Dakar ↔ Mbour
   { from: "Dakar", to: "Mbour", label: "Dakar → Mbour" },
   { from: "Mbour", to: "Dakar", label: "Mbour → Dakar" },
+  // Dakar ↔ Saly
   { from: "Dakar", to: "Saly", label: "Dakar → Saly" },
+  { from: "Saly", to: "Dakar", label: "Saly → Dakar" },
+  // Dakar ↔ Saint-Louis
   { from: "Dakar", to: "Saint-Louis", label: "Dakar → Saint-Louis" },
+  { from: "Saint-Louis", to: "Dakar", label: "Saint-Louis → Dakar" },
+  // Dakar ↔ Ziguinchor
   { from: "Dakar", to: "Ziguinchor", label: "Dakar → Ziguinchor" },
+  { from: "Ziguinchor", to: "Dakar", label: "Ziguinchor → Dakar" },
+  // Dakar ↔ Kaolack
   { from: "Dakar", to: "Kaolack", label: "Dakar → Kaolack" },
+  { from: "Kaolack", to: "Dakar", label: "Kaolack → Dakar" },
+  // Dakar ↔ Touba
   { from: "Dakar", to: "Touba", label: "Dakar → Touba" },
+  { from: "Touba", to: "Dakar", label: "Touba → Dakar" },
+  // Dakar ↔ Tambacounda
   { from: "Dakar", to: "Tambacounda", label: "Dakar → Tambacounda" },
+  { from: "Tambacounda", to: "Dakar", label: "Tambacounda → Dakar" },
 ];
 
 const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -203,12 +218,15 @@ function TripFormModal({ trip, token, onClose, onSaved }) {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await axios.post(`${API_URL}/api/upload`, fd, {
+      const res = await axios.post(`${API_URL}/api/upload/image`, fd, {
         headers: { ...authHeader.headers, "Content-Type": "multipart/form-data" }
       });
       if (res.data.url) handleChange("vehicle_image", res.data.url);
       toast.success("Image uploadée");
-    } catch (e) { toast.error("Erreur upload"); }
+    } catch (e) { 
+      console.error("Upload error:", e);
+      toast.error(e.response?.data?.detail || "Erreur upload"); 
+    }
     setUploading(false);
   };
 

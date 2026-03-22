@@ -9283,3 +9283,6 @@ async def get_providers_for_sms(user: User = Depends(require_admin)):
     providers = await db.service_providers.find({"phone": {"$exists": True, "$ne": None}}, {"_id": 0, "name": 1, "phone": 1, "email": 1, "category": 1}).to_list(200)
     return {"providers": providers}
 
+# Re-include router to ensure all late-defined routes are registered
+# This is needed because some routes (trips, sms) are defined after the initial include
+app.include_router(api_router)
