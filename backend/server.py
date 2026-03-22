@@ -30,6 +30,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from ga4_tracking import track_purchase, track_order_status
 
+# Commercial Management Module
+from commercial_management import create_commercial_endpoints, commercial_router
+
 # Image compression
 from PIL import Image as PILImage
 
@@ -9360,6 +9363,13 @@ async def get_sms_history(user: User = Depends(require_admin)):
 async def get_providers_for_sms(user: User = Depends(require_admin)):
     providers = await db.service_providers.find({"phone": {"$exists": True, "$ne": None}}, {"_id": 0, "name": 1, "phone": 1, "email": 1, "category": 1}).to_list(200)
     return {"providers": providers}
+
+# ============================================================
+# COMMERCIAL MANAGEMENT MODULE
+# ============================================================
+# Initialize commercial endpoints with db and auth dependencies
+commercial_router_instance = create_commercial_endpoints(db, require_admin)
+app.include_router(commercial_router_instance)
 
 # Re-include router to ensure all late-defined routes are registered
 # This is needed because some routes (trips, sms) are defined after the initial include
