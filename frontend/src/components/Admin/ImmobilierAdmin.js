@@ -231,12 +231,19 @@ function PropertyFormModal({ property, token, onClose, onSaved }) {
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
+    
+    // Limit to 6 images total
+    if (form.images.length + files.length > 6) {
+      toast.error("Maximum 6 images par bien");
+      return;
+    }
+    
     setUploading(true);
     try {
       for (const file of files) {
         const formData = new FormData();
         formData.append("file", file);
-        const res = await axios.post(`${API_URL}/api/upload`, formData, {
+        const res = await axios.post(`${API_URL}/api/upload/image`, formData, {
           headers: { ...authHeader.headers, "Content-Type": "multipart/form-data" }
         });
         if (res.data.url) {
@@ -244,7 +251,10 @@ function PropertyFormModal({ property, token, onClose, onSaved }) {
         }
       }
       toast.success("Images uploadées");
-    } catch (e) { toast.error("Erreur upload"); }
+    } catch (e) { 
+      console.error("Upload error:", e);
+      toast.error(e.response?.data?.detail || "Erreur upload - format non supporté"); 
+    }
     setUploading(false);
   };
 

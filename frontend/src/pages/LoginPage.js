@@ -105,10 +105,10 @@ export default function LoginPage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-sm"
         >
-          {/* Logo */}
+          {/* Logo - Plus grand sur mobile */}
           <div className="mb-7 text-center">
             <Link to="/">
-              <img src={LOGO} alt="GROUPE YAMA+" className="h-14 w-auto mx-auto" />
+              <img src={LOGO} alt="GROUPE YAMA+" className="h-20 md:h-16 w-auto mx-auto" />
             </Link>
           </div>
 

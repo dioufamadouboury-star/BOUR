@@ -383,7 +383,7 @@ export default function CategoryPage() {
 
       {/* ─── CATEGORY HERO (dark themed) ─── */}
       {heroConfig && (
-        <div className="relative w-full h-[400px] md:h-[480px] overflow-hidden">
+        <div className="relative w-full h-[450px] md:h-[480px] overflow-hidden">
           <img
             src={heroConfig.image}
             alt={heroConfig.title}
@@ -391,7 +391,7 @@ export default function CategoryPage() {
           />
           <div className={`absolute inset-0 bg-gradient-to-b ${heroConfig.gradient}`} />
           {/* Content */}
-          <div className="relative z-10 h-full flex flex-col justify-between px-6 md:px-16 py-10 pt-28">
+          <div className="relative z-10 h-full flex flex-col justify-between px-4 md:px-16 py-8 pt-24 md:pt-28">
             <div>
               <motion.p
                 initial={{ opacity: 0, y: 16 }}
@@ -419,12 +419,12 @@ export default function CategoryPage() {
               </motion.p>
             </div>
 
-            {/* Filter tabs */}
+            {/* Filter tabs - Mobile scrollable */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex gap-2 flex-wrap"
+              className="flex gap-2 flex-wrap pb-4 max-h-[120px] overflow-y-auto md:max-h-none md:overflow-visible"
             >
               {heroConfig.filters.map(f => {
                 const Icon = f.icon;
@@ -433,14 +433,15 @@ export default function CategoryPage() {
                   <button
                     key={f.id}
                     onClick={() => setActiveHeroFilter(f.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
+                    data-testid={`filter-${f.id}`}
+                    className={`flex items-center gap-1.5 px-3 py-2 md:px-4 md:py-2.5 rounded-full text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
                       active
                         ? "bg-white text-black shadow-lg"
                         : "bg-white/10 backdrop-blur text-white border border-white/20 hover:bg-white/20"
                     }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${active ? "text-black" : heroConfig.accent}`} />
-                    {f.label}
+                    <Icon className={`w-3 h-3 md:w-3.5 md:h-3.5 flex-shrink-0 ${active ? "text-black" : heroConfig.accent}`} />
+                    <span className="truncate max-w-[80px] md:max-w-none">{f.label}</span>
                   </button>
                 );
               })}
