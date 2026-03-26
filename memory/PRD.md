@@ -12,38 +12,30 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 
 ## Recent Changes (March 26, 2026)
 
-### ✅ COMPLETED - All P0 Tasks
-1. **Système de Réservation** (Transport & Services)
-   - Endpoint POST /api/reservations - Création de réservation
-   - Admin Dashboard /admin/reservations avec filtres (status, type)
-   - Confirmation/Refus avec notification Email + SMS
-   - Bouton "Réserver maintenant" sur page Covoiturage
-   - Collecte automatique des contacts marketing
+### ✅ COMPLETED - All P0 + P1 Tasks
+1. **Système de Réservation** (Transport & Services) ✅
+   - Endpoint POST /api/reservations
+   - Admin Dashboard /admin/reservations
+   - Bouton "Réserver maintenant" sur Covoiturage
 
-2. **Centre SMS Avancé**
+2. **Centre SMS Avancé** ✅
    - Templates dynamiques avec variables {{nom}}, {{date}}, {{montant}}
-   - Templates prédéfinis: Paiement, Réservation, Immobilier, Promo
    - CRUD templates personnalisés
-   - Endpoint GET/POST /api/admin/sms/templates
 
-3. **Collecte & Campagnes Marketing**
-   - Auto-collecte emails/phones depuis: inscription, commande, réservation
-   - Dashboard /admin/marketing avec statistiques
-   - Filtres par source (inscription, commande, réservation, service)
-   - Export CSV des contacts
-   - Envoi de campagnes Email/SMS ciblées
+3. **Collecte & Campagnes Marketing** ✅
+   - Auto-collecte emails/phones
+   - Dashboard /admin/marketing avec stats + Export CSV
+   - Envoi campagnes Email/SMS ciblées
 
-4. **Réinitialisation Plateforme**
-   - Dashboard /admin/reset
-   - Backup automatique avant suppression
-   - Options sélectionnables (orders, users, analytics, etc.)
-   - Historique des backups avec restauration
-   - Code de confirmation requis: RESET-YAMA-2026
+4. **Réinitialisation Plateforme** ✅
+   - Backup automatique + Restauration
+   - Code de confirmation: RESET-YAMA-2026
 
-5. **Admin Immobilier Multi-Photos**
-   - Upload jusqu'à 6 images avec prévisualisation
-   - Suppression d'images
-   - Déjà déployé et testé
+5. **Module Prestataires (Refonte)** ✅
+   - Modal détaillé avec profil professionnel complet
+   - Validation des documents (ID, Résidence, Photo)
+   - Bouton "Vérifier documents" pour prestataires en attente
+   - Approbation/Refus avec notifications
 
 ## What's Implemented
 

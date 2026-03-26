@@ -18,20 +18,30 @@ import {
   ExternalLink,
   Filter,
   RefreshCw,
+  FileText,
+  Image as ImageIcon,
+  User,
+  Mail,
+  Briefcase,
+  Calendar,
+  Shield,
+  Download,
+  X,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { toast } from "sonner";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Service Providers Admin Component
+// Service Providers Admin Component - REFONTE
 export function ServiceProvidersAdmin({ token }) {
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProvider, setSelectedProvider] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [documentValidation, setDocumentValidation] = useState({});
 
   useEffect(() => {
     fetchProviders();
@@ -57,13 +67,29 @@ export function ServiceProvidersAdmin({ token }) {
     try {
       await axios.put(
         `${API_URL}/api/admin/service-providers/${providerId}`,
-        { is_active: true },
+        { is_active: true, documents_validated: true },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success("Prestataire approuvé !");
       fetchProviders();
+      setShowDetailModal(false);
     } catch (error) {
       toast.error("Erreur lors de l'approbation");
+    }
+  };
+
+  const handleReject = async (providerId, reason) => {
+    try {
+      await axios.put(
+        `${API_URL}/api/admin/service-providers/${providerId}`,
+        { is_active: false, rejection_reason: reason || "Documents non conformes" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Prestataire refusé");
+      fetchProviders();
+      setShowDetailModal(false);
+    } catch (error) {
+      toast.error("Erreur lors du refus");
     }
   };
 
@@ -256,14 +282,21 @@ export function ServiceProvidersAdmin({ token }) {
                 <div className="flex items-center gap-2">
                   {!provider.is_active ? (
                     <button
-                      onClick={() => handleApprove(provider.provider_id)}
-                      className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600"
+                      onClick={() => { setSelectedProvider(provider); setShowDetailModal(true); }}
+                      className="px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600"
                     >
-                      <CheckCircle className="w-4 h-4 inline mr-1" />
-                      Approuver
+                      <Eye className="w-4 h-4 inline mr-1" />
+                      Vérifier documents
                     </button>
                   ) : (
                     <>
+                      <button
+                        onClick={() => { setSelectedProvider(provider); setShowDetailModal(true); }}
+                        className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                        title="Voir détails"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
                       <button
                         onClick={() => handleVerify(provider.provider_id, !provider.is_verified)}
                         className={cn(
@@ -285,15 +318,6 @@ export function ServiceProvidersAdmin({ token }) {
                       </button>
                     </>
                   )}
-                  <a
-                    href={`/provider/${provider.provider_id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-                    title="Voir le profil"
-                  >
-                    <ExternalLink className="w-5 h-5" />
-                  </a>
                   <button
                     onClick={() => handleDelete(provider.provider_id)}
                     className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-500"
@@ -305,6 +329,142 @@ export function ServiceProvidersAdmin({ token }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Provider Detail Modal with Document Validation */}
+      {showDetailModal && selectedProvider && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setShowDetailModal(false)}>
+          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="sticky top-0 bg-white dark:bg-[#1C1C1E] border-b p-4 flex items-center justify-between z-10">
+              <h2 className="text-xl font-bold">Profil Prestataire</h2>
+              <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Profile Header */}
+              <div className="flex items-start gap-5">
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 overflow-hidden flex-shrink-0">
+                  {selectedProvider.photos?.[0] ? (
+                    <img src={selectedProvider.photos[0]} alt={selectedProvider.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-4xl text-white">👷</div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-2xl font-bold">{selectedProvider.name}</h3>
+                    {selectedProvider.is_verified && <BadgeCheck className="w-6 h-6 text-blue-500" />}
+                    {selectedProvider.is_premium && <Crown className="w-6 h-6 text-yellow-500" />}
+                  </div>
+                  <p className="text-lg text-muted-foreground">{selectedProvider.profession}</p>
+                  <div className="flex flex-wrap gap-4 mt-3 text-sm">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><MapPin className="w-4 h-4" /> {selectedProvider.city}</span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><Phone className="w-4 h-4" /> {selectedProvider.phone}</span>
+                    {selectedProvider.email && <span className="flex items-center gap-1.5 text-muted-foreground"><Mail className="w-4 h-4" /> {selectedProvider.email}</span>}
+                    {selectedProvider.experience_years && <span className="flex items-center gap-1.5 text-muted-foreground"><Briefcase className="w-4 h-4" /> {selectedProvider.experience_years} ans d'expérience</span>}
+                  </div>
+                  {selectedProvider.bio && <p className="mt-3 text-sm text-muted-foreground">{selectedProvider.bio}</p>}
+                </div>
+              </div>
+
+              {/* Status Badge */}
+              <div className={cn("p-4 rounded-xl flex items-center gap-3", 
+                selectedProvider.is_active ? "bg-green-50 dark:bg-green-900/20 text-green-700" : "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700"
+              )}>
+                {selectedProvider.is_active ? <CheckCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                <span className="font-medium">{selectedProvider.is_active ? "Prestataire actif et vérifié" : "En attente de validation des documents"}</span>
+              </div>
+
+              {/* Documents Section */}
+              <div className="space-y-4">
+                <h4 className="font-bold flex items-center gap-2"><FileText className="w-5 h-5" /> Documents fournis</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* ID Document */}
+                  <div className="border rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Shield className="w-4 h-4 text-blue-500" />
+                      <span className="font-medium text-sm">Pièce d'identité</span>
+                    </div>
+                    {selectedProvider.identity_document_url ? (
+                      <a href={selectedProvider.identity_document_url} target="_blank" rel="noopener noreferrer"
+                        className="block aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden hover:opacity-80 transition-opacity">
+                        <img src={selectedProvider.identity_document_url} alt="ID" className="w-full h-full object-cover" />
+                      </a>
+                    ) : (
+                      <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-muted-foreground text-sm">Non fourni</div>
+                    )}
+                  </div>
+
+                  {/* Residence Certificate */}
+                  <div className="border rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <FileText className="w-4 h-4 text-green-500" />
+                      <span className="font-medium text-sm">Certificat de résidence</span>
+                    </div>
+                    {selectedProvider.residence_certificate_url ? (
+                      <a href={selectedProvider.residence_certificate_url} target="_blank" rel="noopener noreferrer"
+                        className="block aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden hover:opacity-80 transition-opacity">
+                        <img src={selectedProvider.residence_certificate_url} alt="Residence" className="w-full h-full object-cover" />
+                      </a>
+                    ) : (
+                      <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-muted-foreground text-sm">Non fourni</div>
+                    )}
+                  </div>
+
+                  {/* Portfolio/Photo */}
+                  <div className="border rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ImageIcon className="w-4 h-4 text-purple-500" />
+                      <span className="font-medium text-sm">Photo de profil</span>
+                    </div>
+                    {selectedProvider.photos?.[0] ? (
+                      <a href={selectedProvider.photos[0]} target="_blank" rel="noopener noreferrer"
+                        className="block aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden hover:opacity-80 transition-opacity">
+                        <img src={selectedProvider.photos[0]} alt="Photo" className="w-full h-full object-cover" />
+                      </a>
+                    ) : (
+                      <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-muted-foreground text-sm">Non fourni</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Services */}
+              {selectedProvider.services && selectedProvider.services.length > 0 && (
+                <div>
+                  <h4 className="font-bold mb-3">Services proposés</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProvider.services.map((s, i) => (
+                      <span key={i} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-full text-sm">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              {!selectedProvider.is_active && (
+                <div className="border-t pt-6 flex gap-3">
+                  <button
+                    onClick={() => handleApprove(selectedProvider.provider_id)}
+                    className="flex-1 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle className="w-5 h-5" /> Approuver et Activer
+                  </button>
+                  <button
+                    onClick={() => handleReject(selectedProvider.provider_id, "Documents non conformes")}
+                    className="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 flex items-center justify-center gap-2"
+                  >
+                    <XCircle className="w-5 h-5" /> Refuser
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
