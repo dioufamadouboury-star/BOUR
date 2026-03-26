@@ -20,12 +20,12 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 5. **Module Prestataires (Refonte)** ✅
 6. **Guide Campagnes Publicitaires** ✅
 7. **Refactoring Backend** ✅
-   - Créé /app/backend/routes/auth.py
-   - Créé /app/backend/routes/reservations.py
-   - Créé /app/backend/routes/marketing.py
-   - Créé /app/backend/routes/sms_templates.py
-   - Créé /app/backend/routes/platform_reset.py
-   - Routes existantes: blog.py, gift_box.py, real_estate.py, commercial_routes.py
+8. **Gestion Commerciale Améliorée** ✅
+   - Nouveau logo YAMA+ sur tous les documents PDF
+   - Factures Proforma avec conversion en facture définitive
+   - Bons de Livraison avec gestion des articles
+   - Attestations (Travail, Stage, Partenariat, Paiement, Collaboration)
+   - Tous les PDFs générés incluent maintenant le logo
 
 ## What's Implemented
 

@@ -29,6 +29,10 @@ import {
   Pen,
   Check,
   MessageCircle,
+  FileBox,
+  Truck,
+  Award,
+  Copy,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { toast } from "sonner";
@@ -143,8 +147,11 @@ export function CommercialDashboard({ token }) {
     { id: "dashboard", label: "Vue d'ensemble", icon: TrendingUp },
     { id: "partners", label: "Partenaires", icon: Users },
     { id: "quotes", label: "Devis", icon: FileText },
+    { id: "proformas", label: "Proforma", icon: FileBox },
     { id: "invoices", label: "Factures", icon: Receipt },
+    { id: "delivery-notes", label: "Bons de livraison", icon: Truck },
     { id: "contracts", label: "Contrats", icon: FileSignature },
+    { id: "attestations", label: "Attestations", icon: Award },
   ];
 
   return (
@@ -182,8 +189,11 @@ export function CommercialDashboard({ token }) {
       {activeTab === "dashboard" && <DashboardOverview stats={stats} onRefresh={fetchDashboard} />}
       {activeTab === "partners" && <PartnersSection token={token} />}
       {activeTab === "quotes" && <QuotesSection token={token} />}
+      {activeTab === "proformas" && <ProformasSection token={token} />}
       {activeTab === "invoices" && <InvoicesSection token={token} />}
+      {activeTab === "delivery-notes" && <DeliveryNotesSection token={token} />}
       {activeTab === "contracts" && <ContractsSection token={token} />}
+      {activeTab === "attestations" && <AttestationsSection token={token} />}
     </div>
   );
 }
@@ -2565,6 +2575,587 @@ function ShareModal({ token, documentType, documentId, documentNumber, partnerPh
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============== PROFORMAS SECTION ==============
+
+function ProformasSection({ token }) {
+  const [proformas, setProformas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [partners, setPartners] = useState([]);
+  const [form, setForm] = useState({
+    partner_id: "",
+    title: "",
+    description: "",
+    items: [{ description: "", quantity: 1, unit_price: 0 }],
+    validity_days: 30,
+    notes: "",
+    payment_terms: "Paiement à réception de la facture définitive"
+  });
+
+  useEffect(() => {
+    fetchProformas();
+    fetchPartners();
+  }, []);
+
+  const fetchProformas = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/commercial/proformas`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProformas(res.data.proformas || []);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  const fetchPartners = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/commercial/partners`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPartners(res.data.partners || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleCreate = async () => {
+    if (!form.partner_id || !form.title) {
+      toast.error("Partenaire et titre requis");
+      return;
+    }
+    try {
+      await axios.post(`${API_URL}/api/commercial/proformas`, form, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Facture proforma créée");
+      setShowCreate(false);
+      setForm({ partner_id: "", title: "", description: "", items: [{ description: "", quantity: 1, unit_price: 0 }], validity_days: 30, notes: "", payment_terms: "Paiement à réception de la facture définitive" });
+      fetchProformas();
+    } catch (e) {
+      toast.error("Erreur lors de la création");
+    }
+  };
+
+  const handleDownloadPDF = async (proforma_number) => {
+    try {
+      const res = await axios.get(`${API_URL}/api/commercial/proformas/${proforma_number}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob"
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Proforma_${proforma_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e) {
+      toast.error("Erreur téléchargement PDF");
+    }
+  };
+
+  const handleConvertToInvoice = async (proforma_number) => {
+    if (!window.confirm("Convertir cette facture proforma en facture définitive ?")) return;
+    try {
+      await axios.post(`${API_URL}/api/commercial/proformas/${proforma_number}/convert-to-invoice`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Facture créée avec succès");
+      fetchProformas();
+    } catch (e) {
+      toast.error("Erreur lors de la conversion");
+    }
+  };
+
+  const addItem = () => setForm(p => ({ ...p, items: [...p.items, { description: "", quantity: 1, unit_price: 0 }] }));
+  const updateItem = (i, field, value) => setForm(p => ({ ...p, items: p.items.map((item, idx) => idx === i ? { ...item, [field]: value } : item) }));
+  const removeItem = (i) => setForm(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }));
+
+  const total = form.items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold">Factures Proforma</h2>
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl">
+          <Plus className="w-4 h-4" /> Nouvelle Proforma
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-8"><RefreshCw className="w-6 h-6 animate-spin" /></div>
+      ) : proformas.length === 0 ? (
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl">
+          <FileBox className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+          <p className="font-medium">Aucune facture proforma</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {proformas.map(p => (
+            <div key={p.proforma_number} className="bg-white dark:bg-gray-800 rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm">{p.proforma_number}</span>
+                  <span className={`px-2 py-0.5 text-xs rounded-full ${p.status === "converted" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+                    {p.status === "converted" ? "Convertie" : "En attente"}
+                  </span>
+                </div>
+                <p className="font-medium">{p.title}</p>
+                <p className="text-sm text-muted-foreground">{p.partner_name} • {formatPrice(p.total)}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => handleDownloadPDF(p.proforma_number)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                  <Download className="w-4 h-4" />
+                </button>
+                {p.status !== "converted" && (
+                  <button onClick={() => handleConvertToInvoice(p.proforma_number)} className="p-2 hover:bg-green-100 rounded-lg text-green-600" title="Convertir en facture">
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create Modal */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowCreate(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Nouvelle Facture Proforma</h3>
+              <button onClick={() => setShowCreate(false)}><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Partenaire *</label>
+                <select value={form.partner_id} onChange={e => setForm(p => ({ ...p, partner_id: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border">
+                  <option value="">Sélectionner...</option>
+                  {partners.map(p => <option key={p.partner_id} value={p.partner_id}>{p.company_name || p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Objet *</label>
+                <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border" placeholder="Ex: Fourniture équipements informatiques" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Description</label>
+                <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border" rows={2} />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Articles</label>
+                {form.items.map((item, i) => (
+                  <div key={i} className="flex gap-2 mt-2">
+                    <input value={item.description} onChange={e => updateItem(i, "description", e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg border" placeholder="Description" />
+                    <input type="number" value={item.quantity} onChange={e => updateItem(i, "quantity", parseInt(e.target.value) || 1)}
+                      className="w-20 px-3 py-2 rounded-lg border" min="1" />
+                    <input type="number" value={item.unit_price} onChange={e => updateItem(i, "unit_price", parseFloat(e.target.value) || 0)}
+                      className="w-28 px-3 py-2 rounded-lg border" placeholder="Prix" />
+                    {form.items.length > 1 && (
+                      <button onClick={() => removeItem(i)} className="p-2 text-red-500"><Trash2 className="w-4 h-4" /></button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={addItem} className="mt-2 text-sm text-blue-600">+ Ajouter un article</button>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="text-sm font-medium">Validité (jours)</label>
+                  <input type="number" value={form.validity_days} onChange={e => setForm(p => ({ ...p, validity_days: parseInt(e.target.value) || 30 }))}
+                    className="w-full mt-1 px-3 py-2 rounded-lg border" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium">Total</label>
+                  <p className="mt-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg font-bold text-lg">{formatPrice(total)}</p>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Notes</label>
+                <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border" rows={2} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg hover:bg-gray-100">Annuler</button>
+              <button onClick={handleCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Créer</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============== DELIVERY NOTES SECTION ==============
+
+function DeliveryNotesSection({ token }) {
+  const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [partners, setPartners] = useState([]);
+  const [form, setForm] = useState({
+    partner_id: "",
+    items: [{ description: "", quantity: 1, unit: "unité" }],
+    order_reference: "",
+    delivery_address: "",
+    delivery_date: "",
+    notes: ""
+  });
+
+  useEffect(() => {
+    fetchNotes();
+    fetchPartners();
+  }, []);
+
+  const fetchNotes = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/commercial/delivery-notes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotes(res.data.delivery_notes || []);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  const fetchPartners = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/commercial/partners`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPartners(res.data.partners || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleCreate = async () => {
+    if (!form.partner_id) {
+      toast.error("Partenaire requis");
+      return;
+    }
+    try {
+      await axios.post(`${API_URL}/api/commercial/delivery-notes`, form, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Bon de livraison créé");
+      setShowCreate(false);
+      setForm({ partner_id: "", items: [{ description: "", quantity: 1, unit: "unité" }], order_reference: "", delivery_address: "", delivery_date: "", notes: "" });
+      fetchNotes();
+    } catch (e) {
+      toast.error("Erreur lors de la création");
+    }
+  };
+
+  const handleDownloadPDF = async (delivery_number) => {
+    try {
+      const res = await axios.get(`${API_URL}/api/commercial/delivery-notes/${delivery_number}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob"
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `BonLivraison_${delivery_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e) {
+      toast.error("Erreur téléchargement PDF");
+    }
+  };
+
+  const addItem = () => setForm(p => ({ ...p, items: [...p.items, { description: "", quantity: 1, unit: "unité" }] }));
+  const updateItem = (i, field, value) => setForm(p => ({ ...p, items: p.items.map((item, idx) => idx === i ? { ...item, [field]: value } : item) }));
+  const removeItem = (i) => setForm(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold">Bons de Livraison</h2>
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl">
+          <Plus className="w-4 h-4" /> Nouveau BL
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-8"><RefreshCw className="w-6 h-6 animate-spin" /></div>
+      ) : notes.length === 0 ? (
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl">
+          <Truck className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+          <p className="font-medium">Aucun bon de livraison</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {notes.map(n => (
+            <div key={n.delivery_number} className="bg-white dark:bg-gray-800 rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <span className="font-mono text-sm">{n.delivery_number}</span>
+                <p className="font-medium">{n.partner_name}</p>
+                <p className="text-sm text-muted-foreground">{n.items?.length || 0} article(s) • {formatDate(n.delivery_date || n.created_at)}</p>
+              </div>
+              <button onClick={() => handleDownloadPDF(n.delivery_number)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <Download className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create Modal */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowCreate(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Nouveau Bon de Livraison</h3>
+              <button onClick={() => setShowCreate(false)}><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Destinataire *</label>
+                <select value={form.partner_id} onChange={e => setForm(p => ({ ...p, partner_id: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border">
+                  <option value="">Sélectionner...</option>
+                  {partners.map(p => <option key={p.partner_id} value={p.partner_id}>{p.company_name || p.name}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Réf. Commande</label>
+                  <input value={form.order_reference} onChange={e => setForm(p => ({ ...p, order_reference: e.target.value }))}
+                    className="w-full mt-1 px-3 py-2 rounded-lg border" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Date de livraison</label>
+                  <input type="date" value={form.delivery_date} onChange={e => setForm(p => ({ ...p, delivery_date: e.target.value }))}
+                    className="w-full mt-1 px-3 py-2 rounded-lg border" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Adresse de livraison</label>
+                <input value={form.delivery_address} onChange={e => setForm(p => ({ ...p, delivery_address: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Articles</label>
+                {form.items.map((item, i) => (
+                  <div key={i} className="flex gap-2 mt-2">
+                    <input value={item.description} onChange={e => updateItem(i, "description", e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg border" placeholder="Description" />
+                    <input type="number" value={item.quantity} onChange={e => updateItem(i, "quantity", parseInt(e.target.value) || 1)}
+                      className="w-20 px-3 py-2 rounded-lg border" min="1" />
+                    <select value={item.unit} onChange={e => updateItem(i, "unit", e.target.value)}
+                      className="w-24 px-2 py-2 rounded-lg border">
+                      <option value="unité">unité</option>
+                      <option value="kg">kg</option>
+                      <option value="carton">carton</option>
+                      <option value="palette">palette</option>
+                    </select>
+                    {form.items.length > 1 && (
+                      <button onClick={() => removeItem(i)} className="p-2 text-red-500"><Trash2 className="w-4 h-4" /></button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={addItem} className="mt-2 text-sm text-blue-600">+ Ajouter un article</button>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Observations</label>
+                <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border" rows={2} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg hover:bg-gray-100">Annuler</button>
+              <button onClick={handleCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Créer</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============== ATTESTATIONS SECTION ==============
+
+function AttestationsSection({ token }) {
+  const [attestations, setAttestations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({
+    attestation_type: "travail",
+    beneficiary_name: "",
+    beneficiary_position: "",
+    beneficiary_address: "",
+    beneficiary_id_number: "",
+    content: ""
+  });
+
+  const typeLabels = {
+    travail: "Attestation de Travail",
+    stage: "Attestation de Stage",
+    partenariat: "Attestation de Partenariat",
+    paiement: "Attestation de Paiement",
+    collaboration: "Attestation de Collaboration"
+  };
+
+  const defaultContent = {
+    travail: "a exercé les fonctions de [POSTE] au sein de notre entreprise du [DATE_DEBUT] au [DATE_FIN]. Durant cette période, l'intéressé(e) a fait preuve de sérieux, de professionnalisme et d'un excellent esprit d'équipe.",
+    stage: "a effectué un stage au sein de notre entreprise du [DATE_DEBUT] au [DATE_FIN] dans le département [DEPARTEMENT]. L'intéressé(e) a démontré de réelles compétences et une bonne capacité d'adaptation.",
+    partenariat: "est un partenaire officiel de GROUPE YAMA PLUS depuis le [DATE]. Notre collaboration porte sur [DOMAINE] et se déroule dans d'excellentes conditions.",
+    paiement: "a bien effectué le paiement de la somme de [MONTANT] FCFA au titre de [OBJET], en date du [DATE].",
+    collaboration: "collabore avec notre entreprise depuis le [DATE] dans le cadre de [PROJET/ACTIVITE]."
+  };
+
+  useEffect(() => {
+    fetchAttestations();
+  }, []);
+
+  const fetchAttestations = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/commercial/attestations`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAttestations(res.data.attestations || []);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  const handleCreate = async () => {
+    if (!form.beneficiary_name || !form.content) {
+      toast.error("Bénéficiaire et contenu requis");
+      return;
+    }
+    try {
+      await axios.post(`${API_URL}/api/commercial/attestations`, form, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Attestation créée");
+      setShowCreate(false);
+      setForm({ attestation_type: "travail", beneficiary_name: "", beneficiary_position: "", beneficiary_address: "", beneficiary_id_number: "", content: "" });
+      fetchAttestations();
+    } catch (e) {
+      toast.error("Erreur lors de la création");
+    }
+  };
+
+  const handleDownloadPDF = async (attestation_number) => {
+    try {
+      const res = await axios.get(`${API_URL}/api/commercial/attestations/${attestation_number}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob"
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Attestation_${attestation_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e) {
+      toast.error("Erreur téléchargement PDF");
+    }
+  };
+
+  const handleTypeChange = (type) => {
+    setForm(p => ({ ...p, attestation_type: type, content: defaultContent[type] || "" }));
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold">Attestations</h2>
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl">
+          <Plus className="w-4 h-4" /> Nouvelle Attestation
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-8"><RefreshCw className="w-6 h-6 animate-spin" /></div>
+      ) : attestations.length === 0 ? (
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl">
+          <Award className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+          <p className="font-medium">Aucune attestation</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {attestations.map(a => (
+            <div key={a.attestation_number} className="bg-white dark:bg-gray-800 rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm">{a.attestation_number}</span>
+                  <span className="px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-700">{typeLabels[a.attestation_type]}</span>
+                </div>
+                <p className="font-medium">{a.beneficiary_name}</p>
+                <p className="text-sm text-muted-foreground">{formatDate(a.created_at)}</p>
+              </div>
+              <button onClick={() => handleDownloadPDF(a.attestation_number)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <Download className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create Modal */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowCreate(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Nouvelle Attestation</h3>
+              <button onClick={() => setShowCreate(false)}><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Type d'attestation</label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {Object.entries(typeLabels).map(([key, label]) => (
+                    <button key={key} onClick={() => handleTypeChange(key)}
+                      className={`px-3 py-1.5 rounded-lg text-sm ${form.attestation_type === key ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-700"}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Nom du bénéficiaire *</label>
+                <input value={form.beneficiary_name} onChange={e => setForm(p => ({ ...p, beneficiary_name: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border" placeholder="M./Mme..." />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Fonction/Poste</label>
+                  <input value={form.beneficiary_position} onChange={e => setForm(p => ({ ...p, beneficiary_position: e.target.value }))}
+                    className="w-full mt-1 px-3 py-2 rounded-lg border" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">N° Pièce d'identité</label>
+                  <input value={form.beneficiary_id_number} onChange={e => setForm(p => ({ ...p, beneficiary_id_number: e.target.value }))}
+                    className="w-full mt-1 px-3 py-2 rounded-lg border" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Adresse</label>
+                <input value={form.beneficiary_address} onChange={e => setForm(p => ({ ...p, beneficiary_address: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Contenu de l'attestation *</label>
+                <textarea value={form.content} onChange={e => setForm(p => ({ ...p, content: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border" rows={4}
+                  placeholder="Le contenu apparaîtra après 'Je soussigné... atteste que [Nom]...'" />
+                <p className="text-xs text-muted-foreground mt-1">Remplacez les [CHAMPS] par les valeurs réelles</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg hover:bg-gray-100">Annuler</button>
+              <button onClick={handleCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Créer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

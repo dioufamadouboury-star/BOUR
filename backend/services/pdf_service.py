@@ -4,35 +4,48 @@ Professional design with GROUPE YAMA PLUS branding
 """
 import io
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm, cm
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT, TA_JUSTIFY
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, HRFlowable
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, HRFlowable, PageBreak
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import requests
 from typing import Optional, List, Dict, Any
 
 # Company colors
-YAMA_BLUE = colors.HexColor("#4A7BA7")
-YAMA_DARK = colors.HexColor("#2C3E50")
-YAMA_LIGHT = colors.HexColor("#ECF0F1")
-YAMA_GRAY = colors.HexColor("#7F8C8D")
+YAMA_BLUE = colors.HexColor("#1E90FF")  # Updated to match new logo
+YAMA_DARK = colors.HexColor("#1C1C1E")
+YAMA_LIGHT = colors.HexColor("#F5F5F7")
+YAMA_GRAY = colors.HexColor("#6E6E73")
+YAMA_GREEN = colors.HexColor("#34C759")
 
 # Company info
 COMPANY_INFO = {
     "name": "GROUPE YAMA PLUS",
+    "slogan": "Votre partenaire de croissance",
     "address": "Dakar – Sénégal",
     "email": "contact@groupeyamaplus.com",
     "phone": "78 382 75 75",
+    "website": "www.groupeyamaplus.com",
     "ninea": "012808210",
     "rccm": "SN DKR 2026 A 4814",
     "tva_mention": "TVA non applicable",
-    "logo_url": "/assets/images/logo_yama_pdf.png"
+    "logo_path": os.path.join(os.path.dirname(os.path.dirname(__file__)), "logo_yama.png")
 }
+
+def get_logo_image(width=45*mm, height=20*mm):
+    """Get logo image from local file"""
+    try:
+        logo_path = COMPANY_INFO["logo_path"]
+        if os.path.exists(logo_path):
+            return Image(logo_path, width=width, height=height)
+    except Exception as e:
+        print(f"Error loading logo: {e}")
+    return None
 
 def download_image(url: str) -> Optional[io.BytesIO]:
     """Download image from URL and return as BytesIO"""
@@ -178,20 +191,18 @@ def create_header(styles, doc_type: str = ""):
     """Create document header with logo and company info"""
     elements = []
     
-    # Try to load logo
-    logo_data = download_image(COMPANY_INFO["logo_url"])
+    # Load logo from local file
+    logo_img = get_logo_image(width=50*mm, height=22*mm)
     
     header_data = []
     
     # Left side: Logo with tagline or Company name
-    if logo_data:
-        # Use proportional sizing to avoid stretching - square logo
-        img = Image(logo_data, width=35*mm, height=35*mm)
+    if logo_img:
         # Create logo with tagline below
         logo_table = Table([
-            [img],
-            [Paragraph("<i>Votre partenaire de croissance</i>", ParagraphStyle('Tagline', fontSize=8, textColor=YAMA_GRAY, alignment=TA_CENTER))]
-        ], colWidths=[40*mm])
+            [logo_img],
+            [Paragraph(f"<i>{COMPANY_INFO['slogan']}</i>", ParagraphStyle('Tagline', fontSize=8, textColor=YAMA_GRAY, alignment=TA_CENTER))]
+        ], colWidths=[55*mm])
         logo_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -207,6 +218,7 @@ def create_header(styles, doc_type: str = ""):
         {COMPANY_INFO['address']}<br/>
         Email: {COMPANY_INFO['email']}<br/>
         Tél: {COMPANY_INFO['phone']}<br/>
+        Web: {COMPANY_INFO['website']}<br/>
         NINEA: {COMPANY_INFO['ninea']}<br/>
         RCCM: {COMPANY_INFO['rccm']}""",
         styles['CompanyInfo']
@@ -1030,4 +1042,463 @@ def generate_partnership_contract_pdf(
     doc.build(elements)
     buffer.seek(0)
     
+    return buffer
+
+
+
+# ============================================================
+# FACTURE PROFORMA
+# ============================================================
+def generate_proforma_invoice_pdf(
+    proforma_number: str,
+    partner: Dict,
+    items: List[Dict],
+    title: str = "Facture Proforma",
+    description: str = "",
+    validity_days: int = 30,
+    notes: str = "",
+    payment_terms: str = "Paiement à réception de la facture définitive",
+    date: str = None
+) -> io.BytesIO:
+    """Generate a proforma invoice PDF with YAMA+ branding"""
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=15*mm, bottomMargin=20*mm, leftMargin=15*mm, rightMargin=15*mm)
+    styles = get_styles()
+    elements = []
+    
+    # Header with logo
+    elements.extend(create_header(styles, "FACTURE PROFORMA"))
+    
+    # Document title with PROFORMA badge
+    title_table = Table([
+        [Paragraph("FACTURE PROFORMA", styles['DocTitle'])],
+        [Paragraph(f"N° {proforma_number}", styles['DocNumber'])]
+    ])
+    title_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BACKGROUND', (0, 0), (0, 0), colors.HexColor("#FFF3CD")),
+        ('TEXTCOLOR', (0, 0), (0, 0), colors.HexColor("#856404")),
+    ]))
+    elements.append(title_table)
+    elements.append(Spacer(1, 5*mm))
+    
+    # Date and validity
+    doc_date = date or datetime.now().strftime("%d/%m/%Y")
+    validity_date = (datetime.now() + timedelta(days=validity_days)).strftime("%d/%m/%Y") if not date else ""
+    
+    date_info = Table([
+        [Paragraph(f"<b>Date d'émission:</b> {doc_date}", styles['YamaBody']),
+         Paragraph(f"<b>Valable jusqu'au:</b> {validity_date}", styles['YamaBody'])]
+    ], colWidths=[90*mm, 90*mm])
+    elements.append(date_info)
+    elements.append(Spacer(1, 8*mm))
+    
+    # Partner section
+    elements.extend(create_partner_section(partner, styles))
+    elements.append(Spacer(1, 5*mm))
+    
+    # Title and description
+    if title:
+        elements.append(Paragraph(f"<b>Objet:</b> {title}", styles['YamaBody']))
+    if description:
+        elements.append(Paragraph(description, styles['YamaBody']))
+    elements.append(Spacer(1, 8*mm))
+    
+    # Items table
+    table_data = [["Description", "Qté", "Prix Unit.", "Total"]]
+    subtotal = 0
+    
+    for item in items:
+        qty = item.get('quantity', 1)
+        price = item.get('unit_price', 0)
+        total = qty * price
+        subtotal += total
+        table_data.append([
+            item.get('description', ''),
+            str(qty),
+            format_price(price),
+            format_price(total)
+        ])
+    
+    table_data.append(["", "", Paragraph("<b>TOTAL HT</b>", styles['TotalLabel']), Paragraph(f"<b>{format_price(subtotal)}</b>", styles['TotalAmount'])])
+    
+    items_table = Table(table_data, colWidths=[90*mm, 20*mm, 35*mm, 35*mm])
+    items_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), YAMA_BLUE),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -2), 0.5, YAMA_GRAY),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, YAMA_LIGHT]),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(items_table)
+    elements.append(Spacer(1, 10*mm))
+    
+    # Payment terms
+    elements.append(Paragraph("<b>Conditions de paiement:</b>", styles['SectionTitle']))
+    elements.append(Paragraph(payment_terms, styles['YamaBody']))
+    
+    # Notes
+    if notes:
+        elements.append(Spacer(1, 5*mm))
+        elements.append(Paragraph("<b>Notes:</b>", styles['SectionTitle']))
+        elements.append(Paragraph(notes, styles['Notes']))
+    
+    # Proforma disclaimer
+    elements.append(Spacer(1, 10*mm))
+    disclaimer_table = Table([[
+        Paragraph("<b>⚠️ DOCUMENT NON COMPTABLE</b><br/>Cette facture proforma n'a pas de valeur comptable. Elle sera remplacée par une facture définitive après validation de la commande.", 
+                  ParagraphStyle('Disclaimer', fontSize=9, textColor=colors.HexColor("#856404"), alignment=TA_CENTER))
+    ]])
+    disclaimer_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#FFF3CD")),
+        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#856404")),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    elements.append(disclaimer_table)
+    
+    # Footer
+    elements.append(Spacer(1, 15*mm))
+    elements.append(create_footer(styles))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+
+# ============================================================
+# BON DE LIVRAISON
+# ============================================================
+def generate_delivery_note_pdf(
+    delivery_number: str,
+    partner: Dict,
+    items: List[Dict],
+    order_reference: str = "",
+    delivery_address: str = "",
+    delivery_date: str = None,
+    notes: str = "",
+    date: str = None
+) -> io.BytesIO:
+    """Generate a delivery note PDF with YAMA+ branding"""
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=15*mm, bottomMargin=20*mm, leftMargin=15*mm, rightMargin=15*mm)
+    styles = get_styles()
+    elements = []
+    
+    # Header with logo
+    elements.extend(create_header(styles, "BON DE LIVRAISON"))
+    
+    # Document title
+    elements.append(Paragraph("BON DE LIVRAISON", styles['DocTitle']))
+    elements.append(Paragraph(f"N° {delivery_number}", styles['DocNumber']))
+    elements.append(Spacer(1, 5*mm))
+    
+    # Date and reference info
+    doc_date = date or datetime.now().strftime("%d/%m/%Y")
+    del_date = delivery_date or doc_date
+    
+    info_data = [
+        [Paragraph(f"<b>Date:</b> {doc_date}", styles['YamaBody']),
+         Paragraph(f"<b>Date de livraison:</b> {del_date}", styles['YamaBody'])],
+    ]
+    if order_reference:
+        info_data.append([Paragraph(f"<b>Réf. Commande:</b> {order_reference}", styles['YamaBody']), ""])
+    
+    info_table = Table(info_data, colWidths=[90*mm, 90*mm])
+    elements.append(info_table)
+    elements.append(Spacer(1, 8*mm))
+    
+    # Partner section
+    elements.extend(create_partner_section(partner, styles))
+    
+    # Delivery address if different
+    if delivery_address:
+        elements.append(Spacer(1, 5*mm))
+        elements.append(Paragraph("<b>Adresse de livraison:</b>", styles['SectionTitle']))
+        elements.append(Paragraph(delivery_address, styles['YamaBody']))
+    
+    elements.append(Spacer(1, 8*mm))
+    
+    # Items table
+    table_data = [["#", "Description", "Quantité", "Unité", "État"]]
+    
+    for i, item in enumerate(items, 1):
+        table_data.append([
+            str(i),
+            item.get('description', ''),
+            str(item.get('quantity', 1)),
+            item.get('unit', 'unité'),
+            "☐ Conforme"
+        ])
+    
+    items_table = Table(table_data, colWidths=[15*mm, 85*mm, 25*mm, 25*mm, 30*mm])
+    items_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), YAMA_BLUE),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, YAMA_GRAY),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, YAMA_LIGHT]),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(items_table)
+    
+    # Notes
+    if notes:
+        elements.append(Spacer(1, 8*mm))
+        elements.append(Paragraph("<b>Observations:</b>", styles['SectionTitle']))
+        elements.append(Paragraph(notes, styles['Notes']))
+    
+    elements.append(Spacer(1, 15*mm))
+    
+    # Signatures
+    sig_table = Table([
+        [Paragraph("<b>Le Livreur</b>", styles['YamaBody']),
+         Paragraph("<b>Le Destinataire</b>", styles['YamaBody'])],
+        [Paragraph("Nom:<br/><br/>Signature:", styles['YamaBody']),
+         Paragraph("Nom:<br/><br/>Signature:", styles['YamaBody'])],
+        [Paragraph("<br/><br/><br/>", styles['YamaBody']),
+         Paragraph("<br/><br/><br/>", styles['YamaBody'])]
+    ], colWidths=[90*mm, 90*mm])
+    sig_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOX', (0, 1), (0, 2), 0.5, YAMA_GRAY),
+        ('BOX', (1, 1), (1, 2), 0.5, YAMA_GRAY),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(sig_table)
+    
+    # Footer
+    elements.append(Spacer(1, 10*mm))
+    elements.append(create_footer(styles))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+
+# ============================================================
+# ATTESTATION
+# ============================================================
+def generate_attestation_pdf(
+    attestation_number: str,
+    attestation_type: str,  # "travail", "stage", "partenariat", "paiement"
+    beneficiary_name: str,
+    beneficiary_info: Dict,
+    content: str,
+    date: str = None
+) -> io.BytesIO:
+    """Generate an attestation PDF with YAMA+ branding"""
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=15*mm, bottomMargin=20*mm, leftMargin=20*mm, rightMargin=20*mm)
+    styles = get_styles()
+    elements = []
+    
+    # Header with logo
+    elements.extend(create_header(styles, "ATTESTATION"))
+    
+    # Document title
+    type_labels = {
+        "travail": "ATTESTATION DE TRAVAIL",
+        "stage": "ATTESTATION DE STAGE",
+        "partenariat": "ATTESTATION DE PARTENARIAT",
+        "paiement": "ATTESTATION DE PAIEMENT",
+        "collaboration": "ATTESTATION DE COLLABORATION"
+    }
+    title = type_labels.get(attestation_type, "ATTESTATION")
+    
+    elements.append(Paragraph(title, styles['DocTitle']))
+    elements.append(Paragraph(f"N° {attestation_number}", styles['DocNumber']))
+    elements.append(Spacer(1, 15*mm))
+    
+    # Opening statement
+    doc_date = date or datetime.now().strftime("%d/%m/%Y")
+    elements.append(Paragraph(
+        f"Je soussigné, <b>DIOUF AMADOU BOURY</b>, Directeur Général de <b>GROUPE YAMA PLUS</b>, atteste par la présente que :",
+        styles['YamaBody']
+    ))
+    elements.append(Spacer(1, 10*mm))
+    
+    # Beneficiary info box
+    beneficiary_content = f"<b>M./Mme {beneficiary_name}</b><br/>"
+    if beneficiary_info.get('position'):
+        beneficiary_content += f"Fonction: {beneficiary_info['position']}<br/>"
+    if beneficiary_info.get('address'):
+        beneficiary_content += f"Adresse: {beneficiary_info['address']}<br/>"
+    if beneficiary_info.get('id_number'):
+        beneficiary_content += f"N° Pièce d'identité: {beneficiary_info['id_number']}<br/>"
+    
+    beneficiary_table = Table([[Paragraph(beneficiary_content, styles['YamaBody'])]])
+    beneficiary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), YAMA_LIGHT),
+        ('BOX', (0, 0), (-1, -1), 1, YAMA_BLUE),
+        ('TOPPADDING', (0, 0), (-1, -1), 15),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+        ('LEFTPADDING', (0, 0), (-1, -1), 15),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+    ]))
+    elements.append(beneficiary_table)
+    elements.append(Spacer(1, 10*mm))
+    
+    # Main content
+    elements.append(Paragraph(content, styles['YamaBody']))
+    elements.append(Spacer(1, 10*mm))
+    
+    # Closing statement
+    elements.append(Paragraph(
+        "Cette attestation est délivrée pour servir et valoir ce que de droit.",
+        styles['YamaBody']
+    ))
+    elements.append(Spacer(1, 15*mm))
+    
+    # Date and signature
+    elements.append(Paragraph(f"Fait à <b>Dakar</b>, le <b>{doc_date}</b>", styles['YamaBody']))
+    elements.append(Spacer(1, 15*mm))
+    
+    elements.append(Paragraph("<b>Le Directeur Général</b>", styles['YamaBody']))
+    elements.append(Paragraph("DIOUF AMADOU BOURY", styles['YamaBody']))
+    elements.append(Spacer(1, 20*mm))
+    elements.append(Paragraph("Signature et cachet:", styles['YamaBody']))
+    
+    # Footer
+    elements.append(Spacer(1, 20*mm))
+    elements.append(create_footer(styles))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+
+# ============================================================
+# CUSTOMER ORDER INVOICE (for e-commerce)
+# ============================================================
+def generate_customer_invoice_pdf(
+    order: Dict,
+    items: List[Dict],
+    customer: Dict
+) -> io.BytesIO:
+    """Generate a customer invoice PDF for e-commerce orders with YAMA+ branding"""
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=15*mm, bottomMargin=20*mm, leftMargin=15*mm, rightMargin=15*mm)
+    styles = get_styles()
+    elements = []
+    
+    # Header with logo
+    elements.extend(create_header(styles, "FACTURE"))
+    
+    # Document title
+    elements.append(Paragraph("FACTURE", styles['DocTitle']))
+    elements.append(Paragraph(f"N° {order.get('order_id', 'N/A')}", styles['DocNumber']))
+    elements.append(Spacer(1, 5*mm))
+    
+    # Date
+    order_date = order.get('created_at', datetime.now().isoformat())
+    if isinstance(order_date, str):
+        try:
+            order_date = datetime.fromisoformat(order_date.replace('Z', '+00:00'))
+        except:
+            order_date = datetime.now()
+    formatted_date = order_date.strftime("%d/%m/%Y") if hasattr(order_date, 'strftime') else str(order_date)[:10]
+    
+    elements.append(Paragraph(f"<b>Date:</b> {formatted_date}", styles['YamaBody']))
+    elements.append(Spacer(1, 8*mm))
+    
+    # Customer section
+    elements.append(Paragraph("CLIENT", styles['SectionTitle']))
+    customer_info = f"<b>{customer.get('name', 'Client')}</b><br/>"
+    if customer.get('email'):
+        customer_info += f"Email: {customer['email']}<br/>"
+    if customer.get('phone'):
+        customer_info += f"Tél: {customer['phone']}<br/>"
+    if order.get('shipping_address'):
+        addr = order['shipping_address']
+        customer_info += f"{addr.get('address', '')}<br/>{addr.get('city', '')} {addr.get('postal_code', '')}"
+    
+    elements.append(Paragraph(customer_info, styles['PartnerInfo']))
+    elements.append(Spacer(1, 10*mm))
+    
+    # Items table
+    table_data = [["Produit", "Qté", "Prix Unit.", "Total"]]
+    subtotal = 0
+    
+    for item in items:
+        qty = item.get('quantity', 1)
+        price = item.get('price', 0)
+        total = qty * price
+        subtotal += total
+        table_data.append([
+            item.get('name', item.get('product_name', '')),
+            str(qty),
+            format_price(price),
+            format_price(total)
+        ])
+    
+    # Shipping
+    shipping = order.get('shipping_cost', 0)
+    if shipping > 0:
+        table_data.append(["Frais de livraison", "", "", format_price(shipping)])
+    
+    # Discount
+    discount = order.get('discount_amount', 0)
+    if discount > 0:
+        table_data.append(["Remise", "", "", f"-{format_price(discount)}"])
+    
+    # Total
+    total_amount = order.get('total', subtotal + shipping - discount)
+    table_data.append(["", "", Paragraph("<b>TOTAL</b>", styles['TotalLabel']), Paragraph(f"<b>{format_price(total_amount)}</b>", styles['TotalAmount'])])
+    
+    items_table = Table(table_data, colWidths=[90*mm, 20*mm, 35*mm, 35*mm])
+    items_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), YAMA_BLUE),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
+        ('GRID', (0, 0), (-1, -2), 0.5, YAMA_GRAY),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, YAMA_LIGHT]),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(items_table)
+    elements.append(Spacer(1, 10*mm))
+    
+    # Payment status
+    payment_status = order.get('payment_status', 'pending')
+    status_text = "✅ PAYÉE" if payment_status == 'paid' else "⏳ EN ATTENTE DE PAIEMENT"
+    status_color = YAMA_GREEN if payment_status == 'paid' else colors.HexColor("#FF9500")
+    
+    status_table = Table([[Paragraph(f"<b>{status_text}</b>", ParagraphStyle('Status', fontSize=12, textColor=status_color, alignment=TA_CENTER))]])
+    status_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F0FFF0") if payment_status == 'paid' else colors.HexColor("#FFF5E6")),
+        ('BOX', (0, 0), (-1, -1), 1, status_color),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    elements.append(status_table)
+    
+    # Thank you message
+    elements.append(Spacer(1, 10*mm))
+    elements.append(Paragraph("Merci pour votre confiance !", ParagraphStyle('Thanks', fontSize=11, textColor=YAMA_BLUE, alignment=TA_CENTER, fontName='Helvetica-Bold')))
+    
+    # Footer
+    elements.append(Spacer(1, 15*mm))
+    elements.append(create_footer(styles))
+    
+    doc.build(elements)
+    buffer.seek(0)
     return buffer

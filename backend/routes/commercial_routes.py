@@ -1304,4 +1304,267 @@ def get_commercial_routes(db, require_admin):
             "message": f"Contrat de partenariat {contract_number} créé avec succès"
         }
     
+    # ============== PROFORMA INVOICE ==============
+    
+    class ProformaCreate(BaseModel):
+        partner_id: str
+        title: str
+        description: Optional[str] = None
+        items: List[DocumentItem]
+        validity_days: int = 30
+        notes: Optional[str] = None
+        payment_terms: Optional[str] = "Paiement à réception de la facture définitive"
+    
+    @commercial_router.post("/proformas")
+    async def create_proforma(data: ProformaCreate, user = Depends(require_admin)):
+        """Create a new proforma invoice"""
+        partner = await db.partners.find_one({"partner_id": data.partner_id}, {"_id": 0})
+        if not partner:
+            raise HTTPException(status_code=404, detail="Partenaire non trouvé")
+        
+        proforma_number = generate_document_number("PROF")
+        
+        items_list = [item.dict() for item in data.items]
+        subtotal = sum(item.quantity * item.unit_price for item in data.items)
+        
+        proforma = {
+            "proforma_number": proforma_number,
+            "partner_id": data.partner_id,
+            "partner_name": partner.get("company_name", partner.get("name")),
+            "title": data.title,
+            "description": data.description,
+            "items": items_list,
+            "subtotal": subtotal,
+            "total": subtotal,
+            "validity_days": data.validity_days,
+            "notes": data.notes,
+            "payment_terms": data.payment_terms,
+            "status": "draft",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": user.email if hasattr(user, 'email') else str(user)
+        }
+        
+        await db.proformas.insert_one(proforma)
+        proforma.pop("_id", None)
+        
+        return {"success": True, "proforma": proforma}
+    
+    @commercial_router.get("/proformas")
+    async def list_proformas(status: str = None, user = Depends(require_admin)):
+        """List all proforma invoices"""
+        query = {}
+        if status:
+            query["status"] = status
+        
+        proformas = await db.proformas.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+        return {"proformas": proformas}
+    
+    @commercial_router.get("/proformas/{proforma_number}/pdf")
+    async def download_proforma_pdf(proforma_number: str, user = Depends(require_admin)):
+        """Generate and download proforma PDF"""
+        from services.pdf_service import generate_proforma_invoice_pdf
+        
+        proforma = await db.proformas.find_one({"proforma_number": proforma_number}, {"_id": 0})
+        if not proforma:
+            raise HTTPException(status_code=404, detail="Facture proforma non trouvée")
+        
+        partner = await db.partners.find_one({"partner_id": proforma["partner_id"]}, {"_id": 0})
+        if not partner:
+            partner = {"name": proforma.get("partner_name", "Client")}
+        
+        pdf_buffer = generate_proforma_invoice_pdf(
+            proforma_number=proforma_number,
+            partner=partner,
+            items=proforma.get("items", []),
+            title=proforma.get("title", ""),
+            description=proforma.get("description", ""),
+            validity_days=proforma.get("validity_days", 30),
+            notes=proforma.get("notes", ""),
+            payment_terms=proforma.get("payment_terms", "")
+        )
+        
+        return Response(
+            content=pdf_buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=Proforma_{proforma_number}.pdf"}
+        )
+    
+    @commercial_router.post("/proformas/{proforma_number}/convert-to-invoice")
+    async def convert_proforma_to_invoice(proforma_number: str, user = Depends(require_admin)):
+        """Convert a proforma to a final invoice"""
+        proforma = await db.proformas.find_one({"proforma_number": proforma_number}, {"_id": 0})
+        if not proforma:
+            raise HTTPException(status_code=404, detail="Facture proforma non trouvée")
+        
+        invoice_number = generate_document_number("FACT")
+        
+        invoice = {
+            "invoice_number": invoice_number,
+            "invoice_type": "final",
+            "partner_id": proforma["partner_id"],
+            "partner_name": proforma.get("partner_name"),
+            "title": proforma.get("title"),
+            "description": proforma.get("description"),
+            "items": proforma.get("items", []),
+            "subtotal": proforma.get("subtotal", 0),
+            "total": proforma.get("total", 0),
+            "notes": proforma.get("notes"),
+            "payment_terms": proforma.get("payment_terms"),
+            "from_proforma": proforma_number,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": user.email if hasattr(user, 'email') else str(user)
+        }
+        
+        await db.invoices.insert_one(invoice)
+        await db.proformas.update_one({"proforma_number": proforma_number}, {"$set": {"status": "converted", "converted_to": invoice_number}})
+        
+        invoice.pop("_id", None)
+        return {"success": True, "invoice": invoice}
+    
+    # ============== DELIVERY NOTES ==============
+    
+    class DeliveryNoteCreate(BaseModel):
+        partner_id: str
+        items: List[DocumentItem]
+        order_reference: Optional[str] = None
+        delivery_address: Optional[str] = None
+        delivery_date: Optional[str] = None
+        notes: Optional[str] = None
+    
+    @commercial_router.post("/delivery-notes")
+    async def create_delivery_note(data: DeliveryNoteCreate, user = Depends(require_admin)):
+        """Create a delivery note"""
+        partner = await db.partners.find_one({"partner_id": data.partner_id}, {"_id": 0})
+        if not partner:
+            raise HTTPException(status_code=404, detail="Partenaire non trouvé")
+        
+        delivery_number = generate_document_number("BL")
+        
+        delivery_note = {
+            "delivery_number": delivery_number,
+            "partner_id": data.partner_id,
+            "partner_name": partner.get("company_name", partner.get("name")),
+            "items": [item.dict() for item in data.items],
+            "order_reference": data.order_reference,
+            "delivery_address": data.delivery_address or partner.get("address", ""),
+            "delivery_date": data.delivery_date,
+            "notes": data.notes,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": user.email if hasattr(user, 'email') else str(user)
+        }
+        
+        await db.delivery_notes.insert_one(delivery_note)
+        delivery_note.pop("_id", None)
+        
+        return {"success": True, "delivery_note": delivery_note}
+    
+    @commercial_router.get("/delivery-notes")
+    async def list_delivery_notes(status: str = None, user = Depends(require_admin)):
+        """List all delivery notes"""
+        query = {}
+        if status:
+            query["status"] = status
+        
+        notes = await db.delivery_notes.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+        return {"delivery_notes": notes}
+    
+    @commercial_router.get("/delivery-notes/{delivery_number}/pdf")
+    async def download_delivery_note_pdf(delivery_number: str, user = Depends(require_admin)):
+        """Generate and download delivery note PDF"""
+        from services.pdf_service import generate_delivery_note_pdf
+        
+        note = await db.delivery_notes.find_one({"delivery_number": delivery_number}, {"_id": 0})
+        if not note:
+            raise HTTPException(status_code=404, detail="Bon de livraison non trouvé")
+        
+        partner = await db.partners.find_one({"partner_id": note["partner_id"]}, {"_id": 0})
+        if not partner:
+            partner = {"name": note.get("partner_name", "Client")}
+        
+        pdf_buffer = generate_delivery_note_pdf(
+            delivery_number=delivery_number,
+            partner=partner,
+            items=note.get("items", []),
+            order_reference=note.get("order_reference", ""),
+            delivery_address=note.get("delivery_address", ""),
+            delivery_date=note.get("delivery_date"),
+            notes=note.get("notes", "")
+        )
+        
+        return Response(
+            content=pdf_buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=BonLivraison_{delivery_number}.pdf"}
+        )
+    
+    # ============== ATTESTATIONS ==============
+    
+    class AttestationCreate(BaseModel):
+        attestation_type: str  # travail, stage, partenariat, paiement, collaboration
+        beneficiary_name: str
+        beneficiary_position: Optional[str] = None
+        beneficiary_address: Optional[str] = None
+        beneficiary_id_number: Optional[str] = None
+        content: str
+    
+    @commercial_router.post("/attestations")
+    async def create_attestation(data: AttestationCreate, user = Depends(require_admin)):
+        """Create an attestation"""
+        attestation_number = generate_document_number("ATT")
+        
+        attestation = {
+            "attestation_number": attestation_number,
+            "attestation_type": data.attestation_type,
+            "beneficiary_name": data.beneficiary_name,
+            "beneficiary_info": {
+                "position": data.beneficiary_position,
+                "address": data.beneficiary_address,
+                "id_number": data.beneficiary_id_number
+            },
+            "content": data.content,
+            "status": "draft",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_by": user.email if hasattr(user, 'email') else str(user)
+        }
+        
+        await db.attestations.insert_one(attestation)
+        attestation.pop("_id", None)
+        
+        return {"success": True, "attestation": attestation}
+    
+    @commercial_router.get("/attestations")
+    async def list_attestations(attestation_type: str = None, user = Depends(require_admin)):
+        """List all attestations"""
+        query = {}
+        if attestation_type:
+            query["attestation_type"] = attestation_type
+        
+        attestations = await db.attestations.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+        return {"attestations": attestations}
+    
+    @commercial_router.get("/attestations/{attestation_number}/pdf")
+    async def download_attestation_pdf(attestation_number: str, user = Depends(require_admin)):
+        """Generate and download attestation PDF"""
+        from services.pdf_service import generate_attestation_pdf
+        
+        attestation = await db.attestations.find_one({"attestation_number": attestation_number}, {"_id": 0})
+        if not attestation:
+            raise HTTPException(status_code=404, detail="Attestation non trouvée")
+        
+        pdf_buffer = generate_attestation_pdf(
+            attestation_number=attestation_number,
+            attestation_type=attestation.get("attestation_type", ""),
+            beneficiary_name=attestation.get("beneficiary_name", ""),
+            beneficiary_info=attestation.get("beneficiary_info", {}),
+            content=attestation.get("content", "")
+        )
+        
+        return Response(
+            content=pdf_buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=Attestation_{attestation_number}.pdf"}
+        )
+    
     return commercial_router
