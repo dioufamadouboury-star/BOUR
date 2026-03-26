@@ -12,30 +12,18 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 
 ## Recent Changes (March 26, 2026)
 
-### ✅ COMPLETED - All P0 + P1 Tasks
+### ✅ COMPLETED - All P0 + P1 + P2 Tasks
 1. **Système de Réservation** (Transport & Services) ✅
-   - Endpoint POST /api/reservations
-   - Admin Dashboard /admin/reservations
-   - Bouton "Réserver maintenant" sur Covoiturage
-
 2. **Centre SMS Avancé** ✅
-   - Templates dynamiques avec variables {{nom}}, {{date}}, {{montant}}
-   - CRUD templates personnalisés
-
 3. **Collecte & Campagnes Marketing** ✅
-   - Auto-collecte emails/phones
-   - Dashboard /admin/marketing avec stats + Export CSV
-   - Envoi campagnes Email/SMS ciblées
-
 4. **Réinitialisation Plateforme** ✅
-   - Backup automatique + Restauration
-   - Code de confirmation: RESET-YAMA-2026
-
 5. **Module Prestataires (Refonte)** ✅
-   - Modal détaillé avec profil professionnel complet
-   - Validation des documents (ID, Résidence, Photo)
-   - Bouton "Vérifier documents" pour prestataires en attente
-   - Approbation/Refus avec notifications
+6. **Guide Campagnes Publicitaires** ✅
+   - Tutoriel Facebook Ads étape par étape
+   - Guide Google Ads avec mots-clés recommandés
+   - Guide YouTube Ads avec script vidéo
+   - Stats et budgets adaptés au Sénégal
+   - Pixel Facebook et GA4 déjà configurés
 
 ## What's Implemented
 

@@ -48,6 +48,7 @@ import {
   MessageSquare,
   Smartphone,
   Calendar,
+  Target,
 } from "lucide-react";
 import { formatPrice, formatDate, getOrderStatusDisplay, getPaymentStatusDisplay, getCategoryName, getImageUrl } from "../lib/utils";
 import { cn } from "../lib/utils";
@@ -65,6 +66,7 @@ import CovoiturageAdmin from "../components/Admin/CovoiturageAdmin";
 import ReservationsAdmin from "../components/Admin/ReservationsAdmin";
 import MarketingAdmin from "../components/Admin/MarketingAdmin";
 import PlatformResetAdmin from "../components/Admin/PlatformResetAdmin";
+import AdsGuideAdmin from "../components/Admin/AdsGuideAdmin";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -82,6 +84,7 @@ const menuItems = [
   { id: "service-requests", label: "Demandes Services", icon: ClipboardList, href: "/admin/service-requests" },
   { id: "users", label: "Utilisateurs", icon: Users, href: "/admin/users" },
   { id: "marketing", label: "Marketing", icon: TrendingUp, href: "/admin/marketing" },
+  { id: "ads-guide", label: "Guide Publicités", icon: Target, href: "/admin/ads-guide" },
   { id: "promo-codes", label: "Codes Promo", icon: Tag, href: "/admin/promo-codes" },
   { id: "abandoned-carts", label: "Paniers abandonnés", icon: ShoppingBag, href: "/admin/abandoned-carts" },
   { id: "immobilier", label: "Immobilier", icon: Home, href: "/admin/immobilier" },
@@ -1867,6 +1870,8 @@ export default function AdminPage() {
         return <ReservationsAdmin token={token} />;
       case "marketing":
         return <MarketingAdmin token={token} />;
+      case "ads-guide":
+        return <AdsGuideAdmin />;
       case "reset":
         return <PlatformResetAdmin token={token} />;
       default:

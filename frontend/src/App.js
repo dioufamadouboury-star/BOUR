@@ -148,6 +148,7 @@ function AppRouter() {
       <Route path="/admin/whatsapp" element={<AdminPage />} />
       <Route path="/admin/reservations" element={<AdminPage />} />
       <Route path="/admin/marketing" element={<AdminPage />} />
+      <Route path="/admin/ads-guide" element={<AdminPage />} />
       <Route path="/admin/reset" element={<AdminPage />} />
 
       {/* Public Pages */}
