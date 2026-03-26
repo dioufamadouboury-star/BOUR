@@ -876,6 +876,37 @@ export default function CategoryPage() {
 
 // ─── TripPublicCard ─────────────────────────────────────────────────────
 function TripPublicCard({ trip }) {
+  const [showReservationModal, setShowReservationModal] = useState(false);
+  const [reservationForm, setReservationForm] = useState({ client_name: "", client_phone: "", client_email: "", seats: 1, notes: "" });
+  const [reserving, setReserving] = useState(false);
+
+  const handleReservation = async () => {
+    if (!reservationForm.client_name || !reservationForm.client_phone) {
+      alert("Nom et téléphone requis");
+      return;
+    }
+    setReserving(true);
+    try {
+      const res = await axios.post(`${API_URL}/api/reservations`, {
+        type: "transport",
+        item_id: trip.trip_id,
+        item_name: trip.route_label || `${trip.route_from} → ${trip.route_to}`,
+        client_name: reservationForm.client_name,
+        client_phone: reservationForm.client_phone,
+        client_email: reservationForm.client_email,
+        date: trip.departure_date,
+        time: trip.departure_time,
+        notes: reservationForm.notes,
+        seats: reservationForm.seats
+      });
+      alert(`Réservation envoyée ! ID: ${res.data.reservation_id}. Nous vous contacterons pour confirmer.`);
+      setShowReservationModal(false);
+    } catch (e) {
+      alert("Erreur lors de la réservation");
+    }
+    setReserving(false);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -903,15 +934,62 @@ function TripPublicCard({ trip }) {
           {trip.driver_name && <span>Chauffeur : {trip.driver_name}</span>}
         </div>
         {trip.notes && <p className="text-xs text-muted-foreground mb-4">{trip.notes}</p>}
+        
+        {/* Reservation Button - Above WhatsApp */}
+        <button
+          onClick={() => setShowReservationModal(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors mb-2"
+          data-testid="reserve-trip-btn"
+        >
+          <Car className="w-4 h-4" /> Réserver maintenant
+        </button>
+        
         <a
           href={`https://wa.me/221783827575?text=Bonjour, je souhaite réserver le trajet ${trip.route_label || trip.route_from + ' → ' + trip.route_to}`}
           target="_blank"
           rel="noopener noreferrer"
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
         >
-          <Navigation className="w-4 h-4" /> Réserver via WhatsApp
+          <Navigation className="w-4 h-4" /> Contacter via WhatsApp
         </a>
       </div>
+
+      {/* Reservation Modal */}
+      {showReservationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowReservationModal(false)}>
+          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">Réserver ce trajet</h3>
+            <p className="text-sm text-muted-foreground mb-4">{trip.route_label || `${trip.route_from} → ${trip.route_to}`}</p>
+            <div className="space-y-3">
+              <input type="text" placeholder="Votre nom *" value={reservationForm.client_name}
+                onChange={e => setReservationForm(p => ({...p, client_name: e.target.value}))}
+                className="w-full px-3 py-2.5 rounded-lg border border-black/10 dark:border-white/10" />
+              <input type="tel" placeholder="Téléphone *" value={reservationForm.client_phone}
+                onChange={e => setReservationForm(p => ({...p, client_phone: e.target.value}))}
+                className="w-full px-3 py-2.5 rounded-lg border border-black/10 dark:border-white/10" />
+              <input type="email" placeholder="Email (optionnel)" value={reservationForm.client_email}
+                onChange={e => setReservationForm(p => ({...p, client_email: e.target.value}))}
+                className="w-full px-3 py-2.5 rounded-lg border border-black/10 dark:border-white/10" />
+              <div>
+                <label className="text-sm">Nombre de places</label>
+                <input type="number" min="1" max={trip.total_seats || 4} value={reservationForm.seats}
+                  onChange={e => setReservationForm(p => ({...p, seats: parseInt(e.target.value) || 1}))}
+                  className="w-full px-3 py-2 rounded-lg border border-black/10 dark:border-white/10" />
+              </div>
+              <textarea placeholder="Notes (optionnel)" value={reservationForm.notes}
+                onChange={e => setReservationForm(p => ({...p, notes: e.target.value}))}
+                className="w-full px-3 py-2 rounded-lg border border-black/10 dark:border-white/10" rows={2} />
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setShowReservationModal(false)} className="flex-1 py-2.5 rounded-lg border border-black/10">Annuler</button>
+              <button onClick={handleReservation} disabled={reserving}
+                className="flex-1 py-2.5 rounded-lg bg-blue-600 text-white font-semibold disabled:opacity-50">
+                {reserving ? "Envoi..." : "Confirmer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

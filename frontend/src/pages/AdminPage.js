@@ -47,6 +47,7 @@ import {
   Car,
   MessageSquare,
   Smartphone,
+  Calendar,
 } from "lucide-react";
 import { formatPrice, formatDate, getOrderStatusDisplay, getPaymentStatusDisplay, getCategoryName, getImageUrl } from "../lib/utils";
 import { cn } from "../lib/utils";
@@ -61,6 +62,9 @@ import { CommercialDashboard } from "./CommercialDashboard";
 import GiftBoxAdmin from "../components/Admin/GiftBoxAdmin";
 import ImmobilierAdmin from "../components/Admin/ImmobilierAdmin";
 import CovoiturageAdmin from "../components/Admin/CovoiturageAdmin";
+import ReservationsAdmin from "../components/Admin/ReservationsAdmin";
+import MarketingAdmin from "../components/Admin/MarketingAdmin";
+import PlatformResetAdmin from "../components/Admin/PlatformResetAdmin";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -72,10 +76,12 @@ const menuItems = [
   { id: "flash-sales", label: "Ventes Flash", icon: Zap, href: "/admin/flash-sales" },
   { id: "gift-boxes", label: "Coffrets Cadeaux", icon: Gift, href: "/admin/gift-boxes" },
   { id: "orders", label: "Commandes", icon: ShoppingCart, href: "/admin/orders" },
+  { id: "reservations", label: "Réservations", icon: Calendar, href: "/admin/reservations" },
   { id: "appointments", label: "Rendez-vous", icon: Clock, href: "/admin/appointments" },
   { id: "service-providers", label: "Prestataires", icon: Briefcase, href: "/admin/service-providers" },
   { id: "service-requests", label: "Demandes Services", icon: ClipboardList, href: "/admin/service-requests" },
   { id: "users", label: "Utilisateurs", icon: Users, href: "/admin/users" },
+  { id: "marketing", label: "Marketing", icon: TrendingUp, href: "/admin/marketing" },
   { id: "promo-codes", label: "Codes Promo", icon: Tag, href: "/admin/promo-codes" },
   { id: "abandoned-carts", label: "Paniers abandonnés", icon: ShoppingBag, href: "/admin/abandoned-carts" },
   { id: "immobilier", label: "Immobilier", icon: Home, href: "/admin/immobilier" },
@@ -83,6 +89,7 @@ const menuItems = [
   { id: "sms", label: "SMS", icon: Smartphone, href: "/admin/sms" },
   { id: "whatsapp", label: "WhatsApp Bot", icon: MessageSquare, href: "/admin/whatsapp" },
   { id: "email", label: "Campagnes Email", icon: Mail, href: "/admin/email" },
+  { id: "reset", label: "Réinitialisation", icon: AlertCircle, href: "/admin/reset" },
 ];
 
 const categories = [
@@ -1856,6 +1863,12 @@ export default function AdminPage() {
         return <SMSAdminSection />;
       case "whatsapp":
         return renderWhatsAppBot();
+      case "reservations":
+        return <ReservationsAdmin token={token} />;
+      case "marketing":
+        return <MarketingAdmin token={token} />;
+      case "reset":
+        return <PlatformResetAdmin token={token} />;
       default:
         return renderDashboard();
     }

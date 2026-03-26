@@ -1014,6 +1014,9 @@ async def register(user_data: UserCreate, response: Response):
     
     await db.users.insert_one(user_doc)
     
+    # Collect marketing contact
+    asyncio.create_task(collect_marketing_contact(user_data.name, user_data.email, user_data.phone, "registration"))
+    
     # Send welcome email asynchronously (create a clean copy without _id)
     user_for_email = {k: v for k, v in user_doc.items() if k != "_id"}
     asyncio.create_task(send_welcome_email(user_for_email))
@@ -9363,6 +9366,420 @@ async def get_sms_history(user: User = Depends(require_admin)):
 async def get_providers_for_sms(user: User = Depends(require_admin)):
     providers = await db.service_providers.find({"phone": {"$exists": True, "$ne": None}}, {"_id": 0, "name": 1, "phone": 1, "email": 1, "category": 1}).to_list(200)
     return {"providers": providers}
+
+
+# ============================================================
+# RESERVATION SYSTEM (Transport & Services)
+# ============================================================
+class ReservationCreate(BaseModel):
+    type: str  # "transport", "service", "immobilier"
+    item_id: Optional[str] = None  # trip_id, property_id, or service_id
+    item_name: str
+    client_name: str
+    client_phone: str
+    client_email: Optional[str] = None
+    date: Optional[str] = None
+    time: Optional[str] = None
+    notes: Optional[str] = None
+    seats: Optional[int] = 1  # For transport
+
+@api_router.post("/reservations")
+async def create_reservation(data: ReservationCreate):
+    """Create a reservation for transport or service"""
+    reservation_id = f"RES-{secrets.token_hex(4).upper()}"
+    
+    reservation = {
+        "reservation_id": reservation_id,
+        **data.dict(),
+        "status": "pending",  # pending, confirmed, rejected, completed
+        "admin_notes": None,
+        "confirmed_date": None,
+        "confirmed_time": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": None
+    }
+    
+    await db.reservations.insert_one(reservation)
+    
+    # Notify admin
+    asyncio.create_task(send_email_async(
+        to=ADMIN_NOTIFICATION_EMAIL,
+        subject=f"🔔 Nouvelle réservation #{reservation_id}",
+        html=get_email_template(f"""
+            <h2>Nouvelle réservation</h2>
+            <p><strong>ID:</strong> {reservation_id}</p>
+            <p><strong>Type:</strong> {data.type}</p>
+            <p><strong>Service:</strong> {data.item_name}</p>
+            <p><strong>Client:</strong> {data.client_name}</p>
+            <p><strong>Téléphone:</strong> {data.client_phone}</p>
+            <p><strong>Email:</strong> {data.client_email or 'Non fourni'}</p>
+            <p><strong>Date souhaitée:</strong> {data.date or 'Non précisée'}</p>
+            <p><strong>Heure:</strong> {data.time or 'Non précisée'}</p>
+            <p><strong>Notes:</strong> {data.notes or 'Aucune'}</p>
+            <a href="{SITE_URL}/admin" style="display: inline-block; padding: 12px 24px; background: #1B4332; color: #fff; text-decoration: none; border-radius: 8px;">Gérer la réservation</a>
+        """, "Nouvelle réservation")
+    ))
+    
+    # Collect marketing contact
+    if data.client_email or data.client_phone:
+        await collect_marketing_contact(data.client_name, data.client_email, data.client_phone, "reservation")
+    
+    return {"success": True, "reservation_id": reservation_id, "message": "Votre réservation a été envoyée. Nous vous contacterons pour confirmer."}
+
+@api_router.get("/admin/reservations")
+async def get_admin_reservations(
+    status: Optional[str] = None,
+    type: Optional[str] = None,
+    user: User = Depends(require_admin)
+):
+    """Get all reservations for admin"""
+    query = {}
+    if status:
+        query["status"] = status
+    if type:
+        query["type"] = type
+    
+    reservations = await db.reservations.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
+    total = await db.reservations.count_documents(query)
+    
+    return {"reservations": reservations, "total": total}
+
+@api_router.put("/admin/reservations/{reservation_id}/confirm")
+async def confirm_reservation(reservation_id: str, request: Request, user: User = Depends(require_admin)):
+    """Admin confirms a reservation"""
+    body = await request.json()
+    confirmed_date = body.get("confirmed_date")
+    confirmed_time = body.get("confirmed_time")
+    admin_notes = body.get("admin_notes")
+    send_sms = body.get("send_sms", False)
+    send_email = body.get("send_email", True)
+    
+    reservation = await db.reservations.find_one({"reservation_id": reservation_id})
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Réservation non trouvée")
+    
+    await db.reservations.update_one(
+        {"reservation_id": reservation_id},
+        {"$set": {
+            "status": "confirmed",
+            "confirmed_date": confirmed_date,
+            "confirmed_time": confirmed_time,
+            "admin_notes": admin_notes,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Send confirmation to client
+    if send_email and reservation.get("client_email"):
+        asyncio.create_task(send_email_async(
+            to=reservation["client_email"],
+            subject="✅ Votre réservation est confirmée - GROUPE YAMA+",
+            html=get_email_template(f"""
+                <h2>Réservation confirmée !</h2>
+                <p>Bonjour {reservation['client_name']},</p>
+                <p>Votre réservation <strong>#{reservation_id}</strong> a été confirmée.</p>
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <p><strong>Service:</strong> {reservation['item_name']}</p>
+                    <p><strong>Date:</strong> {confirmed_date or reservation.get('date', 'À confirmer')}</p>
+                    <p><strong>Heure:</strong> {confirmed_time or reservation.get('time', 'À confirmer')}</p>
+                </div>
+                <p>Pour toute question, contactez-nous au <strong>78 382 75 75</strong></p>
+            """, "Réservation confirmée")
+        ))
+    
+    if send_sms and reservation.get("client_phone"):
+        msg = f"YAMA+ : Votre réservation #{reservation_id} est confirmée pour le {confirmed_date or reservation.get('date')} à {confirmed_time or reservation.get('time')}. Contactez-nous au 78 382 75 75"
+        asyncio.create_task(send_sms_notification(reservation["client_phone"], msg))
+    
+    return {"message": "Réservation confirmée"}
+
+@api_router.put("/admin/reservations/{reservation_id}/reject")
+async def reject_reservation(reservation_id: str, request: Request, user: User = Depends(require_admin)):
+    """Admin rejects a reservation"""
+    body = await request.json()
+    reason = body.get("reason", "")
+    
+    reservation = await db.reservations.find_one({"reservation_id": reservation_id})
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Réservation non trouvée")
+    
+    await db.reservations.update_one(
+        {"reservation_id": reservation_id},
+        {"$set": {
+            "status": "rejected",
+            "admin_notes": reason,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Réservation refusée"}
+
+# ============================================================
+# MARKETING DATA COLLECTION & CAMPAIGNS
+# ============================================================
+async def collect_marketing_contact(name: str, email: Optional[str], phone: Optional[str], source: str):
+    """Auto-collect marketing contacts from various sources"""
+    if not email and not phone:
+        return
+    
+    contact = {
+        "name": name or "Anonyme",
+        "email": email,
+        "phone": phone,
+        "source": source,  # registration, order, reservation, service_request, login
+        "collected_at": datetime.now(timezone.utc).isoformat(),
+        "is_subscribed": True,
+        "last_activity": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Upsert by email or phone
+    if email:
+        await db.marketing_contacts.update_one(
+            {"email": email},
+            {"$set": contact, "$setOnInsert": {"contact_id": f"MC-{secrets.token_hex(4).upper()}"}},
+            upsert=True
+        )
+    elif phone:
+        await db.marketing_contacts.update_one(
+            {"phone": phone},
+            {"$set": contact, "$setOnInsert": {"contact_id": f"MC-{secrets.token_hex(4).upper()}"}},
+            upsert=True
+        )
+
+@api_router.get("/admin/marketing/contacts")
+async def get_marketing_contacts(
+    source: Optional[str] = None,
+    has_email: Optional[bool] = None,
+    has_phone: Optional[bool] = None,
+    skip: int = 0,
+    limit: int = 50,
+    user: User = Depends(require_admin)
+):
+    """Get collected marketing contacts"""
+    query = {}
+    if source:
+        query["source"] = source
+    if has_email:
+        query["email"] = {"$exists": True, "$ne": None}
+    if has_phone:
+        query["phone"] = {"$exists": True, "$ne": None}
+    
+    contacts = await db.marketing_contacts.find(query, {"_id": 0}).sort("collected_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.marketing_contacts.count_documents(query)
+    
+    # Stats
+    total_emails = await db.marketing_contacts.count_documents({"email": {"$exists": True, "$ne": None}})
+    total_phones = await db.marketing_contacts.count_documents({"phone": {"$exists": True, "$ne": None}})
+    
+    return {
+        "contacts": contacts,
+        "total": total,
+        "stats": {
+            "total_contacts": await db.marketing_contacts.count_documents({}),
+            "total_emails": total_emails,
+            "total_phones": total_phones
+        }
+    }
+
+@api_router.post("/admin/marketing/campaign")
+async def send_marketing_campaign(request: Request, user: User = Depends(require_admin)):
+    """Send a marketing campaign (email or SMS)"""
+    body = await request.json()
+    campaign_type = body.get("type")  # "email" or "sms"
+    subject = body.get("subject")
+    message = body.get("message")
+    target = body.get("target", "all")  # "all", "emails_only", "phones_only"
+    
+    query = {"is_subscribed": True}
+    if target == "emails_only":
+        query["email"] = {"$exists": True, "$ne": None}
+    elif target == "phones_only":
+        query["phone"] = {"$exists": True, "$ne": None}
+    
+    contacts = await db.marketing_contacts.find(query, {"_id": 0}).to_list(1000)
+    
+    sent_count = 0
+    if campaign_type == "email":
+        for contact in contacts:
+            if contact.get("email"):
+                try:
+                    await send_email_mailersend(
+                        to_email=contact["email"],
+                        to_name=contact.get("name", ""),
+                        subject=subject,
+                        html_content=get_email_template(message, subject)
+                    )
+                    sent_count += 1
+                except Exception as e:
+                    logger.error(f"Campaign email error: {e}")
+    elif campaign_type == "sms":
+        for contact in contacts:
+            if contact.get("phone"):
+                try:
+                    await send_sms_notification(contact["phone"], message)
+                    sent_count += 1
+                except Exception as e:
+                    logger.error(f"Campaign SMS error: {e}")
+    
+    # Log campaign
+    await db.marketing_campaigns.insert_one({
+        "campaign_id": f"CAMP-{secrets.token_hex(4).upper()}",
+        "type": campaign_type,
+        "subject": subject,
+        "message": message,
+        "target": target,
+        "total_contacts": len(contacts),
+        "sent_count": sent_count,
+        "created_by": user.email,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"success": True, "sent": sent_count, "total": len(contacts)}
+
+# ============================================================
+# SMS TEMPLATES MANAGEMENT (Advanced)
+# ============================================================
+@api_router.get("/admin/sms/templates")
+async def get_sms_templates(user: User = Depends(require_admin)):
+    """Get custom SMS templates"""
+    templates = await db.sms_templates.find({}, {"_id": 0}).to_list(50)
+    
+    # Default templates if none exist
+    if not templates:
+        defaults = [
+            {"template_id": "tpl_payment", "name": "Confirmation paiement", "message": "Bonjour {{nom}}, votre paiement de {{montant}} FCFA a été reçu. Merci ! GROUPE YAMA+", "category": "paiement", "variables": ["nom", "montant"]},
+            {"template_id": "tpl_reservation", "name": "Confirmation réservation", "message": "Bonjour {{nom}}, votre réservation pour {{service}} est confirmée le {{date}} à {{heure}}. GROUPE YAMA+ 78 382 75 75", "category": "reservation", "variables": ["nom", "service", "date", "heure"]},
+            {"template_id": "tpl_immobilier", "name": "Visite immobilier", "message": "Bonjour {{nom}}, votre visite du bien {{bien}} est prévue le {{date}}. Adresse: {{adresse}}. GROUPE YAMA+", "category": "immobilier", "variables": ["nom", "bien", "date", "adresse"]},
+            {"template_id": "tpl_promo", "name": "Promotion", "message": "YAMA+ : -{{reduction}}% sur {{produit}} ! Offre valable jusqu'au {{date}}. groupeyamaplus.com", "category": "promo", "variables": ["reduction", "produit", "date"]},
+        ]
+        for tpl in defaults:
+            await db.sms_templates.insert_one(tpl)
+        templates = defaults
+    
+    return {"templates": templates}
+
+@api_router.post("/admin/sms/templates")
+async def create_sms_template(request: Request, user: User = Depends(require_admin)):
+    """Create a custom SMS template"""
+    body = await request.json()
+    
+    # Extract variables from message ({{variable}})
+    import re
+    variables = re.findall(r'\{\{(\w+)\}\}', body.get("message", ""))
+    
+    template = {
+        "template_id": f"tpl_{secrets.token_hex(4)}",
+        "name": body.get("name"),
+        "message": body.get("message"),
+        "category": body.get("category", "custom"),
+        "variables": variables,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.sms_templates.insert_one(template)
+    return {"success": True, "template": {k: v for k, v in template.items() if k != "_id"}}
+
+@api_router.delete("/admin/sms/templates/{template_id}")
+async def delete_sms_template(template_id: str, user: User = Depends(require_admin)):
+    """Delete an SMS template"""
+    result = await db.sms_templates.delete_one({"template_id": template_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Template non trouvé")
+    return {"success": True}
+
+# ============================================================
+# PLATFORM RESET (Admin Only - with backup)
+# ============================================================
+@api_router.post("/admin/platform/reset")
+async def reset_platform(request: Request, user: User = Depends(require_admin)):
+    """Reset platform data with backup"""
+    body = await request.json()
+    confirm_code = body.get("confirm_code")
+    reset_options = body.get("options", {})
+    
+    # Require confirmation code
+    if confirm_code != "RESET-YAMA-2026":
+        raise HTTPException(status_code=400, detail="Code de confirmation invalide")
+    
+    backup_id = f"BACKUP-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    backup_data = {}
+    
+    # Backup before reset
+    collections_to_reset = []
+    
+    if reset_options.get("orders", False):
+        collections_to_reset.append("orders")
+        backup_data["orders"] = await db.orders.find({}, {"_id": 0}).to_list(10000)
+    
+    if reset_options.get("users", False):
+        collections_to_reset.append("users")
+        backup_data["users"] = await db.users.find({}, {"_id": 0}).to_list(10000)
+    
+    if reset_options.get("analytics", False):
+        collections_to_reset.extend(["analytics_events", "page_views"])
+        backup_data["analytics_events"] = await db.analytics_events.find({}, {"_id": 0}).to_list(10000)
+    
+    if reset_options.get("carts", False):
+        collections_to_reset.append("carts")
+        backup_data["carts"] = await db.carts.find({}, {"_id": 0}).to_list(10000)
+    
+    if reset_options.get("reservations", False):
+        collections_to_reset.append("reservations")
+        backup_data["reservations"] = await db.reservations.find({}, {"_id": 0}).to_list(10000)
+    
+    if reset_options.get("marketing", False):
+        collections_to_reset.append("marketing_contacts")
+        backup_data["marketing_contacts"] = await db.marketing_contacts.find({}, {"_id": 0}).to_list(10000)
+    
+    if reset_options.get("sms_history", False):
+        collections_to_reset.append("sms_history")
+        backup_data["sms_history"] = await db.sms_history.find({}, {"_id": 0}).to_list(10000)
+    
+    # Save backup
+    await db.platform_backups.insert_one({
+        "backup_id": backup_id,
+        "data": backup_data,
+        "collections": collections_to_reset,
+        "created_by": user.email,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Reset collections
+    for collection in collections_to_reset:
+        await db[collection].delete_many({})
+    
+    logger.info(f"Platform reset by {user.email}: {collections_to_reset}")
+    
+    return {
+        "success": True,
+        "backup_id": backup_id,
+        "reset_collections": collections_to_reset,
+        "message": f"Réinitialisation effectuée. Backup: {backup_id}"
+    }
+
+@api_router.get("/admin/platform/backups")
+async def get_platform_backups(user: User = Depends(require_admin)):
+    """Get list of platform backups"""
+    backups = await db.platform_backups.find({}, {"_id": 0, "data": 0}).sort("created_at", -1).to_list(20)
+    return {"backups": backups}
+
+@api_router.post("/admin/platform/restore/{backup_id}")
+async def restore_platform_backup(backup_id: str, user: User = Depends(require_admin)):
+    """Restore from a backup"""
+    backup = await db.platform_backups.find_one({"backup_id": backup_id})
+    if not backup:
+        raise HTTPException(status_code=404, detail="Backup non trouvé")
+    
+    restored = []
+    for collection, data in backup.get("data", {}).items():
+        if data:
+            await db[collection].delete_many({})
+            await db[collection].insert_many(data)
+            restored.append(collection)
+    
+    return {"success": True, "restored_collections": restored}
+
+
 
 # ============================================================
 # COMMERCIAL MANAGEMENT MODULE
