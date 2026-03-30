@@ -54,6 +54,8 @@ import ProviderDashboardPage from "./pages/ProviderDashboardPage";
 import GiftBoxPage from "./pages/GiftBoxPage";
 import ImmobilierPage from "./pages/ImmobilierPage";
 import PropertyDetailPage from "./pages/PropertyDetailPage";
+import ResellerPortalPage from "./pages/ResellerPortalPage";
+import ReferralRedirectPage from "./pages/ReferralRedirectPage";
 
 import "./App.css";
 
@@ -150,6 +152,7 @@ function AppRouter() {
       <Route path="/admin/marketing" element={<AdminPage />} />
       <Route path="/admin/ads-guide" element={<AdminPage />} />
       <Route path="/admin/reset" element={<AdminPage />} />
+      <Route path="/admin/resellers" element={<AdminPage />} />
 
       {/* Public Pages */}
       <Route
@@ -424,6 +427,11 @@ function AppRouter() {
           </PublicLayout>
         }
       />
+
+      {/* Reseller Portal */}
+      <Route path="/reseller/login" element={<ResellerPortalPage />} />
+      <Route path="/reseller/portal" element={<ResellerPortalPage />} />
+      <Route path="/r/:code" element={<ReferralRedirectPage />} />
 
       {/* 404 */}
       <Route

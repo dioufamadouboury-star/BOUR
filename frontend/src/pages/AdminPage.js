@@ -67,6 +67,7 @@ import ReservationsAdmin from "../components/Admin/ReservationsAdmin";
 import MarketingAdmin from "../components/Admin/MarketingAdmin";
 import PlatformResetAdmin from "../components/Admin/PlatformResetAdmin";
 import AdsGuideAdmin from "../components/Admin/AdsGuideAdmin";
+import ResellersAdmin from "../components/Admin/ResellersAdmin";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -92,6 +93,7 @@ const menuItems = [
   { id: "sms", label: "SMS", icon: Smartphone, href: "/admin/sms" },
   { id: "whatsapp", label: "WhatsApp Bot", icon: MessageSquare, href: "/admin/whatsapp" },
   { id: "email", label: "Campagnes Email", icon: Mail, href: "/admin/email" },
+  { id: "resellers", label: "Revendeurs", icon: Users, href: "/admin/resellers" },
   { id: "reset", label: "Réinitialisation", icon: AlertCircle, href: "/admin/reset" },
 ];
 
@@ -1874,6 +1876,8 @@ export default function AdminPage() {
         return <AdsGuideAdmin />;
       case "reset":
         return <PlatformResetAdmin token={token} />;
+      case "resellers":
+        return <ResellersAdmin token={token} />;
       default:
         return renderDashboard();
     }

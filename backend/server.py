@@ -458,6 +458,8 @@ class OrderCreate(BaseModel):
     subtotal: int
     shipping_cost: int
     total: int
+    promo_code: Optional[str] = None
+    reseller_code: Optional[str] = None
 
 class OrderStatusHistory(BaseModel):
     status: str

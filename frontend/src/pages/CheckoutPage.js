@@ -300,6 +300,21 @@ export default function CheckoutPage() {
         promo_code: appliedPromo?.code || null,
       };
 
+      // Check for reseller referral code
+      const resellerCode = localStorage.getItem("reseller_code");
+      const resellerCodeExpiry = localStorage.getItem("reseller_code_expiry");
+      
+      if (resellerCode && resellerCodeExpiry) {
+        const expiry = new Date(resellerCodeExpiry);
+        if (expiry > new Date()) {
+          orderData.reseller_code = resellerCode;
+        } else {
+          // Clean up expired code
+          localStorage.removeItem("reseller_code");
+          localStorage.removeItem("reseller_code_expiry");
+        }
+      }
+
       const response = await axios.post(`${API_URL}/api/orders`, orderData);
 
       const newOrderId = response.data.order_id;
