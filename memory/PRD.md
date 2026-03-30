@@ -1,7 +1,7 @@
 # GROUPE YAMA+ - E-commerce Platform PRD
 
 ## Original Problem Statement
-Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categories, admin panel, marketing games, email notifications, WhatsApp AI Chatbot, tracking (FB Pixel, GA4), SEO optimization, Real Estate module, and ad campaign guides.
+Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categories, admin panel, marketing games, email notifications, WhatsApp AI Chatbot, tracking (FB Pixel, GA4), SEO optimization, Real Estate module, ad campaign guides, and reseller/affiliate program.
 
 ## Current Tech Stack
 - **Frontend**: React.js, TailwindCSS, Framer Motion, Axios
@@ -10,22 +10,41 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 - **Deployment**: Hostinger VPS (Ubuntu), Nginx, Systemd
 - **Integrations**: Google OAuth, PayTech, MailerSend, Gemini Vision, Facebook Pixel, GA4
 
-## Recent Changes (March 26, 2026)
+## Recent Changes (March 30, 2026)
 
-### ✅ COMPLETED - All P0 + P1 + P2 + P3 Tasks
-1. **Système de Réservation** ✅
-2. **Centre SMS Avancé** ✅
-3. **Collecte & Campagnes Marketing** ✅
-4. **Réinitialisation Plateforme** ✅
-5. **Module Prestataires (Refonte)** ✅
-6. **Guide Campagnes Publicitaires** ✅
-7. **Refactoring Backend** ✅
-8. **Gestion Commerciale Améliorée** ✅
-   - Nouveau logo YAMA+ sur tous les documents PDF
-   - Factures Proforma avec conversion en facture définitive
-   - Bons de Livraison avec gestion des articles
-   - Attestations (Travail, Stage, Partenariat, Paiement, Collaboration)
-   - Tous les PDFs générés incluent maintenant le logo
+### ✅ COMPLETED - Système Revendeur/Affilié
+1. **Admin Revendeurs** ✅
+   - Création de revendeurs (nom, email, téléphone, taux commission)
+   - Génération automatique de code unique et mot de passe temporaire
+   - Statistiques globales (total revendeurs, ventes, commissions)
+   - Activation/désactivation des revendeurs
+   - Versement des commissions (Wave, OM, Free Money, Cash, Banque)
+
+2. **Portail Revendeur** ✅
+   - Login sécurisé à `/reseller/login`
+   - Dashboard avec statistiques (ventes, commissions, solde)
+   - Historique des ventes et des versements
+   - Lien de parrainage personnalisé
+
+3. **Système de Tracking Affilié** ✅
+   - URL de parrainage: `/r/{code}`
+   - Stockage du code en localStorage (30 jours)
+   - Intégration checkout: code envoyé avec chaque commande
+   - Commission automatique calculée à la création de commande
+
+### API Endpoints - Revendeurs
+```
+POST   /api/admin/resellers                    - Créer revendeur
+GET    /api/admin/resellers                    - Liste revendeurs
+GET    /api/admin/resellers/{id}               - Détails revendeur
+PUT    /api/admin/resellers/{id}               - Modifier revendeur
+POST   /api/admin/resellers/{id}/pay-commission - Verser commission
+POST   /api/reseller/login                     - Connexion revendeur
+GET    /api/reseller/me                        - Profil revendeur
+GET    /api/reseller/dashboard                 - Stats revendeur
+GET    /api/reseller/products                  - Produits avec liens affiliés
+GET    /api/r/{code}                           - Redirection parrainage
+```
 
 ## What's Implemented
 
@@ -35,49 +54,80 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 ### Premium Category Pages with Subcategories
 - Electronique, Électroménager, Décoration, Mode & Beauté, Automobile (Covoiturage)
 
-### Admin Dashboard - NEW SECTIONS
+### Admin Dashboard
+- **Revendeurs**: Gestion du programme d'affiliation
 - **Réservations**: Gestion des réservations transport/services
 - **Marketing**: Collecte contacts + Campagnes
+- **Gestion Commerciale**: Devis, Factures, Proforma, Bons de Livraison, Attestations
 - **Réinitialisation**: Reset plateforme avec backup
-- + All existing: Products, Orders, Immobilier, Automobile, SMS, etc.
-
-### API Endpoints - NEW
-```
-POST   /api/reservations                    - Créer réservation
-GET    /api/admin/reservations              - Liste admin
-PUT    /api/admin/reservations/{id}/confirm - Confirmer
-PUT    /api/admin/reservations/{id}/reject  - Refuser
-GET    /api/admin/marketing/contacts        - Contacts collectés
-POST   /api/admin/marketing/campaign        - Envoyer campagne
-GET    /api/admin/sms/templates             - Templates SMS
-POST   /api/admin/sms/templates             - Créer template
-DELETE /api/admin/sms/templates/{id}        - Supprimer template
-POST   /api/admin/platform/reset            - Réinitialiser
-GET    /api/admin/platform/backups          - Liste backups
-POST   /api/admin/platform/restore/{id}     - Restaurer backup
-```
+- + Products, Orders, Immobilier, Automobile, SMS, etc.
 
 ## P1 - Backlog Tasks
-1. Module Services / Prestataires (Refonte) - Profils professionnels, validation documents
-2. Guide campagnes publicitaires (Facebook/Google/YouTube Ads)
-3. WhatsApp Chatbot (attente identifiants Meta API)
+1. Déploiement VPS du système Revendeurs (rsync to groupeyamaplus.com)
+2. WhatsApp Chatbot (attente identifiants Meta API)
 
 ## P2 - Future Tasks
-1. Refactoring server.py (extract more modules)
+1. Refactoring server.py (extract more modules to /routes/)
 2. App mobile React Native
+3. Portail Client/Partenaire B2B
 
 ## Known Issues
 - Orange SMS blocked (external - contact Orange Support)
-- server.py ~9700 lines - needs refactoring
+- server.py ~10200 lines - needs refactoring
 
 ## Credentials
 - Admin: admin@yamaplus.com / Admin123!
+- Test Reseller: testrevendeur@example.com / 3p3rLEZ3PLI
 - VPS: root@76.13.58.76
 - Production: https://groupeyamaplus.com
 
-## Key Files
-- /app/backend/server.py - Main backend (includes new reservation/marketing endpoints)
-- /app/frontend/src/components/Admin/ReservationsAdmin.js - NEW
-- /app/frontend/src/components/Admin/MarketingAdmin.js - NEW
-- /app/frontend/src/components/Admin/PlatformResetAdmin.js - NEW
-- /app/frontend/src/pages/CategoryPage.js - Updated with reservation modal for trips
+## Key Files - Reseller System
+- /app/backend/server.py - Backend (reseller endpoints lines 9835-10190)
+- /app/frontend/src/components/Admin/ResellersAdmin.js - Admin interface
+- /app/frontend/src/pages/ResellerPortalPage.js - Reseller login & dashboard
+- /app/frontend/src/pages/ReferralRedirectPage.js - URL tracking /r/:code
+- /app/frontend/src/pages/CheckoutPage.js - Sends reseller_code with orders
+- /app/frontend/src/pages/AdminPage.js - Includes ResellersAdmin tab
+- /app/frontend/src/App.js - Routes for /reseller/*, /r/:code, /admin/resellers
+
+## DB Schema - Resellers
+```javascript
+// resellers collection
+{
+  reseller_id: "RSL-XXXXXXXX",
+  reseller_code: "NAMEXXX",
+  name: String,
+  email: String,
+  phone: String,
+  hashed_password: String,
+  commission_rate: Number (default 10),
+  is_active: Boolean,
+  total_sales: Number,
+  total_commission: Number,
+  pending_commission: Number,
+  paid_commission: Number,
+  referral_link: String,
+  created_at: ISODate,
+  created_by: String
+}
+
+// orders collection (extended)
+{
+  ...existing_fields,
+  reseller_code: String (optional),
+  reseller_id: String (optional),
+  reseller_commission_rate: Number,
+  reseller_commission: Number
+}
+
+// reseller_commissions collection
+{
+  commission_id: String,
+  reseller_id: String,
+  type: "earned" | "payment",
+  amount: Number,
+  order_id: String (for earned),
+  payment_method: String (for payment),
+  created_at: ISODate
+}
+```
