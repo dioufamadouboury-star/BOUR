@@ -5611,6 +5611,41 @@ async def create_order(order_data: OrderCreate, request: Request):
     order_doc["order_status"] = "pending"
     order_doc["created_at"] = now.isoformat()
     
+    # Check for reseller referral
+    reseller_code = order_data.dict().get("reseller_code") or request.headers.get("X-Reseller-Code")
+    if reseller_code:
+        reseller = await db.resellers.find_one({"reseller_code": reseller_code, "is_active": True})
+        if reseller:
+            order_doc["reseller_code"] = reseller_code
+            order_doc["reseller_id"] = reseller["reseller_id"]
+            order_doc["reseller_commission_rate"] = reseller["commission_rate"]
+            commission = order_doc.get("total", 0) * (reseller["commission_rate"] / 100)
+            order_doc["reseller_commission"] = commission
+            
+            # Update reseller stats
+            await db.resellers.update_one(
+                {"reseller_id": reseller["reseller_id"]},
+                {
+                    "$inc": {
+                        "total_sales": order_doc.get("total", 0),
+                        "total_commission": commission,
+                        "pending_commission": commission
+                    }
+                }
+            )
+            
+            # Log commission
+            await db.reseller_commissions.insert_one({
+                "commission_id": f"COM-{secrets.token_hex(4).upper()}",
+                "reseller_id": reseller["reseller_id"],
+                "order_id": order_id,
+                "type": "earning",
+                "amount": commission,
+                "order_total": order_doc.get("total", 0),
+                "commission_rate": reseller["commission_rate"],
+                "created_at": now.isoformat()
+            })
+    
     # Update stock for each product
     for item in order_data.items:
         await db.products.update_one(
@@ -9778,6 +9813,391 @@ async def restore_platform_backup(backup_id: str, user: User = Depends(require_a
             restored.append(collection)
     
     return {"success": True, "restored_collections": restored}
+
+
+# ============================================================
+# RESELLER / AFFILIATE SYSTEM
+# ============================================================
+
+class ResellerCreate(BaseModel):
+    name: str
+    email: EmailStr
+    phone: str
+    commission_rate: float = 10.0  # Percentage
+    password: Optional[str] = None
+
+class ResellerUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    commission_rate: Optional[float] = None
+    is_active: Optional[bool] = None
+
+@api_router.post("/admin/resellers")
+async def create_reseller(data: ResellerCreate, user: User = Depends(require_admin)):
+    """Admin creates a new reseller"""
+    # Check if email already exists
+    existing = await db.resellers.find_one({"email": data.email.lower()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Un revendeur avec cet email existe déjà")
+    
+    reseller_id = f"RSL-{secrets.token_hex(4).upper()}"
+    reseller_code = f"{data.name[:4].upper()}{secrets.token_hex(2).upper()}"
+    
+    # Generate password if not provided
+    temp_password = data.password or secrets.token_urlsafe(8)
+    hashed_password = bcrypt.hashpw(temp_password.encode(), bcrypt.gensalt()).decode()
+    
+    reseller = {
+        "reseller_id": reseller_id,
+        "reseller_code": reseller_code,
+        "name": data.name,
+        "email": data.email.lower(),
+        "phone": data.phone,
+        "hashed_password": hashed_password,
+        "commission_rate": data.commission_rate,
+        "is_active": True,
+        "total_sales": 0,
+        "total_commission": 0,
+        "pending_commission": 0,
+        "paid_commission": 0,
+        "referral_link": f"/r/{reseller_code}",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": user.email
+    }
+    
+    await db.resellers.insert_one(reseller)
+    
+    # Send welcome email with credentials
+    asyncio.create_task(send_email_async(
+        to=data.email,
+        subject="🎉 Bienvenue dans le Programme Revendeur YAMA+",
+        html=get_email_template(f"""
+            <h2>Bienvenue {data.name} !</h2>
+            <p>Vous êtes maintenant revendeur officiel GROUPE YAMA+.</p>
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <p><strong>Votre lien unique:</strong></p>
+                <p style="font-size: 18px; color: #1E90FF;">{SITE_URL}/r/{reseller_code}</p>
+                <p><strong>Votre code:</strong> {reseller_code}</p>
+                <p><strong>Commission:</strong> {data.commission_rate}% sur chaque vente</p>
+            </div>
+            <p><strong>Accès à votre portail:</strong></p>
+            <p>Email: {data.email}</p>
+            <p>Mot de passe: {temp_password}</p>
+            <a href="{SITE_URL}/reseller/login" style="display: inline-block; padding: 12px 24px; background: #1E90FF; color: #fff; text-decoration: none; border-radius: 8px;">Accéder à mon portail</a>
+        """, "Programme Revendeur YAMA+")
+    ))
+    
+    reseller.pop("_id", None)
+    reseller.pop("hashed_password", None)
+    reseller["temp_password"] = temp_password
+    
+    return {"success": True, "reseller": reseller}
+
+@api_router.get("/admin/resellers")
+async def get_resellers(user: User = Depends(require_admin)):
+    """Get all resellers"""
+    resellers = await db.resellers.find({}, {"_id": 0, "hashed_password": 0}).sort("created_at", -1).to_list(100)
+    
+    # Get stats
+    total = len(resellers)
+    active = len([r for r in resellers if r.get("is_active")])
+    total_sales = sum(r.get("total_sales", 0) for r in resellers)
+    total_commission = sum(r.get("total_commission", 0) for r in resellers)
+    
+    return {
+        "resellers": resellers,
+        "stats": {
+            "total": total,
+            "active": active,
+            "total_sales": total_sales,
+            "total_commission": total_commission
+        }
+    }
+
+@api_router.get("/admin/resellers/{reseller_id}")
+async def get_reseller(reseller_id: str, user: User = Depends(require_admin)):
+    """Get reseller details with sales history"""
+    reseller = await db.resellers.find_one({"reseller_id": reseller_id}, {"_id": 0, "hashed_password": 0})
+    if not reseller:
+        raise HTTPException(status_code=404, detail="Revendeur non trouvé")
+    
+    # Get sales made through this reseller
+    sales = await db.orders.find(
+        {"reseller_code": reseller.get("reseller_code")},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    # Get commission history
+    commissions = await db.reseller_commissions.find(
+        {"reseller_id": reseller_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    return {
+        "reseller": reseller,
+        "sales": sales,
+        "commissions": commissions
+    }
+
+@api_router.put("/admin/resellers/{reseller_id}")
+async def update_reseller(reseller_id: str, data: ResellerUpdate, user: User = Depends(require_admin)):
+    """Update reseller"""
+    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Aucune donnée à mettre à jour")
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.resellers.update_one(
+        {"reseller_id": reseller_id},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Revendeur non trouvé")
+    
+    return {"success": True, "message": "Revendeur mis à jour"}
+
+@api_router.post("/admin/resellers/{reseller_id}/pay-commission")
+async def pay_reseller_commission(reseller_id: str, request: Request, user: User = Depends(require_admin)):
+    """Pay pending commission to reseller"""
+    body = await request.json()
+    amount = body.get("amount", 0)
+    payment_method = body.get("payment_method", "wave")
+    notes = body.get("notes", "")
+    
+    reseller = await db.resellers.find_one({"reseller_id": reseller_id})
+    if not reseller:
+        raise HTTPException(status_code=404, detail="Revendeur non trouvé")
+    
+    pending = reseller.get("pending_commission", 0)
+    if amount > pending:
+        raise HTTPException(status_code=400, detail=f"Montant supérieur au solde ({pending} FCFA)")
+    
+    # Record payment
+    payment_id = f"PAY-{secrets.token_hex(4).upper()}"
+    await db.reseller_commissions.insert_one({
+        "payment_id": payment_id,
+        "reseller_id": reseller_id,
+        "type": "payout",
+        "amount": amount,
+        "payment_method": payment_method,
+        "notes": notes,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": user.email
+    })
+    
+    # Update reseller balances
+    await db.resellers.update_one(
+        {"reseller_id": reseller_id},
+        {
+            "$inc": {"pending_commission": -amount, "paid_commission": amount},
+            "$set": {"last_payout_at": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+    
+    return {"success": True, "payment_id": payment_id}
+
+# ============== RESELLER PORTAL ENDPOINTS ==============
+
+@api_router.post("/reseller/login")
+async def reseller_login(request: Request, response: Response):
+    """Reseller login"""
+    body = await request.json()
+    email = body.get("email", "").lower()
+    password = body.get("password", "")
+    
+    reseller = await db.resellers.find_one({"email": email})
+    if not reseller:
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+    
+    if not bcrypt.checkpw(password.encode(), reseller["hashed_password"].encode()):
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+    
+    if not reseller.get("is_active"):
+        raise HTTPException(status_code=403, detail="Compte désactivé")
+    
+    # Generate token
+    token = jwt.encode({
+        "reseller_id": reseller["reseller_id"],
+        "email": email,
+        "type": "reseller",
+        "exp": datetime.now(timezone.utc) + timedelta(days=30)
+    }, SECRET_KEY, algorithm=ALGORITHM)
+    
+    # Update last login
+    await db.resellers.update_one(
+        {"reseller_id": reseller["reseller_id"]},
+        {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {
+        "token": token,
+        "reseller": {
+            "reseller_id": reseller["reseller_id"],
+            "reseller_code": reseller["reseller_code"],
+            "name": reseller["name"],
+            "email": reseller["email"],
+            "commission_rate": reseller["commission_rate"],
+            "referral_link": reseller["referral_link"]
+        }
+    }
+
+async def get_current_reseller(request: Request) -> dict:
+    """Get current reseller from token"""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Non authentifié")
+    
+    token = auth_header.split(" ")[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "reseller":
+            raise HTTPException(status_code=403, detail="Accès non autorisé")
+        
+        reseller = await db.resellers.find_one(
+            {"reseller_id": payload["reseller_id"]},
+            {"_id": 0, "hashed_password": 0}
+        )
+        if not reseller:
+            raise HTTPException(status_code=404, detail="Revendeur non trouvé")
+        return reseller
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Session expirée")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token invalide")
+
+@api_router.get("/reseller/me")
+async def get_reseller_profile(request: Request):
+    """Get current reseller profile"""
+    reseller = await get_current_reseller(request)
+    return {"reseller": reseller}
+
+@api_router.get("/reseller/dashboard")
+async def get_reseller_dashboard(request: Request):
+    """Get reseller dashboard data"""
+    reseller = await get_current_reseller(request)
+    reseller_code = reseller["reseller_code"]
+    
+    # Get sales stats
+    sales = await db.orders.find(
+        {"reseller_code": reseller_code},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    total_sales = sum(s.get("total", 0) for s in sales)
+    total_orders = len(sales)
+    
+    # This month stats
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    this_month_sales = [s for s in sales if s.get("created_at", "") >= month_start.isoformat()]
+    this_month_total = sum(s.get("total", 0) for s in this_month_sales)
+    this_month_commission = this_month_total * (reseller["commission_rate"] / 100)
+    
+    # Recent orders
+    recent_orders = sales[:10]
+    
+    # Commission history
+    commissions = await db.reseller_commissions.find(
+        {"reseller_id": reseller["reseller_id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(20)
+    
+    return {
+        "stats": {
+            "total_sales": total_sales,
+            "total_orders": total_orders,
+            "total_commission": reseller.get("total_commission", 0),
+            "pending_commission": reseller.get("pending_commission", 0),
+            "paid_commission": reseller.get("paid_commission", 0),
+            "this_month_sales": this_month_total,
+            "this_month_commission": this_month_commission,
+            "commission_rate": reseller["commission_rate"]
+        },
+        "recent_orders": recent_orders,
+        "commissions": commissions,
+        "referral_link": f"{SITE_URL}/r/{reseller_code}"
+    }
+
+@api_router.get("/reseller/products")
+async def get_reseller_products(request: Request):
+    """Get products for reseller to share"""
+    reseller = await get_current_reseller(request)
+    
+    # Get active products
+    products = await db.products.find(
+        {"is_active": True},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(200)
+    
+    # Add reseller link to each product
+    for product in products:
+        product["reseller_link"] = f"{SITE_URL}/product/{product['product_id']}?ref={reseller['reseller_code']}"
+    
+    return {"products": products}
+
+@api_router.post("/reseller/withdrawal-request")
+async def request_withdrawal(request: Request):
+    """Request commission withdrawal"""
+    reseller = await get_current_reseller(request)
+    body = await request.json()
+    
+    amount = body.get("amount", 0)
+    payment_method = body.get("payment_method", "wave")
+    payment_details = body.get("payment_details", "")
+    
+    pending = reseller.get("pending_commission", 0)
+    if amount > pending:
+        raise HTTPException(status_code=400, detail=f"Solde insuffisant ({pending} FCFA disponible)")
+    
+    if amount < 5000:
+        raise HTTPException(status_code=400, detail="Retrait minimum: 5000 FCFA")
+    
+    withdrawal_id = f"WD-{secrets.token_hex(4).upper()}"
+    
+    await db.reseller_withdrawals.insert_one({
+        "withdrawal_id": withdrawal_id,
+        "reseller_id": reseller["reseller_id"],
+        "amount": amount,
+        "payment_method": payment_method,
+        "payment_details": payment_details,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Notify admin
+    asyncio.create_task(send_email_async(
+        to=ADMIN_NOTIFICATION_EMAIL,
+        subject=f"💰 Demande de retrait revendeur - {withdrawal_id}",
+        html=get_email_template(f"""
+            <h2>Nouvelle demande de retrait</h2>
+            <p><strong>Revendeur:</strong> {reseller['name']} ({reseller['email']})</p>
+            <p><strong>Montant:</strong> {amount} FCFA</p>
+            <p><strong>Méthode:</strong> {payment_method}</p>
+            <p><strong>Détails:</strong> {payment_details}</p>
+        """, "Demande de retrait")
+    ))
+    
+    return {"success": True, "withdrawal_id": withdrawal_id}
+
+# ============== PUBLIC REFERRAL TRACKING ==============
+
+@api_router.get("/r/{reseller_code}")
+async def track_referral(reseller_code: str, response: Response):
+    """Track referral visit and redirect to home"""
+    reseller = await db.resellers.find_one({"reseller_code": reseller_code, "is_active": True})
+    if reseller:
+        # Log visit
+        await db.reseller_visits.insert_one({
+            "reseller_code": reseller_code,
+            "visited_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Return referral info (frontend will handle redirect and cookie)
+    return {"reseller_code": reseller_code, "valid": reseller is not None}
+
+
 
 
 
