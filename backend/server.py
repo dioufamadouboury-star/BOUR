@@ -10025,7 +10025,7 @@ async def reseller_login(request: Request, response: Response):
         "email": email,
         "type": "reseller",
         "exp": datetime.now(timezone.utc) + timedelta(days=30)
-    }, SECRET_KEY, algorithm=ALGORITHM)
+    }, JWT_SECRET, algorithm=JWT_ALGORITHM)
     
     # Update last login
     await db.resellers.update_one(
@@ -10053,7 +10053,7 @@ async def get_current_reseller(request: Request) -> dict:
     
     token = auth_header.split(" ")[1]
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         if payload.get("type") != "reseller":
             raise HTTPException(status_code=403, detail="Accès non autorisé")
         

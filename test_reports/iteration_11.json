@@ -1,0 +1,53 @@
+{
+  "summary": "Bug fix verification: Reseller login JWT_SECRET/JWT_ALGORITHM fix confirmed working. All 16 backend tests pass (100%). Frontend E2E: 12/14 passed (2 flaky admin login timing issues, not related to the fix).",
+  "mode": "update",
+  "baseline_commit": "ba37070b7e6c7185b3cd3e036d6767cafd58d45c",
+  "head_commit": "c45d8671b1d7fc7915bdd0f55e7f8804c7b37b4f",
+  "specs_created": [],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_resellers.py",
+    "/app/test_reports/pytest/pytest_results_resellers_fixed.xml",
+    "/app/tests/e2e/resellers.spec.ts"
+  ],
+  "regression_results": {
+    "total_specs": 2,
+    "passed": 28,
+    "failed": 2,
+    "skipped": 0
+  },
+  "issues": [
+    {
+      "id": "IMP-001",
+      "issue_type": "improvement",
+      "severity": "LOW",
+      "description": "Admin login redirect timing is variable (5-25 seconds), causing intermittent test failures. Not a bug but affects test reliability.",
+      "endpoint_or_component": "LoginPage.js"
+    }
+  ],
+  "action_items": [],
+  "updated_files": [],
+  "test_results": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "86% (12/14 tests passed - 2 flaky due to admin login timing)"
+  },
+  "bug_fix_verified": {
+    "bug_id": "BUG-001",
+    "description": "Reseller login endpoint uses undefined SECRET_KEY and ALGORITHM variables instead of JWT_SECRET and JWT_ALGORITHM",
+    "fix_verified": true,
+    "verification_method": "Backend pytest tests + curl verification",
+    "tests_now_passing": [
+      "test_resellers.py::TestResellerPortalAPI::test_reseller_login_success",
+      "test_resellers.py::TestResellerPortalAPI::test_reseller_login_invalid_password",
+      "test_resellers.py::TestResellerPortalAPI::test_reseller_login_invalid_email",
+      "test_resellers.py::TestResellerPortalAPI::test_reseller_me_endpoint",
+      "test_resellers.py::TestResellerPortalAPI::test_reseller_dashboard"
+    ]
+  },
+  "seed_data_creation": "None - used existing test reseller testrevendeur@example.com",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Reseller login bug is fixed and verified. All reseller portal API endpoints working correctly. Admin reseller management and referral code capture features continue to work. The 2 flaky frontend tests are related to admin login timing, not the reseller system.",
+  "rca_of_issue": "Root cause was confirmed: In server.py, the reseller_login function (line 10028) and get_current_reseller function (line 10056) were using undefined variables SECRET_KEY and ALGORITHM instead of the defined JWT_SECRET and JWT_ALGORITHM variables. Fix applied correctly by E1."
+}
