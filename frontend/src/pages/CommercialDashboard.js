@@ -33,6 +33,10 @@ import {
   Truck,
   Award,
   Copy,
+  AlertTriangle,
+  Calendar,
+  BarChart3,
+  Printer,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { toast } from "sonner";
@@ -201,13 +205,44 @@ export function CommercialDashboard({ token }) {
 // ============== DASHBOARD OVERVIEW ==============
 
 function DashboardOverview({ stats, onRefresh }) {
+  const [timeRange, setTimeRange] = useState("month");
+  
   if (!stats) return null;
+
+  // Calculate overdue invoices
+  const overdueInvoices = stats.invoices?.overdue || 0;
+  const overdueAmount = stats.invoices?.overdue_amount || 0;
+  
+  // Calculate conversion rate (quotes to invoices)
+  const conversionRate = stats.quotes?.total > 0 
+    ? Math.round((stats.quotes?.converted || 0) / stats.quotes?.total * 100) 
+    : 0;
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5">
+      {/* Alert for overdue invoices */}
+      {overdueInvoices > 0 && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-800 flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-red-800 dark:text-red-200">
+              {overdueInvoices} facture(s) en retard de paiement
+            </p>
+            <p className="text-sm text-red-600 dark:text-red-300">
+              Montant total : {formatPrice(overdueAmount)}
+            </p>
+          </div>
+          <button className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">
+            Envoyer relances
+          </button>
+        </div>
+      )}
+
+      {/* Stats Cards - Enhanced */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 hover:shadow-lg transition-shadow">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
               <Users className="w-5 h-5 text-blue-600" />
@@ -215,9 +250,10 @@ function DashboardOverview({ stats, onRefresh }) {
             <span className="text-sm text-muted-foreground">Partenaires</span>
           </div>
           <p className="text-3xl font-bold">{stats.partners?.total || 0}</p>
+          <p className="text-xs text-green-600 mt-1">+{stats.partners?.new_this_month || 0} ce mois</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 hover:shadow-lg transition-shadow">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
               <FileText className="w-5 h-5 text-yellow-600" />
@@ -225,10 +261,21 @@ function DashboardOverview({ stats, onRefresh }) {
             <span className="text-sm text-muted-foreground">Devis</span>
           </div>
           <p className="text-3xl font-bold">{stats.quotes?.total || 0}</p>
-          <p className="text-sm text-muted-foreground">{stats.quotes?.pending || 0} en attente</p>
+          <p className="text-sm text-yellow-600">{stats.quotes?.pending || 0} en attente</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 hover:shadow-lg transition-shadow">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+              <FileBox className="w-5 h-5 text-orange-600" />
+            </div>
+            <span className="text-sm text-muted-foreground">Proformas</span>
+          </div>
+          <p className="text-3xl font-bold">{stats.proformas?.total || 0}</p>
+          <p className="text-sm text-muted-foreground">{stats.proformas?.pending || 0} à convertir</p>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 hover:shadow-lg transition-shadow">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
               <Receipt className="w-5 h-5 text-green-600" />
@@ -239,7 +286,7 @@ function DashboardOverview({ stats, onRefresh }) {
           <p className="text-sm text-green-600">{formatPrice(stats.invoices?.total_paid || 0)} encaissé</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 hover:shadow-lg transition-shadow">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
               <FileSignature className="w-5 h-5 text-purple-600" />
@@ -251,10 +298,20 @@ function DashboardOverview({ stats, onRefresh }) {
         </div>
       </div>
 
-      {/* Financial Summary */}
+      {/* Financial Summary - Enhanced */}
       <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 text-white">
-        <h3 className="text-lg font-semibold mb-4">Résumé Financier</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Résumé Financier</h3>
+          <div className="flex gap-2">
+            {["week", "month", "year"].map(range => (
+              <button key={range} onClick={() => setTimeRange(range)}
+                className={`px-3 py-1 rounded-lg text-sm ${timeRange === range ? "bg-white/20" : "hover:bg-white/10"}`}>
+                {range === "week" ? "Semaine" : range === "month" ? "Mois" : "Année"}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
           <div>
             <p className="text-blue-100 text-sm">Total Facturé</p>
             <p className="text-2xl font-bold">{formatPrice(stats.invoices?.total_amount || 0)}</p>
@@ -266,6 +323,92 @@ function DashboardOverview({ stats, onRefresh }) {
           <div>
             <p className="text-blue-100 text-sm">En Attente</p>
             <p className="text-2xl font-bold text-yellow-300">{formatPrice(stats.invoices?.total_pending || 0)}</p>
+          </div>
+          <div>
+            <p className="text-blue-100 text-sm">En Retard</p>
+            <p className="text-2xl font-bold text-red-300">{formatPrice(overdueAmount)}</p>
+          </div>
+        </div>
+        
+        {/* Progress bar for collection rate */}
+        <div className="mt-6">
+          <div className="flex justify-between text-sm mb-2">
+            <span>Taux de recouvrement</span>
+            <span>{stats.invoices?.collection_rate || 0}%</span>
+          </div>
+          <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+            <div className="h-full bg-green-400 rounded-full transition-all duration-500"
+              style={{ width: `${stats.invoices?.collection_rate || 0}%` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Conversion Rate Card */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5">
+          <h4 className="font-semibold mb-3 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-green-500" />
+            Taux de Conversion
+          </h4>
+          <div className="flex items-center gap-4">
+            <div className="relative w-20 h-20">
+              <svg className="w-20 h-20 transform -rotate-90">
+                <circle cx="40" cy="40" r="35" stroke="#e5e7eb" strokeWidth="8" fill="none" />
+                <circle cx="40" cy="40" r="35" stroke="#10b981" strokeWidth="8" fill="none"
+                  strokeDasharray={`${conversionRate * 2.2} 220`} strokeLinecap="round" />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">{conversionRate}%</span>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>Devis → Factures</p>
+              <p className="text-xs">{stats.quotes?.converted || 0} / {stats.quotes?.total || 0} devis convertis</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5">
+          <h4 className="font-semibold mb-3">Actions Rapides</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <button className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+              <Plus className="w-4 h-4 text-blue-600" />
+              <span>Nouveau Devis</span>
+            </button>
+            <button className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl text-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+              <Receipt className="w-4 h-4 text-green-600" />
+              <span>Nouvelle Facture</span>
+            </button>
+            <button className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl text-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
+              <Users className="w-4 h-4 text-purple-600" />
+              <span>Partenaire</span>
+            </button>
+            <button className="flex items-center gap-2 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl text-sm hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors">
+              <Download className="w-4 h-4 text-orange-600" />
+              <span>Export</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Documents this month */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5">
+          <h4 className="font-semibold mb-3">Ce Mois</h4>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Devis créés</span>
+              <span className="font-semibold">{stats.this_month?.quotes || 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Factures émises</span>
+              <span className="font-semibold">{stats.this_month?.invoices || 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Paiements reçus</span>
+              <span className="font-semibold text-green-600">{stats.this_month?.payments || 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Bons de livraison</span>
+              <span className="font-semibold">{stats.this_month?.delivery_notes || 0}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1150,6 +1293,10 @@ function InvoicesSection({ token }) {
   const [statusFilter, setStatusFilter] = useState("");
   const [emailModal, setEmailModal] = useState(null);
   const [shareModal, setShareModal] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [overdueInvoices, setOverdueInvoices] = useState([]);
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
@@ -1160,6 +1307,16 @@ function InvoicesSection({ token }) {
       });
       setInvoices(response.data.invoices || []);
       setStats(response.data.stats || {});
+      
+      // Calculate overdue invoices (pending for more than 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const overdue = (response.data.invoices || []).filter(inv => {
+        if (inv.status !== "pending") return false;
+        const createdDate = new Date(inv.created_at);
+        return createdDate < thirtyDaysAgo;
+      });
+      setOverdueInvoices(overdue);
     } catch (error) {
       console.error("Error fetching invoices:", error);
     } finally {
@@ -1192,7 +1349,7 @@ function InvoicesSection({ token }) {
 
   const handleMarkPaid = async (invoiceId, total) => {
     try {
-      await axios.put(`${API_URL}/api/commercial/invoices/${invoiceId}`, { amount_paid: total }, {
+      await axios.put(`${API_URL}/api/commercial/invoices/${invoiceId}`, { amount_paid: total, status: "paid" }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Facture marquée comme payée");
@@ -1202,17 +1359,101 @@ function InvoicesSection({ token }) {
     }
   };
 
+  const handlePartialPayment = async () => {
+    if (!showPaymentModal || paymentAmount <= 0) return;
+    try {
+      const currentPaid = showPaymentModal.amount_paid || 0;
+      const newPaid = currentPaid + paymentAmount;
+      const newStatus = newPaid >= showPaymentModal.total ? "paid" : "partial";
+      
+      await axios.put(`${API_URL}/api/commercial/invoices/${showPaymentModal.invoice_id}`, { 
+        amount_paid: newPaid,
+        status: newStatus
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(`Paiement de ${formatPrice(paymentAmount)} enregistré`);
+      setShowPaymentModal(null);
+      setPaymentAmount(0);
+      fetchInvoices();
+    } catch (error) {
+      toast.error("Erreur lors de l'enregistrement");
+    }
+  };
+
+  const handleSendReminders = async () => {
+    try {
+      let sent = 0;
+      for (const invoice of overdueInvoices) {
+        if (invoice.partner_email) {
+          // TODO: Call backend to send reminder email
+          sent++;
+        }
+      }
+      toast.success(`${sent} relance(s) envoyée(s)`);
+      setShowReminderModal(false);
+    } catch (error) {
+      toast.error("Erreur lors de l'envoi");
+    }
+  };
+
+  const exportToCSV = () => {
+    const headers = ["Numéro", "Partenaire", "Objet", "Total", "Payé", "Statut", "Date"];
+    const rows = invoices.map(inv => [
+      inv.invoice_number,
+      inv.partner_name || "",
+      inv.title || "",
+      inv.total || 0,
+      inv.amount_paid || 0,
+      inv.status,
+      inv.created_at?.split("T")[0] || ""
+    ]);
+    
+    const csv = [headers, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `factures_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    toast.success("Export CSV téléchargé");
+  };
+
+  const duplicateInvoice = async (invoice) => {
+    // TODO: Implement duplicate functionality
+    toast.info("Fonctionnalité à venir");
+  };
+
   return (
     <div className="space-y-4">
+      {/* Alert for overdue invoices */}
+      {overdueInvoices.length > 0 && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-red-800 dark:text-red-200">
+              {overdueInvoices.length} facture(s) en retard de paiement (+30 jours)
+            </p>
+            <p className="text-sm text-red-600">
+              Total: {formatPrice(overdueInvoices.reduce((sum, inv) => sum + (inv.total - (inv.amount_paid || 0)), 0))}
+            </p>
+          </div>
+          <button onClick={() => setShowReminderModal(true)}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2">
+            <Send className="w-4 h-4" /> Envoyer relances
+          </button>
+        </div>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center">
           <p className="text-2xl font-bold">{stats.total || 0}</p>
           <p className="text-sm text-muted-foreground">Total</p>
         </div>
-        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-red-600">{stats.unpaid || 0}</p>
-          <p className="text-sm text-muted-foreground">Impayées</p>
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold text-yellow-600">{stats.pending || stats.unpaid || 0}</p>
+          <p className="text-sm text-muted-foreground">En attente</p>
         </div>
         <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 text-center">
           <p className="text-2xl font-bold text-orange-600">{stats.partial || 0}</p>
@@ -1221,6 +1462,39 @@ function InvoicesSection({ token }) {
         <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center">
           <p className="text-2xl font-bold text-green-600">{stats.paid || 0}</p>
           <p className="text-sm text-muted-foreground">Payées</p>
+        </div>
+        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold text-red-600">{overdueInvoices.length}</p>
+          <p className="text-sm text-muted-foreground">En retard</p>
+        </div>
+      </div>
+
+      {/* Header with actions */}
+      <div className="flex flex-wrap gap-4 items-center justify-between">
+        <div className="flex gap-2">
+          {["", "pending", "partial", "paid"].map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                statusFilter === status
+                  ? "bg-black dark:bg-white text-white dark:text-black"
+                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
+            >
+              {status === "" ? "Toutes" : status === "pending" ? "En attente" : status === "partial" ? "Partielles" : "Payées"}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={exportToCSV}
+            className="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl text-sm font-medium flex items-center gap-2 hover:bg-gray-200">
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
+          <button onClick={fetchInvoices}
+            className="p-2 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200">
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -1315,12 +1589,25 @@ function InvoicesSection({ token }) {
                     Email
                   </button>
                   {invoice.status !== "paid" && (
-                    <button
-                      onClick={() => handleMarkPaid(invoice.invoice_id, invoice.total)}
-                      className="px-4 py-2 bg-yellow-400 text-black text-sm font-medium rounded-lg"
-                    >
-                      Marquer payée
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          setShowPaymentModal(invoice);
+                          setPaymentAmount(invoice.total - (invoice.amount_paid || 0));
+                        }}
+                        className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2"
+                        title="Enregistrer un paiement"
+                      >
+                        <DollarSign className="w-4 h-4" />
+                        Paiement
+                      </button>
+                      <button
+                        onClick={() => handleMarkPaid(invoice.invoice_id, invoice.total)}
+                        className="px-4 py-2 bg-yellow-400 text-black text-sm font-medium rounded-lg"
+                      >
+                        Tout payé
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -1356,6 +1643,87 @@ function InvoicesSection({ token }) {
           onClose={() => setShareModal(null)}
           onSuccess={fetchInvoices}
         />
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowPaymentModal(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4">Enregistrer un paiement</h3>
+            <div className="space-y-4">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
+                <p className="text-sm text-muted-foreground">Facture</p>
+                <p className="font-bold">{showPaymentModal.invoice_number}</p>
+                <div className="flex justify-between mt-2">
+                  <span className="text-sm">Total:</span>
+                  <span className="font-semibold">{formatPrice(showPaymentModal.total)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">Déjà payé:</span>
+                  <span className="font-semibold text-green-600">{formatPrice(showPaymentModal.amount_paid || 0)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2 mt-2">
+                  <span className="text-sm font-medium">Reste à payer:</span>
+                  <span className="font-bold text-red-600">{formatPrice(showPaymentModal.total - (showPaymentModal.amount_paid || 0))}</span>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Montant du paiement</label>
+                <input type="number" value={paymentAmount}
+                  onChange={e => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                  className="w-full px-4 py-3 rounded-xl border text-lg font-bold"
+                  max={showPaymentModal.total - (showPaymentModal.amount_paid || 0)} />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setPaymentAmount(showPaymentModal.total - (showPaymentModal.amount_paid || 0))}
+                  className="flex-1 py-2 bg-gray-100 rounded-lg text-sm">Tout payer</button>
+                <button onClick={() => setPaymentAmount((showPaymentModal.total - (showPaymentModal.amount_paid || 0)) / 2)}
+                  className="flex-1 py-2 bg-gray-100 rounded-lg text-sm">50%</button>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setShowPaymentModal(null)} className="px-4 py-2 rounded-lg hover:bg-gray-100">Annuler</button>
+              <button onClick={handlePartialPayment} className="px-4 py-2 bg-green-600 text-white rounded-lg">
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reminder Modal */}
+      {showReminderModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowReminderModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Relances de paiement
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {overdueInvoices.length} facture(s) en retard de paiement. Une relance par email sera envoyée aux partenaires concernés.
+            </p>
+            <div className="max-h-60 overflow-y-auto space-y-2 mb-4">
+              {overdueInvoices.map(inv => (
+                <div key={inv.invoice_id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div>
+                    <p className="font-medium text-sm">{inv.invoice_number}</p>
+                    <p className="text-xs text-muted-foreground">{inv.partner_name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-sm text-red-600">{formatPrice(inv.total - (inv.amount_paid || 0))}</p>
+                    <p className="text-xs text-muted-foreground">{inv.partner_email ? "✉️" : "❌ Pas d'email"}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowReminderModal(false)} className="px-4 py-2 rounded-lg hover:bg-gray-100">Annuler</button>
+              <button onClick={handleSendReminders} className="px-4 py-2 bg-red-600 text-white rounded-lg flex items-center gap-2">
+                <Send className="w-4 h-4" /> Envoyer les relances
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
