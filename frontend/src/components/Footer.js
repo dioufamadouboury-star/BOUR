@@ -18,6 +18,7 @@ const footerLinks = {
     { name: "Suivi de commande", href: "/suivi-commande" },
     { name: "Programme Fidélité", href: "/fidelite" },
     { name: "Parrainage", href: "/parrainage" },
+    { name: "Espace Revendeurs", href: "/reseller/login", highlight: true },
   ],
   legal: [
     { name: "Conditions générales", href: "/cgv" },
@@ -127,7 +128,10 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     to={link.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    className={link.highlight 
+                      ? "inline-flex items-center gap-2 px-3 py-1.5 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                      : "text-muted-foreground hover:text-foreground transition-colors"
+                    }
                   >
                     {link.name}
                   </Link>
