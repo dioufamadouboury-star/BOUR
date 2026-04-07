@@ -482,8 +482,8 @@ export default function AdminPage() {
       }
 
       if (currentPage === "products" || currentPage === "admin") {
-        const response = await axios.get(`${API_URL}/api/products?limit=50`);
-        setProducts(response.data);
+        const response = await axios.get(`${API_URL}/api/products?limit=500`);
+        setProducts(response.data || []);
       }
 
       if (currentPage === "orders" || currentPage === "admin") {
@@ -589,16 +589,14 @@ export default function AdminPage() {
   };
 
   const handleDeleteProduct = async (productId) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce produit ?")) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce produit ?")) return;
 
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      await axios.delete(`${API_URL}/api/products/${productId}`, { headers });
+      await axios.delete(`${API_URL}/api/admin/products/${productId}`, { headers });
       toast.success("Produit supprimé");
       // Mise à jour immédiate de l'état local
       setProducts(prevProducts => prevProducts.filter(p => p.product_id !== productId));
-      // Puis rafraîchir depuis le serveur
-      setTimeout(() => fetchData(), 500);
     } catch (error) {
       toast.error("Erreur lors de la suppression");
       console.error("Delete error:", error);

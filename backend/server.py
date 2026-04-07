@@ -1446,15 +1446,11 @@ async def get_products(
     skip: int = 0
 ):
     # Enforce maximum limit to prevent memory issues
-    limit = min(limit, 100)
+    limit = min(limit, 500)
     
     # Build cache key for cacheable queries (no search, skip=0)
+    # Disabled short cache to prevent stale data issues
     cache_key = None
-    if not search and skip == 0 and limit <= 50:
-        cache_key = f"products:{category}:{featured}:{is_new}:{is_promo}:{limit}"
-        cached = get_cached(cache_key)
-        if cached:
-            return cached
     
     query = {}
     

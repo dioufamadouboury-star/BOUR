@@ -105,9 +105,12 @@ export default function AccountPage() {
     
     setSaving(true);
     try {
+      const token = localStorage.getItem("auth_token");
       await axios.put(`${API_URL}/api/auth/profile`, {
         name: editForm.name.trim(),
         phone: editForm.phone.trim() || null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       
       // Refresh user data
