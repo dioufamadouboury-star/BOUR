@@ -63,6 +63,9 @@ export default function ProductPage() {
   const [notifyEmail, setNotifyEmail] = useState("");
   const [notifyLoading, setNotifyLoading] = useState(false);
   
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedSize, setSelectedSize] = useState(null);
+  
   // Price Alert state
   const [showPriceAlertModal, setShowPriceAlertModal] = useState(false);
   const [priceAlertEmail, setPriceAlertEmail] = useState("");
@@ -125,13 +128,26 @@ export default function ProductPage() {
   const inWishlist = isInWishlist(product.product_id);
 
   const handleAddToCart = () => {
-    addToCart(product.product_id, quantity);
+    // Validate color/size selection if required
+    if (product.colors?.length > 0 && !selectedColor) {
+      toast.error("Veuillez sélectionner une couleur");
+      return;
+    }
+    if (product.sizes?.length > 0 && !selectedSize) {
+      toast.error("Veuillez sélectionner une taille");
+      return;
+    }
+    addToCart(product.product_id, quantity, { color: selectedColor, size: selectedSize });
   };
 
   const handleWhatsAppOrder = () => {
+    let productName = product.name;
+    if (selectedColor) productName += ` (${selectedColor})`;
+    if (selectedSize) productName += ` - Taille ${selectedSize}`;
+    
     const items = [
       {
-        name: product.name,
+        name: productName,
         price: product.price,
         quantity: quantity,
       },
@@ -343,6 +359,56 @@ export default function ProductPage() {
                   <TrendingDown className="w-4 h-4" />
                   Alerte baisse de prix
                 </button>
+              )}
+
+              {/* Color Selection */}
+              {product.colors && product.colors.length > 0 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-3">
+                    Couleur {selectedColor && <span className="text-muted-foreground">: {selectedColor}</span>}
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {product.colors.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setSelectedColor(color)}
+                        className={cn(
+                          "px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all",
+                          selectedColor === color
+                            ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600"
+                            : "border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30"
+                        )}
+                      >
+                        {color}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Size Selection */}
+              {product.sizes && product.sizes.length > 0 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-3">
+                    Taille {selectedSize && <span className="text-muted-foreground">: {selectedSize}</span>}
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {product.sizes.map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={cn(
+                          "w-12 h-12 rounded-xl border-2 text-sm font-bold transition-all flex items-center justify-center",
+                          selectedSize === size
+                            ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600"
+                            : "border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30"
+                        )}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {/* Quantity */}

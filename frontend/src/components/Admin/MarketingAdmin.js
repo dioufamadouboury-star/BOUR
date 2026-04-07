@@ -1,9 +1,70 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Mail, Phone, Users, Send, Loader2, TrendingUp, Filter, Download } from "lucide-react";
+import { Mail, Phone, Users, Send, Loader2, TrendingUp, Filter, Download, FileText, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Email Templates
+const EMAIL_TEMPLATES = [
+  {
+    id: "promo",
+    name: "Promotion",
+    subject: "🔥 Offre Exclusive YAMA+ - Jusqu'à -50%",
+    content: `<h1>Offre Spéciale YAMA+</h1>
+<p>Bonjour,</p>
+<p>Profitez de réductions exceptionnelles sur notre sélection de produits !</p>
+<ul>
+<li>Électroménager : -30%</li>
+<li>Mobilier : -25%</li>
+<li>Décoration : -40%</li>
+</ul>
+<p><strong>Utilisez le code PROMO20 pour bénéficier de 20% supplémentaires !</strong></p>
+<p>Offre valable jusqu'au [DATE]</p>
+<p>À bientôt,<br>L'équipe YAMA+</p>`
+  },
+  {
+    id: "nouveautes",
+    name: "Nouveautés",
+    subject: "✨ Découvrez nos nouveautés YAMA+",
+    content: `<h1>Nouvelles Arrivées !</h1>
+<p>Bonjour,</p>
+<p>De nouveaux produits viennent d'arriver chez YAMA+ !</p>
+<p>Découvrez notre sélection exclusive de [CATEGORIE] pour embellir votre intérieur.</p>
+<p>Visitez notre site pour les découvrir en avant-première.</p>
+<p>À bientôt,<br>L'équipe YAMA+</p>`
+  },
+  {
+    id: "relance",
+    name: "Relance panier",
+    subject: "🛒 Vous avez oublié quelque chose...",
+    content: `<h1>Votre panier vous attend</h1>
+<p>Bonjour,</p>
+<p>Vous avez récemment consulté nos produits mais n'avez pas finalisé votre commande.</p>
+<p>Vos articles sont toujours disponibles et prêts à être livrés !</p>
+<p><strong>Finalisez votre commande maintenant et bénéficiez de la livraison offerte avec le code LIVRAISON</strong></p>
+<p>À bientôt,<br>L'équipe YAMA+</p>`
+  },
+  {
+    id: "fidelite",
+    name: "Programme fidélité",
+    subject: "🎁 Merci pour votre fidélité !",
+    content: `<h1>Merci de votre confiance</h1>
+<p>Bonjour,</p>
+<p>Nous tenons à vous remercier pour votre fidélité !</p>
+<p>En tant que client privilégié, profitez de <strong>15% de réduction</strong> sur votre prochaine commande.</p>
+<p>Code : FIDELE15</p>
+<p>À bientôt,<br>L'équipe YAMA+</p>`
+  }
+];
+
+// SMS Templates
+const SMS_TEMPLATES = [
+  { id: "promo_sms", name: "Promo", content: "🔥 YAMA+ : -30% sur tout le site ! Code PROMO30. Valable 48h. yamaplus.com" },
+  { id: "livraison_sms", name: "Livraison", content: "📦 YAMA+ : Livraison GRATUITE ce weekend ! Profitez-en. yamaplus.com" },
+  { id: "relance_sms", name: "Relance", content: "🛒 YAMA+ : Votre panier vous attend ! Finalisez votre commande. yamaplus.com" },
+  { id: "nouveautes_sms", name: "Nouveautés", content: "✨ YAMA+ : Nouvelles arrivées ! Découvrez notre collection. yamaplus.com" }
+];
 
 export default function MarketingAdmin({ token }) {
   const [contacts, setContacts] = useState([]);
@@ -165,27 +226,53 @@ export default function MarketingAdmin({ token }) {
 
       {/* Campaign Tab */}
       {activeTab === "campaign" && (
-        <div className="bg-white dark:bg-[#1C1C1E] rounded-xl border p-6 space-y-4">
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-xl border p-6 space-y-6">
           <h2 className="font-bold text-lg">Créer une campagne</h2>
           
           <div className="flex gap-4">
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input type="radio" name="type" checked={campaignType === "email"} onChange={() => setCampaignType("email")} />
               <Mail className="w-4 h-4" /> Email
             </label>
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input type="radio" name="type" checked={campaignType === "sms"} onChange={() => setCampaignType("sms")} />
               <Phone className="w-4 h-4" /> SMS
             </label>
           </div>
 
+          {/* Templates */}
+          <div>
+            <label className="text-sm font-medium mb-3 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              Templates prédéfinis
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {(campaignType === "email" ? EMAIL_TEMPLATES : SMS_TEMPLATES).map(tpl => (
+                <button
+                  key={tpl.id}
+                  onClick={() => {
+                    if (campaignType === "email") {
+                      setCampaignSubject(tpl.subject);
+                    }
+                    setCampaignMessage(tpl.content);
+                    toast.success(`Template "${tpl.name}" appliqué`);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-black/10 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all text-sm"
+                >
+                  <FileText className="w-4 h-4 text-amber-500" />
+                  {tpl.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div>
             <label className="text-sm font-medium block mb-1">Cible</label>
             <select value={campaignTarget} onChange={e => setCampaignTarget(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-black/10">
-              <option value="all">Tous les contacts</option>
-              <option value="emails_only">Contacts avec email uniquement</option>
-              <option value="phones_only">Contacts avec téléphone uniquement</option>
+              className="w-full px-3 py-2 rounded-lg border border-black/10 bg-transparent">
+              <option value="all">Tous les contacts ({stats.total_contacts})</option>
+              <option value="emails_only">Contacts avec email ({stats.total_emails})</option>
+              <option value="phones_only">Contacts avec téléphone ({stats.total_phones})</option>
             </select>
           </div>
 
@@ -193,22 +280,30 @@ export default function MarketingAdmin({ token }) {
             <div>
               <label className="text-sm font-medium block mb-1">Sujet</label>
               <input value={campaignSubject} onChange={e => setCampaignSubject(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-black/10" placeholder="Sujet de l'email" />
+                className="w-full px-3 py-2 rounded-lg border border-black/10 bg-transparent" placeholder="Sujet de l'email" />
             </div>
           )}
 
           <div>
-            <label className="text-sm font-medium block mb-1">Message {campaignType === "sms" && `(${campaignMessage.length}/160)`}</label>
+            <label className="text-sm font-medium block mb-1">
+              Message {campaignType === "sms" && <span className="text-muted-foreground">({campaignMessage.length}/160 caractères)</span>}
+            </label>
             <textarea value={campaignMessage} onChange={e => setCampaignMessage(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-black/10" rows={4}
+              className="w-full px-3 py-2 rounded-lg border border-black/10 bg-transparent font-mono text-sm" rows={6}
               placeholder={campaignType === "email" ? "Contenu HTML de l'email..." : "Message SMS..."} />
           </div>
 
-          <button onClick={sendCampaign} disabled={sending}
-            className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold flex items-center gap-2 disabled:opacity-50">
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            Envoyer la campagne
-          </button>
+          <div className="flex gap-3">
+            <button onClick={sendCampaign} disabled={sending}
+              className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold flex items-center gap-2 disabled:opacity-50 hover:bg-blue-700 transition-colors">
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              Envoyer la campagne
+            </button>
+            <button onClick={() => { setCampaignSubject(""); setCampaignMessage(""); }}
+              className="px-6 py-3 rounded-xl border border-black/10 font-semibold hover:bg-black/5 transition-colors">
+              Réinitialiser
+            </button>
+          </div>
         </div>
       )}
     </div>

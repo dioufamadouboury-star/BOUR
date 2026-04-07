@@ -136,6 +136,9 @@ export default function AnalyticsDashboard() {
 
   const { summary, orders_by_status, payment_methods, daily_chart, top_products, customers, inventory } = analytics;
 
+  // Check if there's any data
+  const hasData = summary?.total_orders > 0 || summary?.total_revenue > 0;
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -166,6 +169,17 @@ export default function AnalyticsDashboard() {
           </button>
         </div>
       </div>
+
+      {/* No Data Warning */}
+      {!hasData && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center">
+          <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-amber-500" />
+          <h3 className="font-semibold text-lg mb-2">Aucune donnée disponible</h3>
+          <p className="text-muted-foreground">
+            Les statistiques s'afficheront automatiquement dès que vous aurez des commandes.
+          </p>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
