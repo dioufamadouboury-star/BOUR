@@ -43,7 +43,10 @@ export default function ResellerPortalPage() {
   const [loading, setLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [registerForm, setRegisterForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [loginLoading, setLoginLoading] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showContact, setShowContact] = useState(false);
   const [contactMessage, setContactMessage] = useState("");
@@ -96,6 +99,28 @@ export default function ResellerPortalPage() {
       toast.error(e.response?.data?.detail || "Identifiants incorrects");
     }
     setLoginLoading(false);
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    if (!registerForm.name || !registerForm.email || !registerForm.phone) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+    setRegisterLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/reseller/register-request`, registerForm);
+      toast.success("Demande envoyée ! Nous vous contacterons bientôt.");
+      setRegisterForm({ name: "", email: "", phone: "", message: "" });
+      setIsRegistering(false);
+    } catch (e) {
+      // Fallback to WhatsApp if endpoint doesn't exist
+      const msg = `🤝 DEMANDE REVENDEUR YAMA+\n\nNom: ${registerForm.name}\nEmail: ${registerForm.email}\nTéléphone: ${registerForm.phone}\n\nMessage: ${registerForm.message || "Je souhaite devenir revendeur"}`;
+      window.open(`https://wa.me/221783827575?text=${encodeURIComponent(msg)}`, "_blank");
+      toast.success("Redirection vers WhatsApp...");
+      setIsRegistering(false);
+    }
+    setRegisterLoading(false);
   };
 
   const handleLogout = () => {
@@ -152,7 +177,7 @@ export default function ResellerPortalPage() {
       setShowContact(false);
     } catch (e) {
       // If endpoint doesn't exist, show WhatsApp fallback
-      window.open(`https://wa.me/221771234567?text=${encodeURIComponent(`[Revendeur ${reseller?.name}] ${contactMessage}`)}`, "_blank");
+      window.open(`https://wa.me/221783827575?text=${encodeURIComponent(`[Revendeur ${reseller?.name}] ${contactMessage}`)}`, "_blank");
       toast.success("Redirection vers WhatsApp...");
       setShowContact(false);
     }
@@ -187,55 +212,132 @@ export default function ResellerPortalPage() {
           <div className="text-center mb-8">
             <img src="/assets/images/logo_yama_full.png" alt="YAMA+" className="h-16 mx-auto mb-4" />
             <h1 className="text-2xl font-bold">Espace Revendeurs</h1>
-            <p className="text-muted-foreground mt-2">Connectez-vous pour accéder à votre espace partenaire</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium block mb-2">Email</label>
-              <input
-                type="email"
-                value={loginForm.email}
-                onChange={(e) => setLoginForm((p) => ({ ...p, email: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="votre@email.com"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium block mb-2">Mot de passe</label>
-              <input
-                type="password"
-                value={loginForm.password}
-                onChange={(e) => setLoginForm((p) => ({ ...p, password: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loginLoading}
-              className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold hover:from-orange-600 hover:to-amber-600 transition-all disabled:opacity-50 shadow-lg"
-            >
-              {loginLoading ? <RefreshCw className="w-5 h-5 animate-spin mx-auto" /> : "Se connecter"}
-            </button>
-          </form>
-
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-center text-sm text-muted-foreground mb-4">
-              Pas encore revendeur ?
+            <p className="text-muted-foreground mt-2">
+              {isRegistering ? "Inscrivez-vous pour devenir partenaire" : "Connectez-vous à votre espace"}
             </p>
-            <a
-              href="https://wa.me/221771234567?text=Bonjour, je souhaite devenir revendeur YAMA+"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors"
-            >
-              <MessageCircle className="w-5 h-5" />
-              Contactez-nous sur WhatsApp
-            </a>
           </div>
+
+          {!isRegistering ? (
+            <>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium block mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={loginForm.email}
+                    onChange={(e) => setLoginForm((p) => ({ ...p, email: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="votre@email.com"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-2">Mot de passe</label>
+                  <input
+                    type="password"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm((p) => ({ ...p, password: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loginLoading}
+                  className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold hover:from-orange-600 hover:to-amber-600 transition-all disabled:opacity-50 shadow-lg"
+                >
+                  {loginLoading ? <RefreshCw className="w-5 h-5 animate-spin mx-auto" /> : "Se connecter"}
+                </button>
+              </form>
+
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-center text-sm text-muted-foreground mb-4">
+                  Pas encore revendeur ?
+                </p>
+                <button
+                  onClick={() => setIsRegistering(true)}
+                  className="w-full py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Users className="w-5 h-5" />
+                  Devenir Revendeur
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium block mb-2">Nom complet *</label>
+                  <input
+                    type="text"
+                    value={registerForm.name}
+                    onChange={(e) => setRegisterForm((p) => ({ ...p, name: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-orange-500"
+                    placeholder="Votre nom"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-2">Email *</label>
+                  <input
+                    type="email"
+                    value={registerForm.email}
+                    onChange={(e) => setRegisterForm((p) => ({ ...p, email: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-orange-500"
+                    placeholder="votre@email.com"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-2">Téléphone *</label>
+                  <input
+                    type="tel"
+                    value={registerForm.phone}
+                    onChange={(e) => setRegisterForm((p) => ({ ...p, phone: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-orange-500"
+                    placeholder="+221 7X XXX XX XX"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-2">Message (optionnel)</label>
+                  <textarea
+                    value={registerForm.message}
+                    onChange={(e) => setRegisterForm((p) => ({ ...p, message: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-orange-500 resize-none"
+                    placeholder="Parlez-nous de vous, votre activité..."
+                    rows={3}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={registerLoading}
+                  className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-600 transition-all disabled:opacity-50 shadow-lg"
+                >
+                  {registerLoading ? <RefreshCw className="w-5 h-5 animate-spin mx-auto" /> : "Envoyer ma demande"}
+                </button>
+              </form>
+
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+                <button
+                  onClick={() => setIsRegistering(false)}
+                  className="w-full py-3 border border-gray-200 dark:border-gray-700 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  ← Retour à la connexion
+                </button>
+                <a
+                  href="https://wa.me/221783827575?text=Bonjour, je souhaite devenir revendeur YAMA+"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  Contacter via WhatsApp
+                </a>
+              </div>
+            </>
+          )}
         </motion.div>
       </div>
     );
@@ -623,7 +725,7 @@ export default function ResellerPortalPage() {
                   Envoyer
                 </button>
                 <a
-                  href={`https://wa.me/221771234567?text=${encodeURIComponent(`[Revendeur ${reseller?.name}] `)}`}
+                  href={`https://wa.me/221783827575?text=${encodeURIComponent(`[Revendeur ${reseller?.name}] `)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600"
