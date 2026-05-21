@@ -21,8 +21,15 @@ __all__ = [
     'push_notifications',
     
     # Prepared modules (ready for integration)
-    'products',  # Products CRUD, Flash Sales, Reviews
-    'cart',      # Shopping Cart operations
-    'orders',    # Order creation and tracking
+    'products',      # Products CRUD, Flash Sales, Reviews
+    'cart',          # Shopping Cart operations
+    'orders',        # Order creation and tracking
+    'wishlist',      # Wishlist operations and sharing
+    'resellers',     # Reseller portal and commission tracking
+    'loyalty',       # Loyalty program, points, rewards
+    'game',          # Spin wheel / Chrono game
+    'appointments',  # Appointment booking system
 ]
+
+
 
