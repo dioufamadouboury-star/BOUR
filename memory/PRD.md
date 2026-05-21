@@ -10,7 +10,17 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 - **Deployment**: Hostinger VPS (Ubuntu), Nginx, Systemd
 - **Integrations**: Google OAuth, PayTech, MailerSend, Gemini Vision, Facebook Pixel, GA4
 
-## Recent Changes (March 30, 2026)
+## Recent Changes (May 21, 2026)
+
+### ✅ COMPLETED - Fix Overlapping Floating Buttons
+- **Issue**: LiveChat "Message" button was overlapping with WhatsApp button
+- **Solution**: Removed LiveChat component from App.js as per user request
+- **Deployed**: To VPS production (groupeyamaplus.com)
+- **Files modified**: `/app/frontend/src/App.js`
+
+---
+
+## Changes (March 30, 2026)
 
 ### ✅ COMPLETED - Système Revendeur/Affilié
 1. **Admin Revendeurs** ✅

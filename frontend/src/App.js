@@ -13,7 +13,7 @@ import CartDrawer from "./components/CartDrawer";
 import NewsletterPopup from "./components/NewsletterPopup";
 import GameFloatingButton from "./components/GameFloatingButton";
 import WhatsAppButton from "./components/WhatsAppButton";
-import LiveChat from "./components/LiveChat";
+// LiveChat removed per user request (overlapping with WhatsApp button)
 import PushNotificationPrompt from "./components/PushNotificationPrompt";
 import { CompareFloatingBar } from "./components/ProductComparison";
 
@@ -105,7 +105,6 @@ function PublicLayout({ children }) {
       {!isAdminPage && <GameFloatingButton />}
       {!isAdminPage && <CompareFloatingBar />}
       {!isAdminPage && <WhatsAppButton />}
-      {!isAdminPage && <LiveChat />}
       {!isAdminPage && <PushNotificationPrompt />}
     </>
   );
