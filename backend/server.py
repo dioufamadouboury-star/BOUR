@@ -10213,3 +10213,346 @@ app.include_router(commercial_router_instance)
 # Re-include router to ensure all late-defined routes are registered
 # This is needed because some routes (trips, sms) are defined after the initial include
 app.include_router(api_router)
+
+
+# ============================================================
+# SOURCING MODULE (Import Chine)
+# ============================================================
+
+SHIPPING_RATES = {
+    "air_general": {
+        "name": "Avion - Marchandise Générale",
+        "icon": "✈️",
+        "duration": "8-12 jours",
+        "tiers": [
+            {"min_kg": 0, "max_kg": 10, "price_per_kg": 8000},
+            {"min_kg": 10.01, "max_kg": 50, "price_per_kg": 7000},
+            {"min_kg": 50.01, "max_kg": 200, "price_per_kg": 6800},
+            {"min_kg": 200.01, "max_kg": 999999, "price_per_kg": 6600},
+        ],
+        "description": "Transport aérien standard pour marchandises générales"
+    },
+    "air_sensitive": {
+        "name": "Avion - Marchandise Sensible",
+        "icon": "✈️",
+        "duration": "12-16 jours",
+        "tiers": [
+            {"min_kg": 0, "max_kg": 10, "price_per_kg": 8000},
+            {"min_kg": 10.01, "max_kg": 50, "price_per_kg": 7200},
+            {"min_kg": 50.01, "max_kg": 200, "price_per_kg": 7000},
+            {"min_kg": 200.01, "max_kg": 999999, "price_per_kg": 6800},
+        ],
+        "extras": {"phone": 300},
+        "description": "Transport aérien pour marchandises sensibles"
+    },
+    "maritime": {
+        "name": "Maritime (par CBM)",
+        "icon": "🚢",
+        "duration": "30-45 jours",
+        "price_per_cbm": None,
+        "cbm_to_kg": 167,
+        "description": "Transport maritime économique"
+    }
+}
+
+EXTRA_FEES = {
+    "route_change": 3000,
+    "formal_customs_min_kg": 100,
+    "phone_surcharge": 300,
+}
+
+def calculate_volumetric_weight(length_cm: float, width_cm: float, height_cm: float) -> float:
+    cbm = (length_cm * width_cm * height_cm) / 1000000
+    return cbm * 167
+
+def get_shipping_cost(weight_kg: float, method: str, contains_phones: int = 0) -> dict:
+    if method not in SHIPPING_RATES:
+        method = "air_general"
+    rate = SHIPPING_RATES[method]
+    price_per_kg = rate["tiers"][-1]["price_per_kg"]
+    for tier in rate["tiers"]:
+        if tier["min_kg"] <= weight_kg <= tier["max_kg"]:
+            price_per_kg = tier["price_per_kg"]
+            break
+    shipping_cost = int(weight_kg * price_per_kg)
+    phone_surcharge = contains_phones * EXTRA_FEES["phone_surcharge"] if method == "air_sensitive" else 0
+    return {
+        "method": method, "method_name": rate["name"], "duration": rate["duration"],
+        "weight_kg": weight_kg, "price_per_kg": price_per_kg,
+        "base_cost": shipping_cost, "phone_surcharge": phone_surcharge,
+        "total_shipping_cost": shipping_cost + phone_surcharge
+    }
+
+@api_router.get("/sourcing/rates")
+async def get_sourcing_rates():
+    return {
+        "rates": SHIPPING_RATES,
+        "extra_fees": EXTRA_FEES,
+        "notes": [
+            "Le poids facturé dépend de la mesure des colis reçus",
+            "1 CBM = 167 KG pour les colis volumineux",
+            "Douane formelle en Chine: minimum 100KG",
+            "Changement de voie de transport: 3000 CFA/fois",
+            "Transport Chine → Sénégal, entrepôt à entrepôt, douane et taxe comprises"
+        ]
+    }
+
+class ShippingCalculation(BaseModel):
+    weight_kg: float
+    shipping_method: str = "air_general"
+    contains_phones: int = 0
+    length_cm: Optional[float] = None
+    width_cm: Optional[float] = None
+    height_cm: Optional[float] = None
+
+@api_router.post("/sourcing/calculate")
+async def calculate_shipping(data: ShippingCalculation):
+    actual_weight = data.weight_kg
+    volumetric_weight = None
+    if data.length_cm and data.width_cm and data.height_cm:
+        volumetric_weight = calculate_volumetric_weight(data.length_cm, data.width_cm, data.height_cm)
+    billable_weight = max(actual_weight, volumetric_weight or 0)
+    calculations = {}
+    for method_key in ["air_general", "air_sensitive"]:
+        calculations[method_key] = get_shipping_cost(billable_weight, method_key, data.contains_phones)
+    return {
+        "actual_weight_kg": actual_weight,
+        "volumetric_weight_kg": volumetric_weight,
+        "billable_weight_kg": billable_weight,
+        "calculations": calculations,
+        "recommended": data.shipping_method,
+        "note": "Prix indicatif. Le prix final sera confirmé après réception du colis."
+    }
+
+class SourcingRequestModel(BaseModel):
+    customer_name: str
+    customer_email: EmailStr
+    customer_phone: str
+    customer_address: str = ""
+    customer_city: str = "Dakar"
+    product_link: str
+    product_name: str = ""
+    product_description: str = ""
+    quantity: int = 1
+    estimated_weight_kg: Optional[float] = None
+    estimated_dimensions: Optional[str] = None
+    shipping_method: str = "air_general"
+    is_sensitive: bool = False
+    contains_phones: int = 0
+    notes: str = ""
+
+@api_router.post("/sourcing/request")
+async def create_sourcing_request(data: SourcingRequestModel):
+    request_id = f"IMP-{uuid.uuid4().hex[:8].upper()}"
+    now = datetime.now(timezone.utc).isoformat()
+    shipping_estimate = None
+    if data.estimated_weight_kg:
+        shipping_estimate = get_shipping_cost(data.estimated_weight_kg, data.shipping_method, data.contains_phones)
+    request_doc = {
+        "request_id": request_id,
+        "customer": {
+            "name": data.customer_name, "email": data.customer_email,
+            "phone": data.customer_phone, "address": data.customer_address, "city": data.customer_city
+        },
+        "product": {
+            "link": data.product_link, "name": data.product_name,
+            "description": data.product_description, "quantity": data.quantity,
+            "estimated_weight_kg": data.estimated_weight_kg, "estimated_dimensions": data.estimated_dimensions
+        },
+        "shipping": {
+            "method": data.shipping_method, "is_sensitive": data.is_sensitive,
+            "contains_phones": data.contains_phones, "estimate": shipping_estimate
+        },
+        "pricing": {"product_cost": None, "shipping_cost": None, "commission": None, "total": None, "deposit_required": None, "deposit_paid": False},
+        "status": "pending",
+        "tracking": {"china_tracking": None, "international_tracking": None, "events": []},
+        "notes": data.notes, "admin_notes": "", "created_at": now, "updated_at": now
+    }
+    await db.sourcing_requests.insert_one(request_doc)
+    return {"message": "Demande envoyée avec succès", "request_id": request_id, "shipping_estimate": shipping_estimate}
+
+@api_router.get("/sourcing/track/{request_id}")
+async def track_sourcing_request(request_id: str, email: Optional[str] = None):
+    request = await db.sourcing_requests.find_one({"request_id": request_id}, {"_id": 0})
+    if not request:
+        raise HTTPException(status_code=404, detail="Demande non trouvée")
+    if email and request.get("customer", {}).get("email", "").lower() != email.lower():
+        raise HTTPException(status_code=404, detail="Demande non trouvée pour cet email")
+    return {
+        "request_id": request["request_id"], "status": request["status"],
+        "product": {"name": request.get("product", {}).get("name", ""), "quantity": request.get("product", {}).get("quantity", 1)},
+        "shipping": {"method": request.get("shipping", {}).get("method", ""), "method_name": SHIPPING_RATES.get(request.get("shipping", {}).get("method", ""), {}).get("name", "")},
+        "pricing": {"total": request.get("pricing", {}).get("total"), "deposit_paid": request.get("pricing", {}).get("deposit_paid", False)},
+        "tracking": request.get("tracking", {}), "created_at": request.get("created_at"), "updated_at": request.get("updated_at")
+    }
+
+@api_router.get("/admin/sourcing/requests")
+async def admin_get_sourcing_requests(status: Optional[str] = None, user=Depends(require_admin)):
+    query = {"status": status} if status else {}
+    requests = await db.sourcing_requests.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return {"requests": requests}
+
+@api_router.get("/admin/sourcing/stats")
+async def admin_get_sourcing_stats(user=Depends(require_admin)):
+    total = await db.sourcing_requests.count_documents({})
+    pending = await db.sourcing_requests.count_documents({"status": "pending"})
+    quoted = await db.sourcing_requests.count_documents({"status": "quoted"})
+    in_progress = await db.sourcing_requests.count_documents({"status": {"$in": ["deposit_paid", "ordered", "in_transit_china", "arrived_warehouse", "shipping_to_senegal", "customs"]}})
+    delivered = await db.sourcing_requests.count_documents({"status": "delivered"})
+    return {"total": total, "pending": pending, "quoted": quoted, "in_progress": in_progress, "delivered": delivered}
+
+@api_router.put("/admin/sourcing/requests/{request_id}")
+async def admin_update_sourcing_request(request_id: str, request: Request, user=Depends(require_admin)):
+    body = await request.json()
+    now = datetime.now(timezone.utc).isoformat()
+    update_data = {"updated_at": now}
+    if "status" in body:
+        update_data["status"] = body["status"]
+        await db.sourcing_requests.update_one({"request_id": request_id}, {"$push": {"tracking.events": {"status": body["status"], "timestamp": now, "note": body.get("status_note", "")}}})
+    for field in ["product_cost", "shipping_cost", "commission", "total", "deposit_required"]:
+        if field in body: update_data[f"pricing.{field}"] = body[field]
+    if "deposit_paid" in body: update_data["pricing.deposit_paid"] = body["deposit_paid"]
+    if "china_tracking" in body: update_data["tracking.china_tracking"] = body["china_tracking"]
+    if "international_tracking" in body: update_data["tracking.international_tracking"] = body["international_tracking"]
+    if "actual_weight_kg" in body: update_data["shipping.actual_weight_kg"] = body["actual_weight_kg"]
+    if "admin_notes" in body: update_data["admin_notes"] = body["admin_notes"]
+    await db.sourcing_requests.update_one({"request_id": request_id}, {"$set": update_data})
+    return {"message": "Demande mise à jour"}
+
+
+# ============================================================
+# B2B PORTAL MODULE
+# ============================================================
+
+WHOLESALE_TIERS = [
+    {"min_qty": 1, "max_qty": 9, "discount": 0, "label": "Standard"},
+    {"min_qty": 10, "max_qty": 24, "discount": 5, "label": "Bronze"},
+    {"min_qty": 25, "max_qty": 49, "discount": 10, "label": "Argent"},
+    {"min_qty": 50, "max_qty": 99, "discount": 15, "label": "Or"},
+    {"min_qty": 100, "max_qty": 999999, "discount": 20, "label": "Platine"},
+]
+
+def get_wholesale_price(base_price: int, quantity: int) -> dict:
+    for tier in WHOLESALE_TIERS:
+        if tier["min_qty"] <= quantity <= tier["max_qty"]:
+            discount = tier["discount"]
+            unit_price = base_price * (100 - discount) // 100
+            return {"unit_price": unit_price, "total_price": unit_price * quantity, "discount_percent": discount, "tier": tier["label"], "savings": (base_price - unit_price) * quantity}
+    return {"unit_price": base_price, "total_price": base_price * quantity, "discount_percent": 0, "tier": "Standard", "savings": 0}
+
+class B2BPartnerRegister(BaseModel):
+    company_name: str
+    contact_name: str
+    email: EmailStr
+    phone: str
+    password: str
+    business_type: str = "retailer"
+    ninea: Optional[str] = None
+    rccm: Optional[str] = None
+    address: str = ""
+    city: str = "Dakar"
+    description: str = ""
+
+@api_router.post("/b2b/register")
+async def register_b2b_partner(data: B2BPartnerRegister):
+    existing = await db.b2b_partners.find_one({"email": data.email.lower()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email déjà utilisé")
+    partner_id = f"B2B-{uuid.uuid4().hex[:8].upper()}"
+    partner_code = f"PRO{secrets.token_hex(3).upper()}"
+    hashed_password = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
+    now = datetime.now(timezone.utc).isoformat()
+    partner_doc = {
+        "partner_id": partner_id, "partner_code": partner_code, "company_name": data.company_name,
+        "contact_name": data.contact_name, "email": data.email.lower(), "phone": data.phone,
+        "hashed_password": hashed_password, "business_type": data.business_type,
+        "ninea": data.ninea, "rccm": data.rccm, "address": data.address, "city": data.city,
+        "description": data.description, "status": "pending", "is_active": False,
+        "credit_limit": 0, "current_credit": 0, "discount_tier": "standard",
+        "total_orders": 0, "total_spent": 0, "created_at": now, "updated_at": now
+    }
+    await db.b2b_partners.insert_one(partner_doc)
+    return {"message": "Demande envoyée. Vous serez contacté après validation.", "partner_id": partner_id}
+
+@api_router.post("/b2b/login")
+async def login_b2b_partner(request: Request):
+    body = await request.json()
+    email = body.get("email", "").lower()
+    password = body.get("password", "")
+    partner = await db.b2b_partners.find_one({"email": email})
+    if not partner:
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+    if not bcrypt.checkpw(password.encode(), partner["hashed_password"].encode()):
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+    if partner.get("status") == "pending":
+        raise HTTPException(status_code=403, detail="Votre compte est en attente de validation")
+    if not partner.get("is_active"):
+        raise HTTPException(status_code=403, detail="Compte désactivé")
+    token = jwt.encode({"partner_id": partner["partner_id"], "email": email, "type": "b2b_partner", "exp": datetime.now(timezone.utc) + timedelta(days=30)}, JWT_SECRET, algorithm="HS256")
+    await db.b2b_partners.update_one({"partner_id": partner["partner_id"]}, {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}})
+    return {"token": token, "partner": {"partner_id": partner["partner_id"], "partner_code": partner["partner_code"], "company_name": partner["company_name"], "contact_name": partner["contact_name"], "email": partner["email"], "business_type": partner["business_type"], "discount_tier": partner.get("discount_tier", "standard"), "credit_limit": partner.get("credit_limit", 0)}}
+
+async def get_current_b2b_partner(request: Request) -> dict:
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Non authentifié")
+    token = auth_header.split(" ")[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        if payload.get("type") != "b2b_partner":
+            raise HTTPException(status_code=403, detail="Accès non autorisé")
+        partner = await db.b2b_partners.find_one({"partner_id": payload["partner_id"]}, {"_id": 0, "hashed_password": 0})
+        if not partner or not partner.get("is_active"):
+            raise HTTPException(status_code=403, detail="Compte désactivé")
+        return partner
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Session expirée")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token invalide")
+
+@api_router.get("/b2b/me")
+async def get_b2b_partner_profile(request: Request):
+    partner = await get_current_b2b_partner(request)
+    return {"partner": partner}
+
+@api_router.get("/b2b/dashboard")
+async def get_b2b_dashboard(request: Request):
+    partner = await get_current_b2b_partner(request)
+    orders = await db.b2b_orders.find({"partner_id": partner["partner_id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    quotes = await db.b2b_quotes.find({"partner_id": partner["partner_id"]}, {"_id": 0}).sort("created_at", -1).to_list(20)
+    total_spent = sum(o.get("total", 0) for o in orders)
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    this_month_orders = [o for o in orders if o.get("created_at", "") >= month_start.isoformat()]
+    return {
+        "partner": partner,
+        "stats": {"total_orders": len(orders), "total_spent": total_spent, "pending_orders": len([o for o in orders if o.get("status") == "pending"]), "this_month_orders": len(this_month_orders), "this_month_spent": sum(o.get("total", 0) for o in this_month_orders), "credit_available": partner.get("credit_limit", 0) - partner.get("current_credit", 0)},
+        "recent_orders": orders[:10], "pending_quotes": [q for q in quotes if q.get("status") == "pending"][:5], "wholesale_tiers": WHOLESALE_TIERS
+    }
+
+@api_router.get("/admin/b2b/partners")
+async def admin_get_b2b_partners(user=Depends(require_admin)):
+    partners = await db.b2b_partners.find({}, {"_id": 0, "hashed_password": 0}).sort("created_at", -1).to_list(100)
+    return {"partners": partners}
+
+@api_router.put("/admin/b2b/partners/{partner_id}")
+async def admin_update_b2b_partner(partner_id: str, request: Request, user=Depends(require_admin)):
+    body = await request.json()
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    for field in ["status", "is_active", "credit_limit", "discount_tier"]:
+        if field in body: update_data[field] = body[field]
+    await db.b2b_partners.update_one({"partner_id": partner_id}, {"$set": update_data})
+    return {"message": "Partenaire mis à jour"}
+
+@api_router.get("/admin/b2b/quotes")
+async def admin_get_b2b_quotes(user=Depends(require_admin)):
+    quotes = await db.b2b_quotes.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return {"quotes": quotes}
+
+@api_router.get("/admin/b2b/orders")
+async def admin_get_b2b_orders(user=Depends(require_admin)):
+    orders = await db.b2b_orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return {"orders": orders}
+
+# Final router registration to include all late-defined routes
+app.include_router(api_router)
