@@ -12,17 +12,25 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 
 ## Recent Changes (May 21, 2026)
 
-### ✅ COMPLETED - Fix Overlapping Floating Buttons
-- **Issue**: LiveChat "Message" button was overlapping with WhatsApp button
-- **Solution**: Removed LiveChat component from App.js as per user request
-- **Deployed**: To VPS production (groupeyamaplus.com)
-- **Files modified**: `/app/frontend/src/App.js`
+### ✅ NEW - B2B Portal (/b2b)
+- Partner registration and login system
+- Wholesale pricing tiers (0%, -5%, -10%, -15%, -20% based on quantity)
+- Quote request system
+- Partner dashboard with orders and stats
+- Admin management panel for partners and quotes
+- Files: `/app/backend/routes/b2b_portal.py`, `/app/frontend/src/pages/B2BPortalPage.js`
 
-### ✅ COMPLETED - Admin Products Organization by Category Tabs
-- **Feature**: Added category filter tabs in Admin Products page
-- **Tabs**: Tous, Électronique, Électroménager, Décoration, Mode & Beauté, Automobile, Immobilier, Services
-- **Files modified**: `/app/frontend/src/pages/AdminPage.js`
-- **Deployed**: To VPS production
+### ✅ NEW - International Sourcing (/sourcing, /import-chine)
+- China to Senegal shipping service
+- Shipping rates:
+  - Air General: 8000-6600 FCFA/KG (8-12 days)
+  - Air Sensitive: 8000-6800 FCFA/KG (12-16 days) + 300 FCFA/phone
+  - Maritime: by CBM (30-45 days)
+- Shipping calculator with volumetric weight (1 CBM = 167 KG)
+- Order request form with product link
+- Tracking system with status steps
+- Admin management for quotes and orders
+- Files: `/app/backend/routes/sourcing.py`, `/app/frontend/src/pages/SourcingPage.js`
 
 ### ✅ COMPLETED - Server.py Refactoring (Full)
 - **Total modules created**: 24 files in `/app/backend/routes/`

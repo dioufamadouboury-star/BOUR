@@ -39,6 +39,10 @@ __all__ = [
     
     # Admin
     'admin',             # Admin dashboard, analytics, exports
+    
+    # New modules
+    'b2b_portal',        # B2B partner portal
+    'sourcing',          # International sourcing (China import)
 ]
 
 

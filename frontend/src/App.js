@@ -56,6 +56,8 @@ import ImmobilierPage from "./pages/ImmobilierPage";
 import PropertyDetailPage from "./pages/PropertyDetailPage";
 import ResellerPortalPage from "./pages/ResellerPortalPage";
 import ReferralRedirectPage from "./pages/ReferralRedirectPage";
+import B2BPortalPage from "./pages/B2BPortalPage";
+import SourcingPage from "./pages/SourcingPage";
 
 import "./App.css";
 
@@ -431,6 +433,16 @@ function AppRouter() {
       <Route path="/reseller/login" element={<ResellerPortalPage />} />
       <Route path="/reseller/portal" element={<ResellerPortalPage />} />
       <Route path="/r/:code" element={<ReferralRedirectPage />} />
+
+      {/* B2B Portal */}
+      <Route path="/b2b" element={<B2BPortalPage />} />
+      <Route path="/b2b/login" element={<B2BPortalPage />} />
+      <Route path="/b2b/*" element={<B2BPortalPage />} />
+
+      {/* International Sourcing (China Import) */}
+      <Route path="/sourcing" element={<SourcingPage />} />
+      <Route path="/import-chine" element={<SourcingPage />} />
+      <Route path="/sourcing/track/:requestId" element={<SourcingPage />} />
 
       {/* 404 */}
       <Route
