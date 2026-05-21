@@ -5,6 +5,7 @@ import { Toaster } from "./components/ui/sonner";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
+import { CurrencyProvider } from "./components/CurrencySelector";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -460,9 +461,11 @@ function App() {
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
-              <ScrollToTop />
-              <AppRouter />
-              <Toaster position="bottom-right" />
+              <CurrencyProvider>
+                <ScrollToTop />
+                <AppRouter />
+                <Toaster position="bottom-right" />
+              </CurrencyProvider>
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>

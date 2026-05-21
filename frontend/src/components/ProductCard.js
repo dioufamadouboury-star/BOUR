@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ShoppingBag, Check, Phone, MessageCircle, Calendar, Star } from "lucide-react";
-import { formatPrice, calculateDiscount, getImageUrls, cn } from "../lib/utils";
+import { calculateDiscount, getImageUrls, cn } from "../lib/utils";
 import { useCart } from "../contexts/CartContext";
 import { useWishlist } from "../contexts/WishlistContext";
+import { useCurrency } from "./CurrencySelector";
 
 // Star Rating Component
 function StarRating({ rating = 0, reviews = 0, size = "sm" }) {
@@ -41,6 +42,7 @@ function StarRating({ rating = 0, reviews = 0, size = "sm" }) {
 export default function ProductCard({ product, index = 0, onRequestVisit }) {
   const { addToCart, loading: cartLoading } = useCart();
   const { isInWishlist, toggleWishlist, loading: wishlistLoading } = useWishlist();
+  const { formatPrice } = useCurrency();
   const [addedToCart, setAddedToCart] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   

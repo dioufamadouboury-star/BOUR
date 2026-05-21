@@ -29,6 +29,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 import { cn } from "../lib/utils";
+import { CurrencySelector } from "./CurrencySelector";
 
 const categoryItems = [
   { 
@@ -301,6 +302,11 @@ export default function Navbar() {
                   <Moon className="w-5 h-5" />
                 )}
               </button>
+
+              {/* Currency Selector */}
+              <div className="hidden md:block">
+                <CurrencySelector />
+              </div>
 
               {/* Wishlist */}
               <Link

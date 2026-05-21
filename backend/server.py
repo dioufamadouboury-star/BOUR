@@ -254,9 +254,13 @@ from routes.gift_box import router as gift_box_router
 from routes.blog import router as blog_router
 from routes.seo_prerender import router as seo_prerender_router
 from routes.real_estate import router as real_estate_router
+from routes.currency import router as currency_router
+from routes.push_notifications import router as push_notifications_router
 api_router.include_router(gift_box_router)
 api_router.include_router(blog_router)
 api_router.include_router(real_estate_router)
+api_router.include_router(currency_router)
+api_router.include_router(push_notifications_router)
 
 # SEO Prerender router (served at /api/prerender/ for bot detection by Nginx)
 prerender_router = APIRouter(prefix="/api/prerender")
