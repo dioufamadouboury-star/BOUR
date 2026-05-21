@@ -679,6 +679,7 @@ export default function AdminPage() {
   };
 
   const [appointmentFilter, setAppointmentFilter] = useState("");
+  const [productCategoryFilter, setProductCategoryFilter] = useState("all");
 
   // Fix all image URLs in database
   const handleFixImages = async () => {
@@ -739,11 +740,14 @@ export default function AdminPage() {
     }
   };
 
-  // Filter products by search
+  // Filter products by search AND category
   const filteredProducts = products.filter(
-    (p) =>
-      p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.category?.toLowerCase().includes(searchQuery.toLowerCase())
+    (p) => {
+      const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.category?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = productCategoryFilter === "all" || p.category === productCategoryFilter;
+      return matchesSearch && matchesCategory;
+    }
   );
 
   // Render sidebar
@@ -1016,13 +1020,37 @@ export default function AdminPage() {
   );
 
   // Render Products
-  const renderProducts = () => (
+  const renderProducts = () => {
+    // Count products per category
+    const categoryCounts = {
+      all: products.length,
+      electronique: products.filter(p => p.category === "electronique").length,
+      electromenager: products.filter(p => p.category === "electromenager").length,
+      decoration: products.filter(p => p.category === "decoration").length,
+      beaute: products.filter(p => p.category === "beaute").length,
+      automobile: products.filter(p => p.category === "automobile").length,
+      immobilier: products.filter(p => p.category === "immobilier").length,
+      services: products.filter(p => p.category === "services").length,
+    };
+
+    const categoryTabs = [
+      { id: "all", label: "Tous", count: categoryCounts.all },
+      { id: "electronique", label: "Électronique", count: categoryCounts.electronique },
+      { id: "electromenager", label: "Électroménager", count: categoryCounts.electromenager },
+      { id: "decoration", label: "Décoration", count: categoryCounts.decoration },
+      { id: "beaute", label: "Mode & Beauté", count: categoryCounts.beaute },
+      { id: "automobile", label: "Automobile", count: categoryCounts.automobile },
+      { id: "immobilier", label: "Immobilier", count: categoryCounts.immobilier },
+      { id: "services", label: "Services", count: categoryCounts.services },
+    ];
+
+    return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Produits</h1>
-          <p className="text-muted-foreground">{products.length} produits au total</p>
+          <p className="text-muted-foreground">{filteredProducts.length} produits {productCategoryFilter !== "all" && `dans ${getCategoryName(productCategoryFilter)}`}</p>
         </div>
         <button
           onClick={handleNewProduct}
@@ -1031,6 +1059,33 @@ export default function AdminPage() {
           <Plus className="w-5 h-5" />
           Ajouter un produit
         </button>
+      </div>
+
+      {/* Category Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {categoryTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setProductCategoryFilter(tab.id)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all",
+              productCategoryFilter === tab.id
+                ? "bg-black text-white dark:bg-white dark:text-black"
+                : "bg-gray-100 dark:bg-gray-800 text-muted-foreground hover:bg-gray-200 dark:hover:bg-gray-700"
+            )}
+            data-testid={`product-tab-${tab.id}`}
+          >
+            {tab.label}
+            <span className={cn(
+              "px-2 py-0.5 rounded-full text-xs",
+              productCategoryFilter === tab.id
+                ? "bg-white/20 text-white dark:bg-black/20 dark:text-black"
+                : "bg-black/10 dark:bg-white/10"
+            )}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* Search */}
@@ -1159,6 +1214,7 @@ export default function AdminPage() {
       </div>
     </div>
   );
+  };
 
   // Render Orders
   const renderOrders = () => (
