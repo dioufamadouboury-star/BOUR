@@ -25,6 +25,7 @@ import {
   Wrench,
   Gift,
   Building,
+  Globe,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
@@ -93,6 +94,8 @@ const secondaryNavItems = [
   { name: "À propos", href: "/a-propos", icon: Info },
   { name: "Contact", href: "/contact", icon: Phone },
   { name: "Aide / FAQ", href: "/aide", icon: HelpCircle },
+  { name: "Import Chine", href: "/sourcing", icon: Globe, highlight: true },
+  { name: "B2B Pro", href: "/b2b", icon: Building, highlight: true },
 ];
 
 export default function Navbar() {

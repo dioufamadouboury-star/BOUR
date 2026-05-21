@@ -49,6 +49,7 @@ import {
   Smartphone,
   Calendar,
   Target,
+  Globe,
 } from "lucide-react";
 import { formatPrice, formatDate, getOrderStatusDisplay, getPaymentStatusDisplay, getCategoryName, getImageUrl } from "../lib/utils";
 import { cn } from "../lib/utils";
@@ -68,6 +69,8 @@ import MarketingAdmin from "../components/Admin/MarketingAdmin";
 import PlatformResetAdmin from "../components/Admin/PlatformResetAdmin";
 import AdsGuideAdmin from "../components/Admin/AdsGuideAdmin";
 import ResellersAdmin from "../components/Admin/ResellersAdmin";
+import B2BAdmin from "../components/Admin/B2BAdmin";
+import SourcingAdmin from "../components/Admin/SourcingAdmin";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -94,6 +97,8 @@ const menuItems = [
   { id: "whatsapp", label: "WhatsApp Bot", icon: MessageSquare, href: "/admin/whatsapp" },
   { id: "email", label: "Campagnes Email", icon: Mail, href: "/admin/email" },
   { id: "resellers", label: "Revendeurs", icon: Users, href: "/admin/resellers" },
+  { id: "b2b", label: "Partenaires B2B", icon: Building2, href: "/admin/b2b" },
+  { id: "sourcing", label: "Import Chine", icon: Globe, href: "/admin/sourcing" },
   { id: "reset", label: "Réinitialisation", icon: AlertCircle, href: "/admin/reset" },
 ];
 
@@ -1932,6 +1937,10 @@ export default function AdminPage() {
         return <PlatformResetAdmin token={token} />;
       case "resellers":
         return <ResellersAdmin token={token} />;
+      case "b2b":
+        return <B2BAdmin />;
+      case "sourcing":
+        return <SourcingAdmin />;
       default:
         return renderDashboard();
     }

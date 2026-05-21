@@ -19,6 +19,8 @@ const footerLinks = {
     { name: "Programme Fidélité", href: "/fidelite" },
     { name: "Parrainage", href: "/parrainage" },
     { name: "Espace Revendeurs", href: "/reseller/login", highlight: true },
+    { name: "Espace B2B Pro", href: "/b2b", highlight: true },
+    { name: "Import Chine 🇨🇳", href: "/sourcing", highlight: true },
   ],
   legal: [
     { name: "Conditions générales", href: "/cgv" },
