@@ -1,10 +1,42 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ShoppingBag, Check, Phone, MessageCircle, Calendar } from "lucide-react";
+import { Heart, ShoppingBag, Check, Phone, MessageCircle, Calendar, Star } from "lucide-react";
 import { formatPrice, calculateDiscount, getImageUrls, cn } from "../lib/utils";
 import { useCart } from "../contexts/CartContext";
 import { useWishlist } from "../contexts/WishlistContext";
+
+// Star Rating Component
+function StarRating({ rating = 0, reviews = 0, size = "sm" }) {
+  const stars = Array(5).fill(0);
+  const sizes = {
+    sm: "w-3 h-3",
+    md: "w-4 h-4"
+  };
+  
+  return (
+    <div className="flex items-center gap-1">
+      <div className="flex">
+        {stars.map((_, i) => (
+          <Star
+            key={i}
+            className={cn(
+              sizes[size],
+              i < Math.floor(rating) 
+                ? "text-amber-400 fill-amber-400" 
+                : i < rating 
+                  ? "text-amber-400 fill-amber-400/50"
+                  : "text-gray-300 dark:text-gray-600"
+            )}
+          />
+        ))}
+      </div>
+      {reviews > 0 && (
+        <span className="text-[10px] text-muted-foreground">({reviews})</span>
+      )}
+    </div>
+  );
+}
 
 export default function ProductCard({ product, index = 0, onRequestVisit }) {
   const { addToCart, loading: cartLoading } = useCart();
@@ -152,6 +184,13 @@ export default function ProductCard({ product, index = 0, onRequestVisit }) {
             {product.name}
           </h3>
         </Link>
+        
+        {/* Star Rating */}
+        {(product.avg_rating > 0 || product.reviews_count > 0) && (
+          <div className="mb-1.5">
+            <StarRating rating={product.avg_rating || 0} reviews={product.reviews_count || 0} />
+          </div>
+        )}
         
         {/* Price section - Compact */}
         <div className="flex items-baseline gap-1.5 mb-2">
