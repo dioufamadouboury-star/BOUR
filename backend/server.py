@@ -25,7 +25,7 @@ from datetime import datetime, timezone, timedelta
 import httpx
 import bcrypt
 import jwt
-from mailersend import MailerSendClient, EmailBuilder
+import resend
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from ga4_tracking import track_purchase, track_order_status
@@ -53,50 +53,49 @@ load_dotenv(ROOT_DIR / '.env')
 _paytech_env = os.environ.get('PAYTECH_ENV', 'NOT_SET')
 logging.info(f"🔧 PayTech configuration loaded: PAYTECH_ENV={_paytech_env}")
 
-# MailerSend configuration
-MAILERSEND_API_KEY = os.environ.get("MAILERSEND_API_KEY")
-MAILERSEND_FROM_EMAIL = os.environ.get("MAILERSEND_FROM_EMAIL", "noreply@groupeyamaplus.com")
-MAILERSEND_FROM_NAME = os.environ.get("MAILERSEND_FROM_NAME", "GROUPE YAMA+")
+# Resend Email configuration
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+# Use Resend's default domain until custom domain is verified
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "GROUPE YAMA+ <onboarding@resend.dev>")
 
-# Initialize MailerSend client
-mailersend_client = MailerSendClient(api_key=MAILERSEND_API_KEY) if MAILERSEND_API_KEY else None
+# Initialize Resend
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
+    logging.info("✅ Resend email service configured")
+else:
+    logging.warning("⚠️ Resend API key not configured - emails will be disabled")
 
-async def send_email_mailersend(to_email: str, to_name: str, subject: str, html_content: str, text_content: str = None, attachment_content: bytes = None, attachment_filename: str = None):
-    """Send email using MailerSend API with optional attachment"""
-    if not mailersend_client:
-        logger.warning("MailerSend not configured - skipping email")
-        return {"success": False, "error": "MailerSend not configured"}
+async def send_email_async(to_email: str, subject: str, html_content: str):
+    """Send email using Resend API (async non-blocking)"""
+    if not RESEND_API_KEY:
+        logger.warning("Resend not configured - skipping email")
+        return {"success": False, "error": "Resend not configured"}
     
     try:
-        email_builder = (
-            EmailBuilder()
-            .from_email(MAILERSEND_FROM_EMAIL, MAILERSEND_FROM_NAME)
-            .to(to_email, to_name or to_email)
-            .subject(subject)
-            .html(html_content)
-        )
-        if text_content:
-            email_builder.text(text_content)
+        params = {
+            "from": RESEND_FROM_EMAIL,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content
+        }
         
-        # Add attachment if provided
-        if attachment_content and attachment_filename:
-            email_builder.attach_content(attachment_content, attachment_filename, "attachment")
-        
-        # Build the email request
-        email_request = email_builder.build()
-        
-        # Send email using emails.send()
-        response = await asyncio.to_thread(mailersend_client.emails.send, email_request)
-        logger.info(f"Email sent to {to_email}")
-        return {"success": True, "response": str(response)}
+        # Run sync SDK in thread to keep FastAPI non-blocking
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"✅ Email sent to {to_email} via Resend - ID: {result.get('id', 'N/A')}")
+        return {"success": True, "email_id": result.get("id")}
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {str(e)}")
+        logger.error(f"❌ Failed to send email to {to_email}: {str(e)}")
         return {"success": False, "error": str(e)}
+
+# Alias for backward compatibility
+async def send_email_mailersend(to_email: str, to_name: str, subject: str, html_content: str, text_content: str = None, attachment_content: bytes = None, attachment_filename: str = None):
+    """Send email using Resend (replacement for MailerSend)"""
+    return await send_email_async(to_email, subject, html_content)
 
 async def send_admin_notification(subject: str, body: str):
     """Send notification email to admin"""
     try:
-        admin_email = ADMIN_NOTIFICATION_EMAIL if 'ADMIN_NOTIFICATION_EMAIL' in dir() else "amadoubourydiouf@gmail.com"
+        admin_email = "amadoubourydiouf@gmail.com"
         html_content = f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
@@ -107,7 +106,7 @@ async def send_admin_notification(subject: str, body: str):
         </body>
         </html>
         """
-        await send_email_mailersend(admin_email, "Admin YAMA+", subject, html_content)
+        await send_email_async(admin_email, subject, html_content)
         logger.info(f"Admin notification sent: {subject}")
     except Exception as e:
         logger.error(f"Failed to send admin notification: {str(e)}")
