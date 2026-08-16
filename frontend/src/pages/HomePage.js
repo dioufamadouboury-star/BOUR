@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Smartphone, Home, Sparkles, Sofa, Car, Building } from "lucide-react";
+import { ArrowRight, Smartphone, Home, Sparkles, Sofa, Car, Building, ChevronLeft, ChevronRight } from "lucide-react";
 import axios from "axios";
 import ProductCard from "../components/ProductCard";
 import FlashSalesSection from "../components/FlashSalesSection";
@@ -119,13 +119,17 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Carousel state for new arrivals
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const carouselRef = useRef(null);
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const [featured, newProds, promos] = await Promise.all([
-          axios.get(`${API_URL}/api/products?featured=true&limit=4`),
-          axios.get(`${API_URL}/api/products?is_new=true&limit=4`),
-          axios.get(`${API_URL}/api/products?is_promo=true&limit=4`),
+          axios.get(`${API_URL}/api/products?featured=true&limit=8`),
+          axios.get(`${API_URL}/api/products?is_new=true&limit=12`),
+          axios.get(`${API_URL}/api/products?is_promo=true&limit=8`),
         ]);
         
         setFeaturedProducts(featured.data);
@@ -140,6 +144,27 @@ export default function HomePage() {
 
     fetchProducts();
   }, []);
+
+  // Auto-scroll carousel every 2 seconds
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel || loading) return;
+
+    const autoScroll = setInterval(() => {
+      const maxScroll = carousel.scrollWidth - carousel.clientWidth;
+      const currentScroll = carousel.scrollLeft;
+      
+      if (currentScroll >= maxScroll - 10) {
+        // Reset to beginning smoothly
+        carousel.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        // Scroll one card width
+        carousel.scrollBy({ left: 270, behavior: 'smooth' });
+      }
+    }, 2000);
+
+    return () => clearInterval(autoScroll);
+  }, [loading]);
 
   return (
     <main className="min-h-screen" data-testid="home-page">
@@ -328,44 +353,72 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* New Arrivals - Compact Section */}
+      {/* New Arrivals - Auto-scrolling Carousel */}
       <section className="section-padding bg-[#F5F5F7] dark:bg-[#1C1C1E]">
         <div className="container-lumina">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="flex items-end justify-between mb-12"
+            className="flex items-end justify-between mb-8"
           >
             <div>
-              <p className="text-caption mb-4">Nouveautés</p>
+              <p className="text-caption mb-4">NOUVEAUTÉS</p>
               <h2 className="heading-section">Découvrez nos dernières arrivées</h2>
             </div>
-            <Link to="/nouveautes" className="btn-ghost hidden md:flex">
-              Tout voir
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            <div className="hidden md:flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  if (carouselRef.current) {
+                    carouselRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+                  }
+                }}
+                className="p-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={() => {
+                  if (carouselRef.current) {
+                    carouselRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+                  }
+                }}
+                className="p-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+              <Link to="/nouveautes" className="btn-ghost ml-4">
+                Tout voir
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </motion.div>
 
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="aspect-[4/5] rounded-2xl skeleton" />
+            <div className="flex gap-4 overflow-hidden">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-[200px] sm:w-[220px] lg:w-[260px] aspect-[4/5] rounded-2xl skeleton" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-              {featuredProducts.filter(p => p.is_new).slice(0, 4).map((product, index) => (
-                <ProductCard key={product.product_id} product={product} index={index} />
-              )) || featuredProducts.slice(0, 4).map((product, index) => (
-                <ProductCard key={product.product_id} product={product} index={index} />
+            <div 
+              ref={carouselRef}
+              className="flex gap-4 overflow-x-auto scroll-smooth pb-4 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide"
+            >
+              {(newProducts.length > 0 ? newProducts : featuredProducts).map((product, index) => (
+                <div 
+                  key={product.product_id} 
+                  className="flex-shrink-0 w-[160px] sm:w-[200px] md:w-[220px] lg:w-[260px] snap-start"
+                >
+                  <ProductCard product={product} index={index} />
+                </div>
               ))}
             </div>
           )}
 
           <Link
             to="/nouveautes"
-            className="btn-ghost mt-8 mx-auto md:hidden"
+            className="btn-ghost mt-6 mx-auto md:hidden"
           >
             Tout voir
             <ArrowRight className="w-4 h-4" />
