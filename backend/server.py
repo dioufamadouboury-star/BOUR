@@ -415,6 +415,7 @@ class ProductBase(BaseModel):
     # On-order products
     is_on_order: bool = False  # Product available only on order
     order_delivery_days: Optional[int] = None  # Estimated delivery time in days
+    position: int = 999  # Display order (lower = higher priority, 1 = top)
 
 class ProductCreate(ProductBase):
     pass
@@ -1497,10 +1498,12 @@ async def get_products(
         "is_on_order": 1,
         "order_delivery_days": 1,
         "created_at": 1,
-        "updated_at": 1
+        "updated_at": 1,
+        "position": 1
     }
     
-    products = await db.products.find(query, projection).skip(skip).limit(limit).to_list(limit)
+    # Sort by position first (lower = higher priority), then by created_at
+    products = await db.products.find(query, projection).sort([("position", 1), ("created_at", -1)]).skip(skip).limit(limit).to_list(limit)
     
     for product in products:
         for field in ['created_at', 'updated_at']:
@@ -1583,6 +1586,42 @@ async def delete_product(product_id: str, user: User = Depends(require_admin)):
     clear_cache()
     
     return {"message": "Produit supprimé", "deleted": True}
+
+
+# ============== PRODUCT POSITIONING ==============
+
+class ProductPositionUpdate(BaseModel):
+    product_id: str
+    position: int
+
+@api_router.put("/admin/products/positions")
+async def update_product_positions(positions: List[ProductPositionUpdate], user: User = Depends(require_admin)):
+    """Update positions of multiple products at once"""
+    updated_count = 0
+    for item in positions:
+        result = await db.products.update_one(
+            {"product_id": item.product_id},
+            {"$set": {"position": item.position, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        if result.modified_count > 0:
+            updated_count += 1
+    
+    clear_cache()
+    return {"message": f"{updated_count} produits mis à jour", "updated_count": updated_count}
+
+@api_router.put("/admin/products/{product_id}/position")
+async def update_single_product_position(product_id: str, position: int, user: User = Depends(require_admin)):
+    """Update position of a single product"""
+    result = await db.products.update_one(
+        {"product_id": product_id},
+        {"$set": {"position": position, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Produit non trouvé")
+    
+    clear_cache()
+    return {"message": "Position mise à jour", "product_id": product_id, "position": position}
+
 
 # ============== FLASH SALES ROUTES ==============
 

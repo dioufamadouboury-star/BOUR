@@ -10,7 +10,26 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 - **Deployment**: Hostinger VPS (Ubuntu), Nginx, Systemd
 - **Integrations**: Google OAuth, PayTech, MailerSend, Gemini Vision, Facebook Pixel, GA4
 
-## Recent Changes (May 21, 2026)
+## Recent Changes (August 16, 2026)
+
+### ✅ COMPLETED - Product Position Control Feature
+- **Issue Fixed**: Admin Dashboard product limit bug (limit increased to 500)
+- **New Feature**: Position control for product display ordering
+  - Position column added to Admin products table
+  - Editable position inputs with visual feedback (green border when modified)
+  - "Enregistrer positions" button for batch saving
+  - Products sorted by position (lower number = higher priority, default 999)
+- **API Endpoints**:
+  - `PUT /api/admin/products/positions` - Batch update positions
+  - `PUT /api/admin/products/{id}/position` - Single product position update
+- **Files Modified**:
+  - `/app/backend/server.py` (lines 1590-1625)
+  - `/app/frontend/src/pages/AdminPage.js`
+- **Testing**: 100% pass rate (10/10 backend, 6/6 frontend)
+
+---
+
+## Changes (May 21, 2026)
 
 ### ✅ DEPLOYED TO PRODUCTION - Complete Verification & Bug Fixes
 - All APIs integrated and working: /api/sourcing/*, /api/b2b/*

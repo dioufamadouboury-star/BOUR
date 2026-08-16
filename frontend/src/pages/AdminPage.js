@@ -188,6 +188,8 @@ export default function AdminPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [analyzingImage, setAnalyzingImage] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState("general");
+  const [productPositions, setProductPositions] = useState({});
+  const [savingPositions, setSavingPositions] = useState(false);
   const [productForm, setProductForm] = useState({
     name: "",
     description: "",
@@ -605,6 +607,47 @@ export default function AdminPage() {
     } catch (error) {
       toast.error("Erreur lors de la suppression");
       console.error("Delete error:", error);
+    }
+  };
+
+  // Handle position change for a single product
+  const handlePositionChange = (productId, newPosition) => {
+    setProductPositions(prev => ({
+      ...prev,
+      [productId]: parseInt(newPosition) || 0
+    }));
+  };
+
+  // Save all modified positions
+  const handleSavePositions = async () => {
+    const positionsToUpdate = Object.entries(productPositions)
+      .filter(([productId, position]) => {
+        const product = products.find(p => p.product_id === productId);
+        return product && (product.position || 999) !== position;
+      })
+      .map(([product_id, position]) => ({ product_id, position }));
+
+    if (positionsToUpdate.length === 0) {
+      toast.info("Aucune position modifiée");
+      return;
+    }
+
+    setSavingPositions(true);
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.put(
+        `${API_URL}/api/admin/products/positions`,
+        positionsToUpdate,
+        { headers }
+      );
+      toast.success(`${positionsToUpdate.length} position(s) mise(s) à jour`);
+      setProductPositions({});
+      fetchData(); // Refresh to get sorted products
+    } catch (error) {
+      toast.error("Erreur lors de la mise à jour des positions");
+      console.error("Position update error:", error);
+    } finally {
+      setSavingPositions(false);
     }
   };
 
@@ -1057,13 +1100,31 @@ export default function AdminPage() {
           <h1 className="text-2xl font-bold">Produits</h1>
           <p className="text-muted-foreground">{filteredProducts.length} produits {productCategoryFilter !== "all" && `dans ${getCategoryName(productCategoryFilter)}`}</p>
         </div>
-        <button
-          onClick={handleNewProduct}
-          className="flex items-center gap-2 px-6 py-3 bg-black text-white dark:bg-white dark:text-black rounded-xl font-medium hover:opacity-90 transition-opacity"
-        >
-          <Plus className="w-5 h-5" />
-          Ajouter un produit
-        </button>
+        <div className="flex gap-3">
+          {Object.keys(productPositions).length > 0 && (
+            <button
+              onClick={handleSavePositions}
+              disabled={savingPositions}
+              className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+              data-testid="save-positions-btn"
+            >
+              {savingPositions ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4" />
+              )}
+              Enregistrer positions ({Object.keys(productPositions).length})
+            </button>
+          )}
+          <button
+            onClick={handleNewProduct}
+            className="flex items-center gap-2 px-6 py-3 bg-black text-white dark:bg-white dark:text-black rounded-xl font-medium hover:opacity-90 transition-opacity"
+            data-testid="add-product-btn"
+          >
+            <Plus className="w-5 h-5" />
+            Ajouter un produit
+          </button>
+        </div>
       </div>
 
       {/* Category Tabs */}
@@ -1111,6 +1172,7 @@ export default function AdminPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-black/5 dark:border-white/5">
+                <th className="text-center p-4 text-sm font-semibold text-muted-foreground w-20">Position</th>
                 <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Produit</th>
                 <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Catégorie</th>
                 <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Prix</th>
@@ -1122,6 +1184,21 @@ export default function AdminPage() {
             <tbody className="divide-y divide-black/5 dark:divide-white/5">
               {filteredProducts.map((product) => (
                 <tr key={product.product_id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                  <td className="p-4">
+                    <input
+                      type="number"
+                      min="1"
+                      value={productPositions[product.product_id] ?? product.position ?? 999}
+                      onChange={(e) => handlePositionChange(product.product_id, e.target.value)}
+                      className={cn(
+                        "w-16 px-2 py-1.5 text-center text-sm rounded-lg border transition-colors",
+                        productPositions[product.product_id] !== undefined && productPositions[product.product_id] !== (product.position ?? 999)
+                          ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                          : "border-black/10 dark:border-white/10 bg-transparent"
+                      )}
+                      data-testid={`position-input-${product.product_id}`}
+                    />
+                  </td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden flex-shrink-0">
