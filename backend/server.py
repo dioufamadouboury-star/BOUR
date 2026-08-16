@@ -93,6 +93,25 @@ async def send_email_mailersend(to_email: str, to_name: str, subject: str, html_
         logger.error(f"Failed to send email to {to_email}: {str(e)}")
         return {"success": False, "error": str(e)}
 
+async def send_admin_notification(subject: str, body: str):
+    """Send notification email to admin"""
+    try:
+        admin_email = ADMIN_NOTIFICATION_EMAIL if 'ADMIN_NOTIFICATION_EMAIL' in dir() else "amadoubourydiouf@gmail.com"
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2 style="color: #333;">{subject}</h2>
+            <div style="white-space: pre-wrap; color: #555;">{body}</div>
+            <hr style="margin-top: 30px;">
+            <p style="color: #888; font-size: 12px;">Notification automatique GROUPE YAMA+</p>
+        </body>
+        </html>
+        """
+        await send_email_mailersend(admin_email, "Admin YAMA+", subject, html_content)
+        logger.info(f"Admin notification sent: {subject}")
+    except Exception as e:
+        logger.error(f"Failed to send admin notification: {str(e)}")
+
 # MailerLite Configuration (for newsletter/marketing)
 MAILERLITE_API_KEY = os.environ.get("MAILERLITE_API_KEY")
 MAILERLITE_API_URL = "https://connect.mailerlite.com/api"
@@ -6324,6 +6343,115 @@ async def update_order_status(
             ))
     
     return {"message": "Statut mis à jour"}
+
+# ============== CUSTOMER ORDER CANCELLATION ==============
+
+@api_router.post("/orders/{order_id}/cancel")
+async def cancel_order_by_customer(order_id: str, request: Request):
+    """Allow customer to cancel their order (only if pending or confirmed)"""
+    # Get optional user
+    user = await get_current_user(request)
+    
+    # Get the order
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+    
+    # Verify ownership - check by user_id or email
+    body = {}
+    try:
+        body = await request.json()
+    except:
+        pass
+    
+    customer_email = body.get("email", "").lower()
+    
+    # Check if user owns this order
+    is_owner = False
+    if user and order.get("user_id") == user.user_id:
+        is_owner = True
+    elif customer_email and order.get("shipping", {}).get("email", "").lower() == customer_email:
+        is_owner = True
+    
+    if not is_owner:
+        raise HTTPException(status_code=403, detail="Vous n'êtes pas autorisé à annuler cette commande")
+    
+    # Check if order can be cancelled (only pending or confirmed)
+    current_status = order.get("order_status", "pending")
+    cancellable_statuses = ["pending", "confirmed"]
+    
+    if current_status not in cancellable_statuses:
+        status_messages = {
+            "processing": "en cours de préparation",
+            "shipped": "déjà expédiée",
+            "out_for_delivery": "en cours de livraison",
+            "delivered": "déjà livrée",
+            "cancelled": "déjà annulée"
+        }
+        message = status_messages.get(current_status, current_status)
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cette commande ne peut plus être annulée car elle est {message}. Contactez-nous pour plus d'informations."
+        )
+    
+    # Cancel the order
+    cancellation_reason = body.get("reason", "Annulée par le client")
+    
+    result = await db.orders.update_one(
+        {"order_id": order_id},
+        {
+            "$set": {
+                "order_status": "cancelled",
+                "cancelled_at": datetime.now(timezone.utc).isoformat(),
+                "cancellation_reason": cancellation_reason,
+                "cancelled_by": "customer"
+            },
+            "$push": {
+                "status_history": {
+                    "status": "cancelled",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "note": f"Annulée par le client: {cancellation_reason}"
+                }
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=500, detail="Erreur lors de l'annulation")
+    
+    # Send cancellation confirmation email
+    shipping_email = order.get("shipping", {}).get("email")
+    if shipping_email:
+        asyncio.create_task(send_order_status_update_email(shipping_email, order_id, "cancelled", cancellation_reason))
+    
+    # Notify admin
+    asyncio.create_task(send_admin_notification(
+        f"Commande {order_id} annulée par le client",
+        f"Raison: {cancellation_reason}\nClient: {order.get('shipping', {}).get('first_name', '')} {order.get('shipping', {}).get('last_name', '')}\nEmail: {shipping_email}"
+    ))
+    
+    return {
+        "message": "Votre commande a été annulée avec succès",
+        "order_id": order_id,
+        "status": "cancelled"
+    }
+
+@api_router.get("/orders/{order_id}/can-cancel")
+async def check_order_cancellable(order_id: str, request: Request):
+    """Check if an order can be cancelled by the customer"""
+    user = await get_current_user(request)
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0, "order_status": 1, "user_id": 1})
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+    
+    current_status = order.get("order_status", "pending")
+    can_cancel = current_status in ["pending", "confirmed"]
+    
+    return {
+        "can_cancel": can_cancel,
+        "current_status": current_status,
+        "message": "Vous pouvez annuler cette commande" if can_cancel else "Cette commande ne peut plus être annulée"
+    }
 
 # ============== INVOICE GENERATION ==============
 

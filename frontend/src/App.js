@@ -14,7 +14,7 @@ import NewsletterPopup from "./components/NewsletterPopup";
 import GameFloatingButton from "./components/GameFloatingButton";
 import WhatsAppButton from "./components/WhatsAppButton";
 // LiveChat removed per user request (overlapping with WhatsApp button)
-import PushNotificationPrompt from "./components/PushNotificationPrompt";
+// PushNotificationPrompt removed per user request (not showing properly)
 import { CompareFloatingBar } from "./components/ProductComparison";
 
 import HomePage from "./pages/HomePage";
@@ -107,7 +107,6 @@ function PublicLayout({ children }) {
       {!isAdminPage && <GameFloatingButton />}
       {!isAdminPage && <CompareFloatingBar />}
       {!isAdminPage && <WhatsAppButton />}
-      {!isAdminPage && <PushNotificationPrompt />}
     </>
   );
 }

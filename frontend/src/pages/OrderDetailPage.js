@@ -10,10 +10,14 @@ import {
   MapPin,
   CreditCard,
   Phone,
+  XCircle,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { formatPrice, formatDate, getOrderStatusDisplay } from "../lib/utils";
 import OrderTimeline from "../components/OrderTimeline";
 import { cn } from "../lib/utils";
+import { toast } from "sonner";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -24,6 +28,9 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -53,6 +60,42 @@ export default function OrderDetailPage() {
 
     fetchOrder();
   }, [orderId, isAuthenticated, token, navigate]);
+
+  // Check if order can be cancelled
+  const canCancel = order && ["pending", "confirmed"].includes(order.order_status);
+
+  // Handle order cancellation
+  const handleCancelOrder = async () => {
+    if (!cancelReason.trim()) {
+      toast.error("Veuillez indiquer la raison de l'annulation");
+      return;
+    }
+
+    setCancelling(true);
+    try {
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      await axios.post(
+        `${API_URL}/api/orders/${orderId}/cancel`,
+        { 
+          reason: cancelReason,
+          email: order.shipping?.email 
+        },
+        config
+      );
+      
+      toast.success("Votre commande a été annulée avec succès");
+      setShowCancelModal(false);
+      
+      // Refresh order data
+      const response = await axios.get(`${API_URL}/api/orders/${orderId}`, config);
+      setOrder(response.data);
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      toast.error(error.response?.data?.detail || "Erreur lors de l'annulation");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -107,7 +150,7 @@ export default function OrderDetailPage() {
                 Passée le {formatDate(order.created_at)}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <span className={cn("badge-lumina", status.class)}>
                 {status.label}
               </span>
@@ -118,12 +161,90 @@ export default function OrderDetailPage() {
                 className="btn-secondary"
               >
                 <FileText className="w-4 h-4" />
-                Télécharger la facture
+                Facture
               </a>
+              {canCancel && (
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="btn-secondary text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
+                  data-testid="cancel-order-btn"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Annuler
+                </button>
+              )}
             </div>
           </div>
         </div>
       </section>
+
+      {/* Cancel Order Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" data-testid="cancel-modal-overlay">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-[#1C1C1E] rounded-2xl p-6 max-w-md w-full shadow-xl"
+            data-testid="cancel-modal"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold" data-testid="cancel-modal-title">Annuler la commande ?</h3>
+                <p className="text-sm text-muted-foreground">Cette action est irréversible</p>
+              </div>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Raison de l'annulation</label>
+              <select
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-transparent"
+                data-testid="cancel-reason-select"
+              >
+                <option value="">Sélectionnez une raison</option>
+                <option value="Changement d'avis">Changement d'avis</option>
+                <option value="Délai de livraison trop long">Délai de livraison trop long</option>
+                <option value="Commande en double">Commande en double</option>
+                <option value="Prix trouvé ailleurs moins cher">Prix trouvé ailleurs moins cher</option>
+                <option value="Erreur de commande">Erreur de commande</option>
+                <option value="Autre raison">Autre raison</option>
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="flex-1 py-3 px-4 rounded-xl border border-black/10 dark:border-white/10 font-medium hover:bg-black/5 dark:hover:bg-white/5"
+                data-testid="cancel-modal-keep-btn"
+              >
+                Non, garder
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                disabled={cancelling || !cancelReason}
+                className="flex-1 py-3 px-4 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                data-testid="cancel-modal-confirm-btn"
+              >
+                {cancelling ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Annulation...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4" />
+                    Oui, annuler
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Content */}
       <section className="py-8">

@@ -32,84 +32,103 @@ export default function PushNotificationPrompt() {
   }, []);
 
   const checkSubscription = async () => {
-    // Don't show on unsupported browsers
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    // Check if already seen prompt
+    const hasSeenPrompt = localStorage.getItem('push_prompt_seen_v3');
+    if (hasSeenPrompt) {
       return;
     }
 
-    // Check if already denied
-    if (Notification.permission === 'denied') {
-      return;
-    }
+    // Check browser support
+    const isPushSupported = ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+    
+    if (isPushSupported) {
+      // Check if already denied
+      if (Notification.permission === 'denied') {
+        return;
+      }
 
-    // Check if already subscribed
-    if (Notification.permission === 'granted') {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.getSubscription();
-        if (subscription) {
-          setIsSubscribed(true);
-          return;
+      // Check if already subscribed
+      if (Notification.permission === 'granted') {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.getSubscription();
+          if (subscription) {
+            setIsSubscribed(true);
+            return;
+          }
+        } catch (e) {
+          console.error('Error checking subscription:', e);
         }
-      } catch (e) {
-        console.error('Error checking subscription:', e);
       }
     }
 
-    // Show prompt after short delay (be more proactive)
-    const hasSeenPrompt = localStorage.getItem('push_prompt_seen_v2');
-    
-    if (!hasSeenPrompt) {
-      setTimeout(() => {
-        setShowPrompt(true);
-      }, 3000); // Show after 3 seconds
-    }
+    // Show prompt after short delay
+    setTimeout(() => {
+      setShowPrompt(true);
+    }, 3000); // Show after 3 seconds
   };
 
   const subscribe = async () => {
     setIsLoading(true);
     
     try {
-      // Request permission
-      const permission = await Notification.requestPermission();
+      // Check if push notifications are supported
+      const isPushSupported = ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window) && VAPID_PUBLIC_KEY;
       
-      if (permission !== 'granted') {
-        console.log('Notification permission denied');
-        setShowPrompt(false);
-        localStorage.setItem('push_prompt_seen_v2', 'true');
-        return;
-      }
-
-      // Get service worker registration
-      const registration = await navigator.serviceWorker.ready;
-      
-      // Subscribe to push
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
-
-      // Send subscription to backend
-      await axios.post(`${API_URL}/api/notifications/subscribe`, {
-        endpoint: subscription.endpoint,
-        keys: {
-          p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh')))),
-          auth: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth'))))
+      if (isPushSupported) {
+        // Request permission
+        const permission = await Notification.requestPermission();
+        
+        if (permission !== 'granted') {
+          console.log('Notification permission denied');
+          setShowPrompt(false);
+          localStorage.setItem('push_prompt_seen_v3', 'true');
+          return;
         }
-      });
 
-      setIsSubscribed(true);
-      setShowSuccess(true);
-      localStorage.setItem('push_prompt_seen_v2', 'true');
-      
-      // Hide after showing success
-      setTimeout(() => {
-        setShowPrompt(false);
-        setShowSuccess(false);
-      }, 3000);
+        // Get service worker registration
+        const registration = await navigator.serviceWorker.ready;
+        
+        // Subscribe to push
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+
+        // Send subscription to backend
+        await axios.post(`${API_URL}/api/notifications/subscribe`, {
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh')))),
+            auth: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth'))))
+          }
+        });
+
+        setIsSubscribed(true);
+        setShowSuccess(true);
+        localStorage.setItem('push_prompt_seen_v3', 'true');
+        
+        // Hide after showing success
+        setTimeout(() => {
+          setShowPrompt(false);
+          setShowSuccess(false);
+        }, 3000);
+      } else {
+        // Push not supported - just show success and dismiss
+        setShowSuccess(true);
+        localStorage.setItem('push_prompt_seen_v3', 'true');
+        
+        setTimeout(() => {
+          setShowPrompt(false);
+          setShowSuccess(false);
+        }, 2000);
+      }
       
     } catch (error) {
       console.error('Error subscribing to push:', error);
+      // Even on error, mark as seen to avoid annoying the user
+      localStorage.setItem('push_prompt_seen_v3', 'true');
+      setShowPrompt(false);
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +136,7 @@ export default function PushNotificationPrompt() {
 
   const dismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem('push_prompt_seen_v2', 'true');
+    localStorage.setItem('push_prompt_seen_v3', 'true');
   };
 
   if (!showPrompt) return null;
