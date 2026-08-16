@@ -58,6 +58,7 @@ import {
   GripVertical,
   Sparkles,
   Briefcase,
+  Bell,
   ClipboardList,
   Gift,
   Home,
@@ -88,6 +89,7 @@ import AdsGuideAdmin from "../components/Admin/AdsGuideAdmin";
 import ResellersAdmin from "../components/Admin/ResellersAdmin";
 import B2BAdmin from "../components/Admin/B2BAdmin";
 import SourcingAdmin from "../components/Admin/SourcingAdmin";
+import PushNotificationsAdmin from "../components/Admin/PushNotificationsAdmin";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -104,6 +106,7 @@ const menuItems = [
   { id: "service-providers", label: "Prestataires", icon: Briefcase, href: "/admin/service-providers" },
   { id: "service-requests", label: "Demandes Services", icon: ClipboardList, href: "/admin/service-requests" },
   { id: "users", label: "Utilisateurs", icon: Users, href: "/admin/users" },
+  { id: "push-notifications", label: "Notifications Push", icon: Bell, href: "/admin/push-notifications" },
   { id: "marketing", label: "Marketing", icon: TrendingUp, href: "/admin/marketing" },
   { id: "ads-guide", label: "Guide Publicités", icon: Target, href: "/admin/ads-guide" },
   { id: "promo-codes", label: "Codes Promo", icon: Tag, href: "/admin/promo-codes" },
@@ -2163,6 +2166,8 @@ export default function AdminPage() {
         return renderWhatsAppBot();
       case "reservations":
         return <ReservationsAdmin token={token} />;
+      case "push-notifications":
+        return <PushNotificationsAdmin token={token} />;
       case "marketing":
         return <MarketingAdmin token={token} />;
       case "ads-guide":

@@ -145,7 +145,7 @@ export default function HomePage() {
     fetchProducts();
   }, []);
 
-  // Auto-scroll carousel every 2 seconds
+  // Auto-scroll carousel every 4 seconds (more comfortable viewing time)
   useEffect(() => {
     const carousel = carouselRef.current;
     if (!carousel || loading) return;
@@ -161,7 +161,7 @@ export default function HomePage() {
         // Scroll one card width
         carousel.scrollBy({ left: 270, behavior: 'smooth' });
       }
-    }, 2000);
+    }, 4000); // 4 seconds for comfortable viewing
 
     return () => clearInterval(autoScroll);
   }, [loading]);
