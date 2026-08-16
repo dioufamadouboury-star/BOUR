@@ -2133,6 +2133,9 @@ async def subscribe_newsletter(data: NewsletterSubscribe):
     
     await db.newsletter.insert_one(subscriber_doc)
     
+    # Also collect in marketing_contacts for unified contact management
+    asyncio.create_task(collect_marketing_contact(data.name or "", data.email, None, "newsletter"))
+    
     # Send welcome email (async, don't wait)
     asyncio.create_task(send_newsletter_welcome_email(data.email, data.name or ""))
     
@@ -3737,6 +3740,63 @@ async def send_shipping_update_email(order: dict, new_status: str):
         html=html
     )
     logger.info(f"Shipping update email sent for {order['order_id']} - Status: {new_status}")
+
+async def send_order_whatsapp_confirmation(order: dict, phone: str):
+    """Send WhatsApp order confirmation message to customer"""
+    try:
+        # Format phone number (ensure +221 prefix for Senegal)
+        clean_phone = phone.replace(" ", "").replace("-", "")
+        if not clean_phone.startswith("+"):
+            if clean_phone.startswith("00"):
+                clean_phone = "+" + clean_phone[2:]
+            elif clean_phone.startswith("221"):
+                clean_phone = "+" + clean_phone
+            else:
+                clean_phone = "+221" + clean_phone.lstrip("0")
+        
+        order_id = order.get("order_id")
+        total = order.get("total", 0)
+        items_count = len(order.get("items", []))
+        customer_name = order.get("shipping", {}).get("first_name", "")
+        
+        # Create WhatsApp message
+        message = f"""🎉 *Commande Confirmée - GROUPE YAMA+*
+
+Bonjour {customer_name} !
+
+Votre commande *#{order_id}* a été reçue avec succès !
+
+📦 *Détails:*
+• {items_count} article(s)
+• Total: {total:,.0f} FCFA
+
+Nous préparons votre commande et vous tiendrons informé de son expédition.
+
+📞 Questions ? Répondez à ce message ou appelez-nous.
+
+Merci pour votre confiance !
+_L'équipe GROUPE YAMA+_"""
+
+        # Generate WhatsApp link (click-to-chat API)
+        encoded_message = message.replace("\n", "%0A").replace(" ", "%20").replace("*", "").replace("_", "")
+        whatsapp_link = f"https://wa.me/{clean_phone.replace('+', '')}?text={encoded_message}"
+        
+        # Log the WhatsApp notification for admin to send manually
+        await db.whatsapp_notifications.insert_one({
+            "notification_id": f"WA-{secrets.token_hex(4).upper()}",
+            "type": "order_confirmation",
+            "order_id": order_id,
+            "phone": clean_phone,
+            "message": message,
+            "whatsapp_link": whatsapp_link,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        logger.info(f"WhatsApp order confirmation queued for {order_id} to {clean_phone}")
+        
+    except Exception as e:
+        logger.error(f"Error creating WhatsApp notification for order {order.get('order_id')}: {str(e)}")
 
 async def send_welcome_email(user: dict):
     """Send welcome email to new user and add to MailerLite"""
@@ -5705,6 +5765,16 @@ async def create_order(order_data: OrderCreate, request: Request):
     
     # Send notification to admin
     asyncio.create_task(send_admin_order_notification(order_doc))
+    
+    # Send WhatsApp confirmation to customer if phone provided
+    customer_phone = order_doc.get("shipping", {}).get("phone")
+    if customer_phone:
+        asyncio.create_task(send_order_whatsapp_confirmation(order_doc, customer_phone))
+    
+    # Collect marketing contact
+    customer_name = order_doc.get("shipping", {}).get("first_name", "") + " " + order_doc.get("shipping", {}).get("last_name", "")
+    customer_email = order_doc.get("shipping", {}).get("email")
+    asyncio.create_task(collect_marketing_contact(customer_name.strip(), customer_email, customer_phone, "order"))
     
     # GA4 server-side purchase tracking
     asyncio.create_task(track_purchase(order_doc))
@@ -9655,6 +9725,88 @@ async def get_marketing_contacts(
             "total_emails": total_emails,
             "total_phones": total_phones
         }
+    }
+
+# ============================================================
+# WHATSAPP NOTIFICATIONS ADMIN
+# ============================================================
+
+@api_router.get("/admin/whatsapp/notifications")
+async def get_whatsapp_notifications(
+    status: Optional[str] = None,
+    notification_type: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+    user: User = Depends(require_admin)
+):
+    """Get pending WhatsApp notifications for admin to send manually"""
+    query = {}
+    if status:
+        query["status"] = status
+    if notification_type:
+        query["type"] = notification_type
+    
+    notifications = await db.whatsapp_notifications.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.whatsapp_notifications.count_documents(query)
+    pending = await db.whatsapp_notifications.count_documents({"status": "pending"})
+    
+    return {
+        "notifications": notifications,
+        "total": total,
+        "pending_count": pending
+    }
+
+@api_router.put("/admin/whatsapp/notifications/{notification_id}/mark-sent")
+async def mark_whatsapp_sent(notification_id: str, user: User = Depends(require_admin)):
+    """Mark a WhatsApp notification as sent"""
+    result = await db.whatsapp_notifications.update_one(
+        {"notification_id": notification_id},
+        {"$set": {"status": "sent", "sent_at": datetime.now(timezone.utc).isoformat(), "sent_by": user.user_id}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Notification non trouvée")
+    return {"message": "Notification marquée comme envoyée"}
+
+@api_router.post("/admin/whatsapp/send-custom")
+async def send_custom_whatsapp(request: Request, user: User = Depends(require_admin)):
+    """Create a custom WhatsApp message for any phone"""
+    body = await request.json()
+    phone = body.get("phone")
+    message = body.get("message")
+    order_id = body.get("order_id")
+    
+    if not phone or not message:
+        raise HTTPException(status_code=400, detail="phone et message requis")
+    
+    # Format phone number
+    clean_phone = phone.replace(" ", "").replace("-", "")
+    if not clean_phone.startswith("+"):
+        if clean_phone.startswith("221"):
+            clean_phone = "+" + clean_phone
+        else:
+            clean_phone = "+221" + clean_phone.lstrip("0")
+    
+    encoded_message = message.replace("\n", "%0A").replace(" ", "%20")
+    whatsapp_link = f"https://wa.me/{clean_phone.replace('+', '')}?text={encoded_message}"
+    
+    notification = {
+        "notification_id": f"WA-{secrets.token_hex(4).upper()}",
+        "type": "custom",
+        "order_id": order_id,
+        "phone": clean_phone,
+        "message": message,
+        "whatsapp_link": whatsapp_link,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": user.user_id
+    }
+    
+    await db.whatsapp_notifications.insert_one(notification)
+    
+    return {
+        "message": "Message WhatsApp créé",
+        "notification_id": notification["notification_id"],
+        "whatsapp_link": whatsapp_link
     }
 
 @api_router.post("/admin/marketing/campaign")
