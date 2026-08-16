@@ -145,26 +145,18 @@ export default function HomePage() {
     fetchProducts();
   }, []);
 
-  // Auto-scroll carousel every 4 seconds (more comfortable viewing time)
+  // Auto-advance carousel every 4 seconds (one product at a time)
   useEffect(() => {
-    const carousel = carouselRef.current;
-    if (!carousel || loading) return;
+    if (loading) return;
+    const products = newProducts.length > 0 ? newProducts : featuredProducts;
+    if (products.length === 0) return;
 
-    const autoScroll = setInterval(() => {
-      const maxScroll = carousel.scrollWidth - carousel.clientWidth;
-      const currentScroll = carousel.scrollLeft;
-      
-      if (currentScroll >= maxScroll - 10) {
-        // Reset to beginning smoothly
-        carousel.scrollTo({ left: 0, behavior: 'smooth' });
-      } else {
-        // Scroll one card width
-        carousel.scrollBy({ left: 270, behavior: 'smooth' });
-      }
-    }, 4000); // 4 seconds for comfortable viewing
+    const autoAdvance = setInterval(() => {
+      setCarouselIndex((prev) => (prev + 1) % products.length);
+    }, 4000); // 4 seconds per product
 
-    return () => clearInterval(autoScroll);
-  }, [loading]);
+    return () => clearInterval(autoAdvance);
+  }, [loading, newProducts, featuredProducts]);
 
   return (
     <main className="min-h-screen" data-testid="home-page">
@@ -353,74 +345,130 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* New Arrivals - Auto-scrolling Carousel */}
-      <section className="section-padding bg-[#F5F5F7] dark:bg-[#1C1C1E]">
+      {/* New Arrivals - Spotlight Carousel (One product at a time, centered) */}
+      <section className="section-padding bg-[#F5F5F7] dark:bg-[#1C1C1E] overflow-hidden">
         <div className="container-lumina">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="flex items-end justify-between mb-8"
+            className="text-center mb-8"
           >
-            <div>
-              <p className="text-caption mb-4">NOUVEAUTÉS</p>
-              <h2 className="heading-section">Découvrez nos dernières arrivées</h2>
-            </div>
-            <div className="hidden md:flex items-center gap-2">
-              <button 
-                onClick={() => {
-                  if (carouselRef.current) {
-                    carouselRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-                  }
-                }}
-                className="p-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button 
-                onClick={() => {
-                  if (carouselRef.current) {
-                    carouselRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-                  }
-                }}
-                className="p-2 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-              <Link to="/nouveautes" className="btn-ghost ml-4">
-                Tout voir
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
+            <p className="text-caption mb-4">NOUVEAUTÉS</p>
+            <h2 className="heading-section">Découvrez nos dernières arrivées</h2>
           </motion.div>
 
           {loading ? (
-            <div className="flex gap-4 overflow-hidden">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex-shrink-0 w-[200px] sm:w-[220px] lg:w-[260px] aspect-[4/5] rounded-2xl skeleton" />
-              ))}
+            <div className="flex justify-center">
+              <div className="w-[280px] sm:w-[320px] md:w-[380px] aspect-[3/4] rounded-3xl skeleton" />
             </div>
           ) : (
-            <div 
-              ref={carouselRef}
-              className="flex gap-4 overflow-x-auto scroll-smooth pb-4 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide"
-            >
-              {(newProducts.length > 0 ? newProducts : featuredProducts).map((product, index) => (
-                <div 
-                  key={product.product_id} 
-                  className="flex-shrink-0 w-[160px] sm:w-[200px] md:w-[220px] lg:w-[260px] snap-start"
-                >
-                  <ProductCard product={product} index={index} />
-                </div>
-              ))}
+            <div className="relative">
+              {/* Main spotlight product */}
+              <div className="flex justify-center items-center min-h-[450px] sm:min-h-[500px] md:min-h-[550px]">
+                <AnimatePresence mode="wait">
+                  {(newProducts.length > 0 ? newProducts : featuredProducts).map((product, index) => (
+                    index === carouselIndex && (
+                      <motion.div
+                        key={product.product_id}
+                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: -20 }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        className="w-[280px] sm:w-[320px] md:w-[380px]"
+                      >
+                        <Link 
+                          to={`/product/${product.product_id}`}
+                          className="block bg-white dark:bg-[#2C2C2E] rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-[1.02]"
+                        >
+                          {/* Product Image */}
+                          <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+                            <img
+                              src={product.images?.[0] || "/placeholder.jpg"}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                            {/* Badges */}
+                            <div className="absolute top-4 left-4 flex flex-col gap-2">
+                              {product.is_new && (
+                                <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
+                                  NOUVEAU
+                                </span>
+                              )}
+                              {product.is_promo && (
+                                <span className="px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-full">
+                                  PROMO
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Product Info */}
+                          <div className="p-6 text-center">
+                            <h3 className="font-bold text-lg sm:text-xl mb-2 line-clamp-2">{product.name}</h3>
+                            <div className="flex items-center justify-center gap-3">
+                              <span className="text-2xl sm:text-3xl font-bold text-blue-600">
+                                {formatPrice(product.price)}
+                              </span>
+                              {product.original_price && product.original_price > product.price && (
+                                <span className="text-lg text-gray-400 line-through">
+                                  {formatPrice(product.original_price)}
+                                </span>
+                              )}
+                            </div>
+                            <button className="mt-4 w-full py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl font-semibold hover:opacity-90 transition-opacity">
+                              Voir le produit
+                            </button>
+                          </div>
+                        </Link>
+                      </motion.div>
+                    )
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              {/* Navigation arrows */}
+              <button 
+                onClick={() => {
+                  const products = newProducts.length > 0 ? newProducts : featuredProducts;
+                  setCarouselIndex((prev) => (prev - 1 + products.length) % products.length);
+                }}
+                className="absolute left-2 sm:left-8 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white dark:bg-black shadow-lg hover:scale-110 transition-transform z-10"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button 
+                onClick={() => {
+                  const products = newProducts.length > 0 ? newProducts : featuredProducts;
+                  setCarouselIndex((prev) => (prev + 1) % products.length);
+                }}
+                className="absolute right-2 sm:right-8 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white dark:bg-black shadow-lg hover:scale-110 transition-transform z-10"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+
+              {/* Dots indicator */}
+              <div className="flex justify-center gap-2 mt-6">
+                {(newProducts.length > 0 ? newProducts : featuredProducts).slice(0, 8).map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCarouselIndex(index)}
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${
+                      index === carouselIndex 
+                        ? "bg-black dark:bg-white w-8" 
+                        : "bg-black/20 dark:bg-white/20 hover:bg-black/40 dark:hover:bg-white/40"
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
           <Link
             to="/nouveautes"
-            className="btn-ghost mt-6 mx-auto md:hidden"
+            className="btn-ghost mt-8 mx-auto flex"
           >
-            Tout voir
+            Voir toutes les nouveautés
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
