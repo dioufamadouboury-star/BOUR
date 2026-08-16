@@ -12,10 +12,11 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 
 ## Recent Changes (August 16, 2026)
 
-### ✅ COMPLETED - Product Position Control Feature
+### ✅ COMPLETED & DEPLOYED - Product Position Control Feature
 - **Issue Fixed**: Admin Dashboard product limit bug (limit increased to 500)
 - **New Feature**: Position control for product display ordering
   - Position column added to Admin products table
+  - **Monter/Descendre (↑↓) buttons** for quick reordering without typing
   - Editable position inputs with visual feedback (green border when modified)
   - "Enregistrer positions" button for batch saving
   - Products sorted by position (lower number = higher priority, default 999)
@@ -26,6 +27,7 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
   - `/app/backend/server.py` (lines 1590-1625)
   - `/app/frontend/src/pages/AdminPage.js`
 - **Testing**: 100% pass rate (10/10 backend, 6/6 frontend)
+- **VPS Deployment**: ✅ DEPLOYED to groupeyamaplus.com
 
 ---
 

@@ -38,6 +38,7 @@ import {
   Ruler,
   Building2,
   ChevronDown,
+  ChevronUp,
   GripVertical,
   Sparkles,
   Briefcase,
@@ -618,6 +619,22 @@ export default function AdminPage() {
     }));
   };
 
+  // Move product up (decrease position number)
+  const handleMoveUp = (productId) => {
+    const currentPosition = productPositions[productId] ?? 
+      products.find(p => p.product_id === productId)?.position ?? 999;
+    if (currentPosition > 1) {
+      handlePositionChange(productId, currentPosition - 1);
+    }
+  };
+
+  // Move product down (increase position number)
+  const handleMoveDown = (productId) => {
+    const currentPosition = productPositions[productId] ?? 
+      products.find(p => p.product_id === productId)?.position ?? 999;
+    handlePositionChange(productId, currentPosition + 1);
+  };
+
   // Save all modified positions
   const handleSavePositions = async () => {
     const positionsToUpdate = Object.entries(productPositions)
@@ -1182,22 +1199,43 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5 dark:divide-white/5">
-              {filteredProducts.map((product) => (
+              {filteredProducts.map((product, index) => (
                 <tr key={product.product_id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                   <td className="p-4">
-                    <input
-                      type="number"
-                      min="1"
-                      value={productPositions[product.product_id] ?? product.position ?? 999}
-                      onChange={(e) => handlePositionChange(product.product_id, e.target.value)}
-                      className={cn(
-                        "w-16 px-2 py-1.5 text-center text-sm rounded-lg border transition-colors",
-                        productPositions[product.product_id] !== undefined && productPositions[product.product_id] !== (product.position ?? 999)
-                          ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                          : "border-black/10 dark:border-white/10 bg-transparent"
-                      )}
-                      data-testid={`position-input-${product.product_id}`}
-                    />
+                    <div className="flex items-center gap-1">
+                      <div className="flex flex-col">
+                        <button
+                          onClick={() => handleMoveUp(product.product_id)}
+                          className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-30"
+                          disabled={(productPositions[product.product_id] ?? product.position ?? 999) <= 1}
+                          title="Monter"
+                          data-testid={`move-up-${product.product_id}`}
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleMoveDown(product.product_id)}
+                          className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                          title="Descendre"
+                          data-testid={`move-down-${product.product_id}`}
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        value={productPositions[product.product_id] ?? product.position ?? 999}
+                        onChange={(e) => handlePositionChange(product.product_id, e.target.value)}
+                        className={cn(
+                          "w-14 px-2 py-1.5 text-center text-sm rounded-lg border transition-colors",
+                          productPositions[product.product_id] !== undefined && productPositions[product.product_id] !== (product.position ?? 999)
+                            ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                            : "border-black/10 dark:border-white/10 bg-transparent"
+                        )}
+                        data-testid={`position-input-${product.product_id}`}
+                      />
+                    </div>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
