@@ -5,6 +5,22 @@ import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import ProductFormModal from "../components/ProductFormModal";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   LayoutDashboard,
   Package,
   ShoppingCart,
@@ -166,6 +182,167 @@ const defaultColors = [
 
 const defaultSizes = ["XS", "S", "M", "L", "XL", "XXL", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
 
+// Sortable Product Row Component for Drag & Drop
+function SortableProductRow({ product, productPositions, handlePositionChange, handleMoveUp, handleMoveDown, handleEditProduct, handleDeleteProduct, getCategoryName, formatPrice, getImageUrl, cn }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: product.product_id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 1,
+  };
+
+  return (
+    <tr 
+      ref={setNodeRef} 
+      style={style}
+      className={cn(
+        "hover:bg-black/5 dark:hover:bg-white/5 transition-colors",
+        isDragging && "bg-blue-50 dark:bg-blue-900/20 shadow-lg"
+      )}
+    >
+      <td className="p-4">
+        <div className="flex items-center gap-1">
+          {/* Drag Handle */}
+          <button
+            {...attributes}
+            {...listeners}
+            className="p-1.5 rounded cursor-grab active:cursor-grabbing hover:bg-black/10 dark:hover:bg-white/10 transition-colors touch-none"
+            title="Glisser pour réorganiser"
+            data-testid={`drag-handle-${product.product_id}`}
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <div className="flex flex-col">
+            <button
+              onClick={() => handleMoveUp(product.product_id)}
+              className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-30"
+              disabled={(productPositions[product.product_id] ?? product.position ?? 999) <= 1}
+              title="Monter"
+              data-testid={`move-up-${product.product_id}`}
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleMoveDown(product.product_id)}
+              className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+              title="Descendre"
+              data-testid={`move-down-${product.product_id}`}
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          </div>
+          <input
+            type="number"
+            min="1"
+            value={productPositions[product.product_id] ?? product.position ?? 999}
+            onChange={(e) => handlePositionChange(product.product_id, e.target.value)}
+            className={cn(
+              "w-14 px-2 py-1.5 text-center text-sm rounded-lg border transition-colors",
+              productPositions[product.product_id] !== undefined && productPositions[product.product_id] !== (product.position ?? 999)
+                ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                : "border-black/10 dark:border-white/10 bg-transparent"
+            )}
+            data-testid={`position-input-${product.product_id}`}
+          />
+        </div>
+      </td>
+      <td className="p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden flex-shrink-0">
+            <img
+              src={getImageUrl(product.images?.[0], "/placeholder.jpg")}
+              alt={product.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="min-w-0">
+            <p className="font-medium text-sm truncate max-w-[200px]">{product.name}</p>
+            {product.brand && (
+              <p className="text-xs text-muted-foreground">{product.brand}</p>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="p-4">
+        <span className="px-2 py-1 rounded-lg bg-black/5 dark:bg-white/5 text-xs font-medium">
+          {getCategoryName(product.category)}
+        </span>
+      </td>
+      <td className="p-4">
+        <div>
+          <p className="font-semibold text-sm">{formatPrice(product.price)}</p>
+          {product.original_price && product.original_price > product.price && (
+            <p className="text-xs text-muted-foreground line-through">{formatPrice(product.original_price)}</p>
+          )}
+        </div>
+      </td>
+      <td className="p-4">
+        <span className={cn(
+          "px-2 py-1 rounded-lg text-xs font-medium",
+          product.stock > 10 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+          product.stock > 0 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
+          "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+        )}>
+          {product.stock} en stock
+        </span>
+      </td>
+      <td className="p-4">
+        <div className="flex gap-1 flex-wrap">
+          {product.is_new && (
+            <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px] font-bold">
+              NEW
+            </span>
+          )}
+          {product.is_promo && (
+            <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] font-bold">
+              PROMO
+            </span>
+          )}
+          {product.colors?.length > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 text-[10px] font-bold">
+              {product.colors.length} couleurs
+            </span>
+          )}
+        </div>
+      </td>
+      <td className="p-4">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={() => handleEditProduct(product)}
+            className="p-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+            title="Modifier"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+          <Link
+            to={`/product/${product.product_id}`}
+            className="p-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+            title="Voir"
+          >
+            <Eye className="w-4 h-4" />
+          </Link>
+          <button
+            onClick={() => handleDeleteProduct(product.product_id)}
+            className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 transition-colors"
+            title="Supprimer"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 export default function AdminPage() {
   const { user, token, logout, isAdmin, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -181,6 +358,18 @@ export default function AdminPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [fixingImages, setFixingImages] = useState(false);
+  
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
   
   // Product form state
   const [showProductForm, setShowProductForm] = useState(false);
@@ -633,6 +822,33 @@ export default function AdminPage() {
     const currentPosition = productPositions[productId] ?? 
       products.find(p => p.product_id === productId)?.position ?? 999;
     handlePositionChange(productId, currentPosition + 1);
+  };
+
+  // Handle drag end for product reordering
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    
+    if (active.id !== over?.id && over) {
+      const oldIndex = filteredProducts.findIndex(p => p.product_id === active.id);
+      const newIndex = filteredProducts.findIndex(p => p.product_id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        // Calculate new positions based on visual order
+        const newPositions = {};
+        const reorderedProducts = arrayMove(filteredProducts, oldIndex, newIndex);
+        
+        reorderedProducts.forEach((product, index) => {
+          const newPosition = index + 1;
+          const currentPosition = productPositions[product.product_id] ?? product.position ?? 999;
+          if (currentPosition !== newPosition) {
+            newPositions[product.product_id] = newPosition;
+          }
+        });
+        
+        setProductPositions(prev => ({ ...prev, ...newPositions }));
+        toast.info(`Produit déplacé - N'oubliez pas d'enregistrer les positions`);
+      }
+    }
   };
 
   // Save all modified positions
@@ -1183,155 +1399,58 @@ export default function AdminPage() {
         />
       </div>
 
-      {/* Products Table */}
-      <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-black/5 dark:border-white/5">
-                <th className="text-center p-4 text-sm font-semibold text-muted-foreground w-20">Position</th>
-                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Produit</th>
-                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Catégorie</th>
-                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Prix</th>
-                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Stock</th>
-                <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Statut</th>
-                <th className="text-right p-4 text-sm font-semibold text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/5 dark:divide-white/5">
-              {filteredProducts.map((product, index) => (
-                <tr key={product.product_id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                  <td className="p-4">
-                    <div className="flex items-center gap-1">
-                      <div className="flex flex-col">
-                        <button
-                          onClick={() => handleMoveUp(product.product_id)}
-                          className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors disabled:opacity-30"
-                          disabled={(productPositions[product.product_id] ?? product.position ?? 999) <= 1}
-                          title="Monter"
-                          data-testid={`move-up-${product.product_id}`}
-                        >
-                          <ChevronUp className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleMoveDown(product.product_id)}
-                          className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                          title="Descendre"
-                          data-testid={`move-down-${product.product_id}`}
-                        >
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <input
-                        type="number"
-                        min="1"
-                        value={productPositions[product.product_id] ?? product.position ?? 999}
-                        onChange={(e) => handlePositionChange(product.product_id, e.target.value)}
-                        className={cn(
-                          "w-14 px-2 py-1.5 text-center text-sm rounded-lg border transition-colors",
-                          productPositions[product.product_id] !== undefined && productPositions[product.product_id] !== (product.position ?? 999)
-                            ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                            : "border-black/10 dark:border-white/10 bg-transparent"
-                        )}
-                        data-testid={`position-input-${product.product_id}`}
-                      />
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden flex-shrink-0">
-                        <img
-                          src={getImageUrl(product.images?.[0], "/placeholder.jpg")}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm truncate max-w-[200px]">{product.name}</p>
-                        {product.brand && (
-                          <p className="text-xs text-muted-foreground">{product.brand}</p>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <span className="px-2 py-1 rounded-lg bg-black/5 dark:bg-white/5 text-xs font-medium">
-                      {getCategoryName(product.category)}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div>
-                      <p className="font-semibold text-sm">{formatPrice(product.price)}</p>
-                      {product.original_price && product.original_price > product.price && (
-                        <p className="text-xs text-muted-foreground line-through">{formatPrice(product.original_price)}</p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <span className={cn(
-                      "px-2 py-1 rounded-lg text-xs font-medium",
-                      product.stock > 10 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                      product.stock > 0 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
-                      "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                    )}>
-                      {product.stock} en stock
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex gap-1 flex-wrap">
-                      {product.is_new && (
-                        <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px] font-bold">
-                          NEW
-                        </span>
-                      )}
-                      {product.is_promo && (
-                        <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] font-bold">
-                          PROMO
-                        </span>
-                      )}
-                      {product.colors?.length > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 text-[10px] font-bold">
-                          {product.colors.length} couleurs
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleEditProduct(product)}
-                        className="p-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                        title="Modifier"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <Link
-                        to={`/product/${product.product_id}`}
-                        className="p-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                        title="Voir"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                      <button
-                        onClick={() => handleDeleteProduct(product.product_id)}
-                        className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 transition-colors"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+      {/* Products Table with Drag & Drop */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl border border-black/5 dark:border-white/5 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-black/5 dark:border-white/5">
+                  <th className="text-center p-4 text-sm font-semibold text-muted-foreground w-28">Position</th>
+                  <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Produit</th>
+                  <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Catégorie</th>
+                  <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Prix</th>
+                  <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Stock</th>
+                  <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Statut</th>
+                  <th className="text-right p-4 text-sm font-semibold text-muted-foreground">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {filteredProducts.length === 0 && (
-          <div className="p-12 text-center text-muted-foreground">
-            Aucun produit trouvé
+              </thead>
+              <SortableContext
+                items={filteredProducts.map(p => p.product_id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                  {filteredProducts.map((product) => (
+                    <SortableProductRow
+                      key={product.product_id}
+                      product={product}
+                      productPositions={productPositions}
+                      handlePositionChange={handlePositionChange}
+                      handleMoveUp={handleMoveUp}
+                      handleMoveDown={handleMoveDown}
+                      handleEditProduct={handleEditProduct}
+                      handleDeleteProduct={handleDeleteProduct}
+                      getCategoryName={getCategoryName}
+                      formatPrice={formatPrice}
+                      getImageUrl={getImageUrl}
+                      cn={cn}
+                    />
+                  ))}
+                </tbody>
+              </SortableContext>
+            </table>
           </div>
-        )}
-      </div>
+          {filteredProducts.length === 0 && (
+            <div className="p-12 text-center text-muted-foreground">
+              Aucun produit trouvé
+            </div>
+          )}
+        </div>
+      </DndContext>
     </div>
   );
   };
