@@ -98,14 +98,18 @@ export default function ProductCard({ product, index = 0, onRequestVisit }) {
         <AnimatePresence mode="wait">
           <motion.img
             key={currentImageIndex}
-            src={images[currentImageIndex]}
+            src={images[currentImageIndex] || "/placeholder-product.png"}
             alt={product.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain bg-white"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.3 }}
             loading="lazy"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "/placeholder-product.svg";
+            }}
           />
         </AnimatePresence>
 

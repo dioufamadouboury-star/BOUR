@@ -264,8 +264,38 @@ async def update_order_payment_status(order_id: str, status: str, payment_method
                 customer_phone = order.get("shipping", {}).get("phone")
                 if customer_phone:
                     asyncio.create_task(send_order_whatsapp_confirmation(order, customer_phone))
+                    
+                    # Send SMS confirmation via Orange
+                    asyncio.create_task(send_order_sms_confirmation(order, customer_phone))
     
     return result.modified_count > 0
+
+
+async def send_order_sms_confirmation(order: dict, phone: str):
+    """Send SMS confirmation to customer via Orange API"""
+    try:
+        from routes.orange_sms import send_sms
+        
+        order_id = order.get("order_id", "")
+        total = order.get("total", 0)
+        customer_name = order.get("shipping", {}).get("full_name", "").split()[0] if order.get("shipping", {}).get("full_name") else "Client"
+        
+        message = f"""GROUPE YAMA+
+Bonjour {customer_name},
+Votre commande #{order_id} ({total:,} FCFA) est confirmee!
+Livraison sous 24-48h a Dakar.
+Questions? +221 78 382 75 75
+Merci pour votre confiance!""".replace(",", " ")
+        
+        result = await send_sms(phone, message)
+        
+        if result.get("success"):
+            logger.info(f"SMS confirmation sent for order {order_id} to {phone}")
+        else:
+            logger.error(f"Failed to send SMS for order {order_id}: {result.get('error')}")
+            
+    except Exception as e:
+        logger.error(f"Error sending SMS confirmation: {str(e)}")
 
 
 @router.post("/initiate")

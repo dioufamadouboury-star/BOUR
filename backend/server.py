@@ -3851,6 +3851,34 @@ _L'équipe GROUPE YAMA+_""".replace(",", " ")
     except Exception as e:
         logger.error(f"Error creating WhatsApp notification for order {order.get('order_id')}: {str(e)}")
 
+
+async def send_order_sms_orange(order: dict, phone: str):
+    """Send SMS confirmation to customer via Orange API"""
+    try:
+        from routes.orange_sms import send_sms
+        
+        order_id = order.get("order_id", "")
+        total = order.get("total", 0)
+        customer_name = order.get("shipping", {}).get("full_name", "").split()[0] if order.get("shipping", {}).get("full_name") else "Client"
+        
+        message = f"""GROUPE YAMA+
+Bonjour {customer_name},
+Votre commande #{order_id} ({total:,} FCFA) est confirmee!
+Livraison sous 24-48h a Dakar.
+Questions? +221 78 382 75 75
+Merci pour votre confiance!""".replace(",", " ")
+        
+        result = await send_sms(phone, message)
+        
+        if result.get("success"):
+            logger.info(f"SMS confirmation sent for order {order_id} to {phone}")
+        else:
+            logger.error(f"Failed to send SMS for order {order_id}: {result.get('error')}")
+            
+    except Exception as e:
+        logger.error(f"Error sending SMS confirmation: {str(e)}")
+
+
 async def send_welcome_email(user: dict):
     """Send welcome email to new user and add to MailerLite"""
     promo_code = f"BIENVENUE{secrets.token_hex(3).upper()}"
@@ -5865,6 +5893,9 @@ async def create_order(order_data: OrderCreate, request: Request):
         customer_phone = order_doc.get("shipping", {}).get("phone")
         if customer_phone:
             asyncio.create_task(send_order_whatsapp_confirmation(order_doc, customer_phone))
+            
+            # Send SMS confirmation via Orange
+            asyncio.create_task(send_order_sms_orange(order_doc, customer_phone))
         
         # Send push notification to user if subscribed
         if user:
