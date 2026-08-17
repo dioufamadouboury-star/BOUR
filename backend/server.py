@@ -275,12 +275,14 @@ from routes.real_estate import router as real_estate_router
 from routes.currency import router as currency_router
 from routes.push_notifications import router as push_notifications_router
 from routes.paydunya import router as paydunya_router
+from routes.reviews import router as reviews_router
 api_router.include_router(gift_box_router)
 api_router.include_router(blog_router)
 api_router.include_router(real_estate_router)
 api_router.include_router(currency_router)
 api_router.include_router(push_notifications_router)
 api_router.include_router(paydunya_router)
+api_router.include_router(reviews_router)
 
 # SEO Prerender router (served at /api/prerender/ for bot detection by Nginx)
 prerender_router = APIRouter(prefix="/api/prerender")

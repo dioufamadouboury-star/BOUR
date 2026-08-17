@@ -734,6 +734,61 @@ export default function ProductPage() {
                 </button>
               </div>
 
+              {/* Stock Status & Delivery Info */}
+              <div className="mb-6 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50">
+                {/* Stock Status */}
+                <div className="flex items-center gap-3 mb-3">
+                  {currentStock > 5 ? (
+                    <>
+                      <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                      <span className="text-green-600 dark:text-green-400 font-medium">
+                        En stock ({currentStock} disponibles)
+                      </span>
+                    </>
+                  ) : currentStock > 0 ? (
+                    <>
+                      <span className="w-3 h-3 bg-orange-500 rounded-full" />
+                      <span className="text-orange-600 dark:text-orange-400 font-medium">
+                        Stock limité - Plus que {currentStock} !
+                      </span>
+                    </>
+                  ) : product.is_on_order ? (
+                    <>
+                      <span className="w-3 h-3 bg-blue-500 rounded-full" />
+                      <span className="text-blue-600 dark:text-blue-400 font-medium">
+                        Disponible sur commande
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-3 h-3 bg-red-500 rounded-full" />
+                      <span className="text-red-600 dark:text-red-400 font-medium">
+                        Rupture de stock
+                      </span>
+                    </>
+                  )}
+                </div>
+                
+                {/* Delivery Time */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Truck className="w-4 h-4" />
+                  {currentStock > 0 ? (
+                    <span>Livraison sous <strong className="text-foreground">24 à 48 heures</strong> à Dakar</span>
+                  ) : product.is_on_order ? (
+                    <span>Livraison sous <strong className="text-foreground">{product.order_delivery_days || 7}-{(product.order_delivery_days || 7) + 3} jours</strong></span>
+                  ) : (
+                    <span>Prévenez-moi quand disponible</span>
+                  )}
+                </div>
+                
+                {/* Regional delivery */}
+                {currentStock > 0 && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Livraison 3-5 jours pour les autres régions du Sénégal
+                  </div>
+                )}
+              </div>
+
               {/* Trust Badges */}
               <div className="grid grid-cols-3 gap-4 py-6 border-y border-black/10 dark:border-white/10 mb-8">
                 <div className="text-center">
@@ -811,7 +866,9 @@ export default function ProductPage() {
 
         {/* Frequently Bought Together */}
         <div className="container-lumina">
-          <FrequentlyBoughtTogether productId={productId} currentProduct={product} />
+          {/* Frequently Bought Together - DISABLED: Needs manual product selection */}
+          {/* TODO: Enable when admin can manually select related products */}
+          {/* <FrequentlyBoughtTogether productId={productId} currentProduct={product} /> */}
         </div>
 
         {/* Similar Products Section */}

@@ -31,12 +31,12 @@ export default function ProductReviews({ productId }) {
 
   const fetchReviews = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/products/${productId}/reviews`);
-      setReviews(response.data.reviews);
+      const response = await axios.get(`${API_URL}/api/reviews/product/${productId}`);
+      setReviews(response.data.reviews || []);
       setStats({
-        total_reviews: response.data.total_reviews,
-        average_rating: response.data.average_rating,
-        distribution: response.data.distribution,
+        total_reviews: response.data.rating_summary?.total || 0,
+        average_rating: response.data.rating_summary?.average || 0,
+        distribution: response.data.rating_summary?.breakdown || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
       });
     } catch (error) {
       console.error("Error fetching reviews:", error);
@@ -47,19 +47,27 @@ export default function ProductReviews({ productId }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isAuthenticated) {
-      toast.error("Connectez-vous pour donner votre avis");
+    
+    // Allow non-authenticated users to leave reviews
+    if (!formData.comment || formData.comment.length < 10) {
+      toast.error("Votre commentaire doit contenir au moins 10 caractères");
       return;
     }
 
     setSubmitting(true);
     try {
       await axios.post(
-        `${API_URL}/api/products/${productId}/reviews`,
-        { product_id: productId, ...formData },
+        `${API_URL}/api/reviews`,
+        { 
+          product_id: productId, 
+          rating: formData.rating,
+          comment: formData.comment || formData.title,
+          reviewer_name: user?.name || formData.title || "Client anonyme",
+          photos: []
+        },
         { withCredentials: true }
       );
-      toast.success("Merci pour votre avis !");
+      toast.success("Merci pour votre avis ! Il sera publié après modération.");
       setShowForm(false);
       setFormData({ rating: 5, title: "", comment: "" });
       fetchReviews();

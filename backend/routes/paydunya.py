@@ -45,6 +45,7 @@ class PayDunyaCheckoutRequest(BaseModel):
     order_id: str
     success_url: str
     cancel_url: str
+    payment_channel: Optional[str] = None  # card, wave-senegal, orange-money-senegal, etc.
 
 
 class PayDunyaClient:
@@ -305,19 +306,26 @@ async def initiate_paydunya_payment(request: PayDunyaCheckoutRequest):
     backend_url = os.environ.get("SITE_URL", FRONTEND_URL)
     callback_url = f"{backend_url}/api/payments/paydunya/callback"
     
+    # Determine channels based on payment_channel
+    # If specific channel requested, use only that channel
+    if request.payment_channel:
+        channels = [request.payment_channel]
+    else:
+        channels = [
+            "wave-senegal",
+            "orange-money-senegal",
+            "card",
+            "free-money-senegal",
+            "expresso-sn",
+            "djamo-sn"
+        ]
+    
     # Prepare PayDunya invoice
     invoice_body = {
         "invoice": {
             "total_amount": int(total_amount),
             "description": f"Commande GROUPE YAMA+ - {item_description}",
-            "channels": [
-                "wave-senegal",
-                "orange-money-senegal",
-                "card",
-                "free-money-senegal",
-                "expresso-sn",
-                "djamo-sn"
-            ],
+            "channels": channels,
             "customer": {
                 "name": shipping.get("full_name", ""),
                 "email": shipping.get("email", ""),
@@ -329,7 +337,8 @@ async def initiate_paydunya_payment(request: PayDunyaCheckoutRequest):
         },
         "custom_data": {
             "order_id": request.order_id,
-            "amount": total_amount
+            "amount": total_amount,
+            "payment_channel": request.payment_channel or "all"
         },
         "actions": {
             "return_url": request.success_url,

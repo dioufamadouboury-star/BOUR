@@ -329,11 +329,19 @@ export default function CheckoutPage() {
       if (['mobile_money', 'card'].includes(formData.payment_method)) {
         try {
           const currentUrl = window.location.origin;
-          // Use PayDunya instead of PayTech
+          
+          // Determine payment channel based on selected method
+          let paymentChannel = null;
+          if (formData.payment_method === 'card') {
+            paymentChannel = 'card';  // Force card-only interface
+          }
+          // For mobile_money, leave null to show Wave/Orange Money options
+          
           const paydunyaResponse = await axios.post(`${API_URL}/api/payments/paydunya/initiate`, {
             order_id: newOrderId,
             success_url: `${currentUrl}/order/${newOrderId}?payment=success`,
             cancel_url: `${currentUrl}/checkout?order_id=${newOrderId}&payment=cancel`,
+            payment_channel: paymentChannel,
           });
 
           if (paydunyaResponse.data.success && paydunyaResponse.data.checkout_url) {
