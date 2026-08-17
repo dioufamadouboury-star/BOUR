@@ -65,7 +65,29 @@ const SUBCATEGORIES = {
 };
 
 const AVAILABLE_COLORS = [
-  "Noir", "Blanc", "Gris", "Argent", "Or", "Rose", "Bleu", "Rouge", "Vert", "Violet"
+  { id: "noir", name: "Noir", hex: "#1a1a1a" },
+  { id: "blanc", name: "Blanc", hex: "#ffffff" },
+  { id: "gris", name: "Gris", hex: "#808080" },
+  { id: "argent", name: "Argent", hex: "#c0c0c0" },
+  { id: "or", name: "Or", hex: "#ffd700" },
+  { id: "rose", name: "Rose", hex: "#ffc0cb" },
+  { id: "bleu", name: "Bleu", hex: "#0066cc" },
+  { id: "bleu_ciel", name: "Bleu Ciel", hex: "#87ceeb" },
+  { id: "rouge", name: "Rouge", hex: "#dc2626" },
+  { id: "vert", name: "Vert", hex: "#22c55e" },
+  { id: "violet", name: "Violet", hex: "#8b5cf6" },
+  { id: "titane_noir", name: "Titane Noir", hex: "#3d3d3d" },
+  { id: "titane_naturel", name: "Titane Naturel", hex: "#c4b8a8" },
+  { id: "titane_blanc", name: "Titane Blanc", hex: "#f5f5f0" },
+  { id: "titane_bleu", name: "Titane Bleu", hex: "#5a7d9a" },
+];
+
+const PHONE_CAPACITIES = [
+  { id: "64go", name: "64 Go" },
+  { id: "128go", name: "128 Go" },
+  { id: "256go", name: "256 Go" },
+  { id: "512go", name: "512 Go" },
+  { id: "1to", name: "1 To" },
 ];
 
 const AVAILABLE_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "128GB", "256GB", "512GB", "1TB"];
@@ -105,6 +127,9 @@ const ProductFormModal = memo(({
     no_cart: editingProduct?.no_cart || false,
     meta_title: editingProduct?.meta_title || "",
     meta_description: editingProduct?.meta_description || "",
+    // Phone variants support
+    has_variants: editingProduct?.has_variants || false,
+    variants: editingProduct?.variants || [],
   }), [editingProduct]);
 
   const [form, setForm] = useState(getInitialForm);
@@ -136,6 +161,8 @@ const ProductFormModal = memo(({
         no_cart: editingProduct?.no_cart || false,
         meta_title: editingProduct?.meta_title || "",
         meta_description: editingProduct?.meta_description || "",
+        has_variants: editingProduct?.has_variants || false,
+        variants: editingProduct?.variants ? [...editingProduct.variants] : [],
       };
       setForm(newForm);
       setActiveTab("general");
@@ -319,6 +346,8 @@ const ProductFormModal = memo(({
         no_cart: form.no_cart || false,
         meta_title: form.meta_title?.trim() || null,
         meta_description: form.meta_description?.trim() || null,
+        has_variants: form.has_variants || false,
+        variants: form.variants || [],
       };
 
       const headers = { Authorization: `Bearer ${token}` };
@@ -625,7 +654,7 @@ const ProductFormModal = memo(({
                       placeholder="Ex: 7, 14, 21..."
                     />
                     <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
-                      Ce produit sera affiché comme "Disponible sur commande" avec le délai indiqué.
+                      Ce produit sera affiché comme &quot;Disponible sur commande&quot; avec le délai indiqué.
                     </p>
                   </div>
                 )}
@@ -674,7 +703,7 @@ const ProductFormModal = memo(({
                     </label>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    La première image sera l'image principale. Formats: JPG, PNG, WebP
+                    La première image sera l&apos;image principale. Formats: JPG, PNG, WebP
                   </p>
                 </div>
               </div>
@@ -683,47 +712,243 @@ const ProductFormModal = memo(({
             {/* Variants Tab */}
             {activeTab === "variants" && (
               <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-3">Couleurs disponibles</label>
-                  <div className="flex flex-wrap gap-2">
-                    {AVAILABLE_COLORS.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => toggleColor(color)}
-                        className={cn(
-                          "px-4 py-2 rounded-xl text-sm font-medium border transition-all",
-                          form.colors.includes(color)
-                            ? "bg-black text-white dark:bg-white dark:text-black border-transparent"
-                            : "border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30"
-                        )}
-                      >
-                        {color}
-                      </button>
-                    ))}
+                {/* Phone variants toggle - only for electronique/smartphones */}
+                {(form.category === "electronique" && (form.subcategory === "Smartphones" || form.subcategory?.toLowerCase()?.includes("téléphone"))) && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.has_variants}
+                        onChange={(e) => updateField('has_variants', e.target.checked)}
+                        className="w-5 h-5 rounded border-blue-300"
+                      />
+                      <div>
+                        <span className="font-medium text-blue-800 dark:text-blue-200">Activer les variantes</span>
+                        <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                          Permet de définir différents prix/stocks pour chaque capacité et couleur
+                        </p>
+                      </div>
+                    </label>
                   </div>
-                </div>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium mb-3">Tailles disponibles</label>
-                  <div className="flex flex-wrap gap-2">
-                    {AVAILABLE_SIZES.map((size) => (
+                {/* Variants Management */}
+                {form.has_variants && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Variantes du produit</label>
                       <button
-                        key={size}
                         type="button"
-                        onClick={() => toggleSize(size)}
-                        className={cn(
-                          "px-4 py-2 rounded-xl text-sm font-medium border transition-all",
-                          form.sizes.includes(size)
-                            ? "bg-black text-white dark:bg-white dark:text-black border-transparent"
-                            : "border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30"
-                        )}
+                        onClick={() => {
+                          const newVariant = {
+                            id: `var-${Date.now()}`,
+                            capacity: "128go",
+                            color: "noir",
+                            price: parseInt(form.price) || 0,
+                            stock: 0,
+                            image: form.images[0] || ""
+                          };
+                          updateField('variants', [...form.variants, newVariant]);
+                        }}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                       >
-                        {size}
+                        + Ajouter une variante
                       </button>
+                    </div>
+
+                    {form.variants.length === 0 && (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+                        <p className="text-muted-foreground text-sm">
+                          Aucune variante. Cliquez sur &quot;Ajouter une variante&quot; pour commencer.
+                        </p>
+                      </div>
+                    )}
+
+                    {form.variants.map((variant, index) => (
+                      <div key={variant.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-sm font-medium">Variante {index + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newVariants = form.variants.filter((_, i) => i !== index);
+                              updateField('variants', newVariants);
+                            }}
+                            className="text-red-500 hover:text-red-700 text-sm"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {/* Capacity */}
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Capacité</label>
+                            <select
+                              value={variant.capacity}
+                              onChange={(e) => {
+                                const newVariants = [...form.variants];
+                                newVariants[index] = { ...variant, capacity: e.target.value };
+                                updateField('variants', newVariants);
+                              }}
+                              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900"
+                            >
+                              {PHONE_CAPACITIES.map(cap => (
+                                <option key={cap.id} value={cap.id}>{cap.name}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Color */}
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Couleur</label>
+                            <select
+                              value={variant.color}
+                              onChange={(e) => {
+                                const newVariants = [...form.variants];
+                                newVariants[index] = { ...variant, color: e.target.value };
+                                updateField('variants', newVariants);
+                              }}
+                              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900"
+                            >
+                              {AVAILABLE_COLORS.map(color => (
+                                <option key={color.id} value={color.id}>{color.name}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Price */}
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Prix (FCFA)</label>
+                            <input
+                              type="number"
+                              value={variant.price}
+                              onChange={(e) => {
+                                const newVariants = [...form.variants];
+                                newVariants[index] = { ...variant, price: parseInt(e.target.value) || 0 };
+                                updateField('variants', newVariants);
+                              }}
+                              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900"
+                            />
+                          </div>
+
+                          {/* Stock */}
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Stock</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={variant.stock}
+                              onChange={(e) => {
+                                const newVariants = [...form.variants];
+                                newVariants[index] = { ...variant, stock: parseInt(e.target.value) || 0 };
+                                updateField('variants', newVariants);
+                              }}
+                              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Variant Image */}
+                        <div className="mt-3">
+                          <label className="block text-xs font-medium mb-1">Image de la variante (optionnel)</label>
+                          <select
+                            value={variant.image || ""}
+                            onChange={(e) => {
+                              const newVariants = [...form.variants];
+                              newVariants[index] = { ...variant, image: e.target.value };
+                              updateField('variants', newVariants);
+                            }}
+                            className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900"
+                          >
+                            <option value="">Image principale</option>
+                            {form.images.map((img, imgIndex) => (
+                              <option key={imgIndex} value={img}>Image {imgIndex + 1}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                     ))}
+
+                    {/* Summary Table */}
+                    {form.variants.length > 0 && (
+                      <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                        <h4 className="text-sm font-medium mb-3">Récapitulatif des prix</h4>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-muted-foreground">
+                              <th className="pb-2">Capacité</th>
+                              <th className="pb-2">Couleur</th>
+                              <th className="pb-2 text-right">Prix</th>
+                              <th className="pb-2 text-right">Stock</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {form.variants.map((v, i) => (
+                              <tr key={i} className="border-t border-gray-200 dark:border-gray-700">
+                                <td className="py-2">{PHONE_CAPACITIES.find(c => c.id === v.capacity)?.name}</td>
+                                <td className="py-2">{AVAILABLE_COLORS.find(c => c.id === v.color)?.name}</td>
+                                <td className="py-2 text-right font-medium">{v.price?.toLocaleString()} FCFA</td>
+                                <td className="py-2 text-right">{v.stock}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
+
+                {/* Simple colors for non-variant products */}
+                {!form.has_variants && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-3">Couleurs disponibles</label>
+                      <div className="flex flex-wrap gap-2">
+                        {AVAILABLE_COLORS.map((color) => (
+                          <button
+                            key={color.id}
+                            type="button"
+                            onClick={() => toggleColor(color.name)}
+                            className={cn(
+                              "px-4 py-2 rounded-xl text-sm font-medium border transition-all flex items-center gap-2",
+                              form.colors.includes(color.name)
+                                ? "bg-black text-white dark:bg-white dark:text-black border-transparent"
+                                : "border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30"
+                            )}
+                          >
+                            <span 
+                              className="w-4 h-4 rounded-full border border-gray-300" 
+                              style={{ backgroundColor: color.hex }}
+                            />
+                            {color.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-3">Tailles disponibles</label>
+                      <div className="flex flex-wrap gap-2">
+                        {AVAILABLE_SIZES.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => toggleSize(size)}
+                            className={cn(
+                              "px-4 py-2 rounded-xl text-sm font-medium border transition-all",
+                              form.sizes.includes(size)
+                                ? "bg-black text-white dark:bg-white dark:text-black border-transparent"
+                                : "border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30"
+                            )}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

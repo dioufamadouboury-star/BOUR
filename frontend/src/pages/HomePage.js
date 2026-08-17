@@ -354,8 +354,8 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="text-center mb-8"
           >
-            <p className="text-caption mb-4">NOUVEAUTÉS</p>
-            <h2 className="heading-section">Découvrez nos dernières arrivées</h2>
+            <p className="text-caption mb-4">À LA UNE</p>
+            <h2 className="heading-section">Produits à la une</h2>
           </motion.div>
 
           {loading ? (
@@ -364,10 +364,11 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="relative">
-              {/* Main spotlight product */}
+              {/* Main spotlight product - Shows FEATURED or PROMO products */}
               <div className="flex justify-center items-center min-h-[450px] sm:min-h-[500px] md:min-h-[550px]">
                 <AnimatePresence mode="wait">
-                  {(newProducts.length > 0 ? newProducts : featuredProducts).map((product, index) => (
+                  {featuredProducts.filter(p => p.featured || p.is_promo).length > 0 
+                    ? featuredProducts.filter(p => p.featured || p.is_promo).map((product, index) => (
                     index === carouselIndex && (
                       <motion.div
                         key={product.product_id}
@@ -423,14 +424,70 @@ export default function HomePage() {
                         </Link>
                       </motion.div>
                     )
-                  ))}
+                  ))
+                  : featuredProducts.slice(0, 8).map((product, index) => (
+                    index === carouselIndex && (
+                      <motion.div
+                        key={product.product_id}
+                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: -20 }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        className="w-[280px] sm:w-[320px] md:w-[380px]"
+                      >
+                        <Link 
+                          to={`/product/${product.product_id}`}
+                          className="block bg-white dark:bg-[#2C2C2E] rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-[1.02]"
+                        >
+                          <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+                            <img
+                              src={product.images?.[0] || "/placeholder.jpg"}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-4 left-4 flex flex-col gap-2">
+                              {product.featured && (
+                                <span className="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
+                                  VEDETTE
+                                </span>
+                              )}
+                              {product.is_promo && (
+                                <span className="px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-full">
+                                  PROMO
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="p-6 text-center">
+                            <h3 className="font-bold text-lg sm:text-xl mb-2 line-clamp-2">{product.name}</h3>
+                            <div className="flex items-center justify-center gap-3">
+                              <span className="text-2xl sm:text-3xl font-bold text-blue-600">
+                                {formatPrice(product.price)}
+                              </span>
+                              {product.original_price && product.original_price > product.price && (
+                                <span className="text-lg text-gray-400 line-through">
+                                  {formatPrice(product.original_price)}
+                                </span>
+                              )}
+                            </div>
+                            <button className="mt-4 w-full py-3 bg-black dark:bg-white text-white dark:text-black rounded-xl font-semibold hover:opacity-90 transition-opacity">
+                              Voir le produit
+                            </button>
+                          </div>
+                        </Link>
+                      </motion.div>
+                    )
+                  ))
+                  }
                 </AnimatePresence>
               </div>
 
               {/* Navigation arrows */}
               <button 
                 onClick={() => {
-                  const products = newProducts.length > 0 ? newProducts : featuredProducts;
+                  const products = featuredProducts.filter(p => p.featured || p.is_promo).length > 0 
+                    ? featuredProducts.filter(p => p.featured || p.is_promo)
+                    : featuredProducts.slice(0, 8);
                   setCarouselIndex((prev) => (prev - 1 + products.length) % products.length);
                 }}
                 className="absolute left-2 sm:left-8 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white dark:bg-black shadow-lg hover:scale-110 transition-transform z-10"
@@ -439,7 +496,9 @@ export default function HomePage() {
               </button>
               <button 
                 onClick={() => {
-                  const products = newProducts.length > 0 ? newProducts : featuredProducts;
+                  const products = featuredProducts.filter(p => p.featured || p.is_promo).length > 0 
+                    ? featuredProducts.filter(p => p.featured || p.is_promo)
+                    : featuredProducts.slice(0, 8);
                   setCarouselIndex((prev) => (prev + 1) % products.length);
                 }}
                 className="absolute right-2 sm:right-8 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white dark:bg-black shadow-lg hover:scale-110 transition-transform z-10"
@@ -449,7 +508,9 @@ export default function HomePage() {
 
               {/* Dots indicator */}
               <div className="flex justify-center gap-2 mt-6">
-                {(newProducts.length > 0 ? newProducts : featuredProducts).slice(0, 8).map((_, index) => (
+                {(featuredProducts.filter(p => p.featured || p.is_promo).length > 0 
+                  ? featuredProducts.filter(p => p.featured || p.is_promo)
+                  : featuredProducts.slice(0, 8)).slice(0, 8).map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCarouselIndex(index)}
@@ -465,10 +526,10 @@ export default function HomePage() {
           )}
 
           <Link
-            to="/nouveautes"
+            to="/promotions"
             className="btn-ghost mt-8 mx-auto flex"
           >
-            Voir toutes les nouveautés
+            Voir toutes les promotions
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -487,7 +548,7 @@ export default function HomePage() {
               Offre spéciale
             </p>
             <h2 className="text-4xl md:text-6xl font-semibold tracking-tight mb-6">
-              Jusqu'à -30% sur l'électronique
+              Jusqu&apos;à -30% sur l&apos;électronique
             </h2>
             <p className="text-white/60 text-lg mb-8 max-w-xl mx-auto">
               Profitez de nos offres exceptionnelles sur une sélection de produits premium.

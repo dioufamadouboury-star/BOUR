@@ -8,9 +8,68 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 - **Backend**: FastAPI (Python), Motor (async MongoDB)
 - **Database**: MongoDB
 - **Deployment**: Hostinger VPS (Ubuntu), Nginx, Systemd
-- **Integrations**: Google OAuth, PayTech, MailerSend, Gemini Vision, Facebook Pixel, GA4
+- **Integrations**: Google OAuth, PayDunya (Payments), Resend (Email), Gemini Vision, Facebook Pixel, GA4
 
-## Recent Changes (August 16, 2026)
+---
+
+## Session Changes (August 17, 2026)
+
+### ✅ PHASE 1 - COMPLETED
+
+#### PayDunya Payment Integration
+- **Replaced PayTech** with PayDunya for better support in Senegal
+- **Payment Methods**: Wave, Orange Money, Carte Bancaire, Free Money, Expresso, Djamo
+- **API Endpoints**:
+  - `POST /api/payments/paydunya/initiate`
+  - `POST /api/payments/paydunya/callback` (IPN webhook)
+  - `GET /api/payments/paydunya/verify/{order_id}`
+  - `GET /api/payments/paydunya/methods`
+- **Files**: `/app/backend/routes/paydunya.py`
+
+#### Secure Order Status Management
+- `paid` - Online payment confirmed
+- `cod_pending` - Cash on delivery (order confirmed)
+- `pending` / `awaiting_payment` - Awaiting online payment
+- `failed` - Payment failed
+- `cancelled` - Order cancelled
+
+#### Manager Notifications
+- **Email**: ndeyeaminatadiouf3101@gmail.com
+- **WhatsApp**: +221 78 598 75 18
+- All orders notify manager with full details
+- Failed payments also tracked for follow-up
+
+#### Dashboard Statistics Fix
+- Revenue only counts confirmed payments
+- Fake growth percentages removed
+- `GET /api/admin/failed-payments` for commercial follow-up
+
+#### Resend Email Configuration
+- Domain verified: `groupeyamaplus.com`
+- From: `noreply@groupeyamaplus.com`
+
+### ✅ PHASE 2 - COMPLETED
+
+#### Product Variants (Admin + Frontend)
+- Admin UI for phone variants (Capacity, Color, Price, Stock)
+- Frontend ProductPage updated to show variant selectors
+- Price updates dynamically when capacity/color selected
+- Stock shown per variant
+
+#### Floating Buttons Optimized
+- Reduced size on mobile (w-12 h-12)
+- Better positioning to not cover products
+- WhatsApp at bottom, Gift above
+- Less intrusive pulse animation
+
+#### Homepage Reorganization
+- "Produits à la une" - Featured/Promo products carousel
+- "Nouveautés" - Recently added products grid
+- Sections now distinct and not duplicated
+
+---
+
+## PENDING TASKS (User Priority Order)
 
 ### ✅ COMPLETED & DEPLOYED - Product Position Control Feature
 - **Issue Fixed**: Admin Dashboard product limit bug (limit increased to 500)

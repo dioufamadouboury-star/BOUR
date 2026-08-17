@@ -1137,16 +1137,16 @@ export default function AdminPage() {
           icon={DollarSign}
           title="Chiffre d'affaires"
           value={formatPrice(stats?.total_revenue || 0)}
-          change="+12%"
-          trend="up"
+          change={stats?.revenue_growth ? `${stats.revenue_growth > 0 ? '+' : ''}${stats.revenue_growth}%` : null}
+          trend={stats?.revenue_growth > 0 ? "up" : stats?.revenue_growth < 0 ? "down" : null}
           color="bg-green-500"
         />
         <StatsCard
           icon={ShoppingCart}
           title="Commandes"
           value={stats?.total_orders || 0}
-          change="+8%"
-          trend="up"
+          change={stats?.orders_growth ? `${stats.orders_growth > 0 ? '+' : ''}${stats.orders_growth}%` : null}
+          trend={stats?.orders_growth > 0 ? "up" : stats?.orders_growth < 0 ? "down" : null}
           color="bg-blue-500"
         />
         <StatsCard
@@ -1159,8 +1159,6 @@ export default function AdminPage() {
           icon={Users}
           title="Clients"
           value={stats?.total_users || 0}
-          change="+5%"
-          trend="up"
           color="bg-orange-500"
         />
         <StatsCard

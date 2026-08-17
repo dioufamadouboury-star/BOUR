@@ -27,7 +27,7 @@ export default function GameFloatingButton() {
 
   return (
     <>
-      {/* Floating Button - Gift icon */}
+      {/* Floating Button - Gift icon - Smaller on mobile, positioned to not cover products */}
       <motion.button
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
@@ -37,22 +37,22 @@ export default function GameFloatingButton() {
           setIsGameOpen(true);
           setShowPulse(false);
         }}
-        className="fixed bottom-24 right-6 z-[80] w-16 h-16 bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 hover:from-amber-300 hover:via-orange-400 hover:to-red-400 rounded-full shadow-lg flex items-center justify-center text-white transition-all duration-300"
+        className="fixed bottom-[4.5rem] md:bottom-24 right-2 md:right-6 z-[70] w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 hover:from-amber-300 hover:via-orange-400 hover:to-red-400 rounded-full shadow-lg flex items-center justify-center text-white transition-all duration-300"
         style={{
-          boxShadow: "0 4px 25px rgba(251, 146, 60, 0.6)"
+          boxShadow: "0 4px 20px rgba(251, 146, 60, 0.5)"
         }}
         aria-label="Tentez votre chance"
         data-testid="game-floating-button"
       >
         {showPulse && (
-          <span className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-300 to-orange-400 animate-ping opacity-50" />
+          <span className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-300 to-orange-400 animate-ping opacity-30" />
         )}
-        <Gift className="w-7 h-7 relative z-10" />
-        <Sparkles className="absolute -top-1 -right-1 w-5 h-5 text-yellow-200 animate-pulse" />
+        <Gift className="w-5 h-5 md:w-6 md:h-6 relative z-10" />
+        <Sparkles className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 text-yellow-200 animate-pulse" />
         
-        {/* Rotating stars */}
+        {/* Rotating stars - hide on mobile */}
         <motion.div
-          className="absolute inset-0"
+          className="absolute inset-0 hidden md:block"
           animate={{ rotate: 360 }}
           transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
         >
@@ -61,14 +61,14 @@ export default function GameFloatingButton() {
         </motion.div>
       </motion.button>
 
-      {/* Badge */}
+      {/* Badge - Only show on desktop */}
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.5 }}
-        className="fixed bottom-[7.5rem] right-24 z-[80] hidden md:block"
+        className="fixed bottom-28 right-20 z-[70] hidden lg:block"
       >
-        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg whitespace-nowrap flex items-center gap-2">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap flex items-center gap-2">
           <span className="animate-bounce">🎁</span>
           Tentez votre chance !
         </div>

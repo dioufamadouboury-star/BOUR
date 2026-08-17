@@ -274,11 +274,13 @@ from routes.seo_prerender import router as seo_prerender_router
 from routes.real_estate import router as real_estate_router
 from routes.currency import router as currency_router
 from routes.push_notifications import router as push_notifications_router
+from routes.paydunya import router as paydunya_router
 api_router.include_router(gift_box_router)
 api_router.include_router(blog_router)
 api_router.include_router(real_estate_router)
 api_router.include_router(currency_router)
 api_router.include_router(push_notifications_router)
+api_router.include_router(paydunya_router)
 
 # SEO Prerender router (served at /api/prerender/ for bot detection by Nginx)
 prerender_router = APIRouter(prefix="/api/prerender")
@@ -3760,7 +3762,7 @@ async def send_shipping_update_email(order: dict, new_status: str):
     logger.info(f"Shipping update email sent for {order['order_id']} - Status: {new_status}")
 
 async def send_order_whatsapp_confirmation(order: dict, phone: str):
-    """Send WhatsApp order confirmation message to customer"""
+    """Send WhatsApp order confirmation message to customer with full details"""
     try:
         # Format phone number (ensure +221 prefix for Senegal)
         clean_phone = phone.replace(" ", "").replace("-", "")
@@ -3774,26 +3776,55 @@ async def send_order_whatsapp_confirmation(order: dict, phone: str):
         
         order_id = order.get("order_id")
         total = order.get("total", 0)
-        items_count = len(order.get("items", []))
-        customer_name = order.get("shipping", {}).get("first_name", "")
+        subtotal = order.get("subtotal", 0)
+        shipping_cost = order.get("shipping_cost", 0)
+        items = order.get("items", [])
+        shipping = order.get("shipping", {})
+        customer_name = shipping.get("full_name", shipping.get("first_name", ""))
+        payment_method = order.get("payment_method", "")
+        payment_status = order.get("payment_status", "pending")
         
-        # Create WhatsApp message
-        message = f"""🎉 *Commande Confirmée - GROUPE YAMA+*
+        # Payment status in French
+        status_text = {
+            "paid": "Paiement confirmé",
+            "cod_pending": "Paiement à la livraison",
+            "pending": "En attente de paiement",
+            "failed": "Paiement échoué"
+        }.get(payment_status, payment_status)
+        
+        # Format items list
+        items_text = ""
+        for item in items:
+            item_name = item.get("name", "Produit")
+            quantity = item.get("quantity", 1)
+            price = item.get("price", 0)
+            items_text += f"• {item_name} x{quantity} : {price:,} FCFA\n".replace(",", " ")
+        
+        # Create WhatsApp message for customer
+        message = f"""🎉 *Commande confirmée - GROUPE YAMA+*
 
-Bonjour {customer_name} !
+Bonjour {customer_name},
 
-Votre commande *#{order_id}* a été reçue avec succès !
+Votre commande *#{order_id}* a bien été confirmée.
 
-📦 *Détails:*
-• {items_count} article(s)
-• Total: {total:,.0f} FCFA
+📦 *Récapitulatif:*
+{items_text}
+*Sous-total:* {subtotal:,} FCFA
+*Livraison:* {shipping_cost:,} FCFA
+*Total:* {total:,} FCFA
+
+💳 *Paiement:* {status_text}
+
+📍 *Livraison:*
+{shipping.get('address', '')}
+{shipping.get('city', '')} - {shipping.get('region', '')}
 
 Nous préparons votre commande et vous tiendrons informé de son expédition.
 
 📞 Questions ? Répondez à ce message ou appelez-nous.
 
 Merci pour votre confiance !
-_L'équipe GROUPE YAMA+_"""
+_L'équipe GROUPE YAMA+_""".replace(",", " ")
 
         # Generate WhatsApp link (click-to-chat API)
         encoded_message = message.replace("\n", "%0A").replace(" ", "%20").replace("*", "").replace("_", "")
@@ -4050,18 +4081,6 @@ async def send_sms_notification(phone: str, message: str):
         return {"success": False, "error": str(e)}
 
 
-async def send_email_async(to: str, subject: str, html: str) -> dict:
-    """Send email using MailerSend API asynchronously"""
-    result = await send_email_mailersend(
-        to_email=to,
-        to_name="",
-        subject=subject,
-        html_content=html
-    )
-    if result.get("success"):
-        return {"success": True, "email_id": result.get("response")}
-    else:
-        return {"success": False, "error": result.get("error")}
 
 # ============== ADVANCED EMAIL MARKETING WORKFLOWS ==============
 
@@ -4987,7 +5006,72 @@ async def send_admin_order_notification(order: dict):
     </table>
     """
     html = get_email_template(content, "🛒 Nouvelle Commande YAMA+")
+    
+    # Send to main admin
     await send_email_async(ADMIN_NOTIFICATION_EMAIL, f"🛒 Nouvelle Commande #{order.get('order_id', '')} - {order.get('total', 0):,} FCFA", html)
+    
+    # Also send to manager if configured
+    manager_email = os.environ.get("MANAGER_EMAIL")
+    if manager_email and manager_email != ADMIN_NOTIFICATION_EMAIL:
+        await send_email_async(manager_email, f"🛒 Nouvelle Commande #{order.get('order_id', '')} - {order.get('total', 0):,} FCFA", html)
+    
+    # Create WhatsApp notification for manager
+    manager_whatsapp = os.environ.get("MANAGER_WHATSAPP")
+    if manager_whatsapp:
+        clean_phone = manager_whatsapp.replace(" ", "").replace("-", "")
+        if not clean_phone.startswith("+"):
+            clean_phone = "+221" + clean_phone.lstrip("0")
+        
+        # Build items text
+        items_text = ""
+        for item in order.get("items", []):
+            items_text += f"• {item.get('name', 'Produit')} x{item.get('quantity', 1)} : {item.get('price', 0):,} FCFA\n".replace(",", " ")
+        
+        payment_status = order.get("payment_status", "pending")
+        status_emoji = "✅" if payment_status in ["paid", "cod_pending"] else "⏳" if payment_status == "pending" else "❌"
+        status_text = {
+            "paid": "Paiement réussi",
+            "cod_pending": "Paiement à la livraison",
+            "pending": "En attente de paiement",
+            "awaiting_payment": "En attente de paiement",
+            "failed": "Paiement échoué"
+        }.get(payment_status, payment_status)
+        
+        manager_message = f"""{status_emoji} *Nouvelle commande - GROUPE YAMA+*
+
+*Commande:* #{order.get('order_id', '')}
+*Statut:* {status_text}
+*Mode de paiement:* {payment_method}
+
+*Produits:*
+{items_text}
+*Sous-total:* {order.get('subtotal', 0):,} FCFA
+*Livraison:* {order.get('shipping_cost', 0):,} FCFA
+*Total:* {order.get('total', 0):,} FCFA
+
+*Informations client:*
+Nom: {shipping.get('full_name', 'N/A')}
+Téléphone: {shipping.get('phone', 'N/A')}
+Adresse: {shipping.get('address', 'N/A')}
+Ville: {shipping.get('city', 'N/A')}
+Région: {shipping.get('region', 'N/A')}
+""".replace(",", " ")
+        
+        encoded_msg = manager_message.replace("\n", "%0A").replace(" ", "%20").replace("*", "")
+        whatsapp_link = f"https://wa.me/{clean_phone.replace('+', '')}?text={encoded_msg}"
+        
+        await db.manager_notifications.insert_one({
+            "notification_id": f"MGR-{secrets.token_hex(4).upper()}",
+            "type": "new_order",
+            "order_id": order.get("order_id"),
+            "payment_status": payment_status,
+            "phone": clean_phone,
+            "message": manager_message,
+            "whatsapp_link": whatsapp_link,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        logger.info(f"Manager WhatsApp notification queued for order {order.get('order_id')}")
 
 async def send_order_status_update_email(email: str, order_id: str, new_status: str, note: str = ""):
     """Send order status update email to customer"""
@@ -5726,8 +5810,19 @@ async def create_order(order_data: OrderCreate, request: Request):
     order_doc = order_data.model_dump()
     order_doc["order_id"] = order_id
     order_doc["user_id"] = user.user_id if user else None
-    order_doc["payment_status"] = "pending"
-    order_doc["order_status"] = "pending"
+    
+    # Determine initial payment status based on payment method
+    payment_method = order_doc.get("payment_method", "cash")
+    
+    # For online payments, status stays pending until callback confirms
+    # For cash on delivery, mark as "cod_pending" (cash on delivery pending)
+    if payment_method == "cash":
+        order_doc["payment_status"] = "cod_pending"  # Cash on delivery - confirmed on delivery
+        order_doc["order_status"] = "confirmed"  # Order is confirmed, awaiting delivery
+    else:
+        order_doc["payment_status"] = "pending"  # Awaiting online payment
+        order_doc["order_status"] = "awaiting_payment"  # Not confirmed until paid
+    
     order_doc["created_at"] = now.isoformat()
     
     # Check for reseller referral
@@ -5738,34 +5833,10 @@ async def create_order(order_data: OrderCreate, request: Request):
             order_doc["reseller_code"] = reseller_code
             order_doc["reseller_id"] = reseller["reseller_id"]
             order_doc["reseller_commission_rate"] = reseller["commission_rate"]
-            commission = order_doc.get("total", 0) * (reseller["commission_rate"] / 100)
-            order_doc["reseller_commission"] = commission
-            
-            # Update reseller stats
-            await db.resellers.update_one(
-                {"reseller_id": reseller["reseller_id"]},
-                {
-                    "$inc": {
-                        "total_sales": order_doc.get("total", 0),
-                        "total_commission": commission,
-                        "pending_commission": commission
-                    }
-                }
-            )
-            
-            # Log commission
-            await db.reseller_commissions.insert_one({
-                "commission_id": f"COM-{secrets.token_hex(4).upper()}",
-                "reseller_id": reseller["reseller_id"],
-                "order_id": order_id,
-                "type": "earning",
-                "amount": commission,
-                "order_total": order_doc.get("total", 0),
-                "commission_rate": reseller["commission_rate"],
-                "created_at": now.isoformat()
-            })
+            # Commission will be calculated and credited only after successful payment
+            order_doc["reseller_commission_pending"] = True
     
-    # Update stock for each product
+    # Reserve stock for each product (actual deduction happens after payment)
     for item in order_data.items:
         await db.products.update_one(
             {"product_id": item.product_id},
@@ -5778,33 +5849,86 @@ async def create_order(order_data: OrderCreate, request: Request):
     if user:
         await db.carts.delete_one({"user_id": user.user_id})
     
-    # Send order confirmation email (async, don't wait)
-    asyncio.create_task(send_order_confirmation_email(order_doc))
+    # For CASH ON DELIVERY ONLY: Send confirmations immediately
+    if payment_method == "cash":
+        # Send order confirmation email (async, don't wait)
+        asyncio.create_task(send_order_confirmation_email(order_doc))
+        
+        # Send notification to admin
+        asyncio.create_task(send_admin_order_notification(order_doc))
+        
+        # Send WhatsApp confirmation to customer if phone provided
+        customer_phone = order_doc.get("shipping", {}).get("phone")
+        if customer_phone:
+            asyncio.create_task(send_order_whatsapp_confirmation(order_doc, customer_phone))
+        
+        # Send push notification to user if subscribed
+        if user:
+            asyncio.create_task(send_push_to_user(
+                user.user_id,
+                "🎉 Commande confirmée !",
+                f"Votre commande #{order_id} a été reçue. Nous la préparons !",
+                f"{SITE_URL}/order/{order_id}"
+            ))
+        
+        # Handle reseller commission for COD
+        if reseller_code and order_doc.get("reseller_id"):
+            reseller = await db.resellers.find_one({"reseller_code": reseller_code})
+            if reseller:
+                commission = order_doc.get("total", 0) * (reseller["commission_rate"] / 100)
+                order_doc["reseller_commission"] = commission
+                
+                await db.resellers.update_one(
+                    {"reseller_id": reseller["reseller_id"]},
+                    {"$inc": {
+                        "total_sales": order_doc.get("total", 0),
+                        "total_commission": commission,
+                        "pending_commission": commission
+                    }}
+                )
+                
+                await db.reseller_commissions.insert_one({
+                    "commission_id": f"COM-{secrets.token_hex(4).upper()}",
+                    "reseller_id": reseller["reseller_id"],
+                    "order_id": order_id,
+                    "type": "earning",
+                    "amount": commission,
+                    "order_total": order_doc.get("total", 0),
+                    "commission_rate": reseller["commission_rate"],
+                    "created_at": now.isoformat()
+                })
+                
+                await db.orders.update_one(
+                    {"order_id": order_id},
+                    {"$set": {"reseller_commission": commission, "reseller_commission_pending": False}}
+                )
+    else:
+        # For online payments: Send notification about payment attempt to admin/manager
+        # Full confirmation will be sent by PayDunya callback after successful payment
+        customer_name = order_doc.get("shipping", {}).get("full_name", "Client")
+        customer_phone = order_doc.get("shipping", {}).get("phone", "")
+        total = order_doc.get("total", 0)
+        
+        # Log payment attempt for admin tracking
+        await db.payment_attempts.insert_one({
+            "order_id": order_id,
+            "customer_name": customer_name,
+            "customer_phone": customer_phone,
+            "total": total,
+            "payment_method": payment_method,
+            "status": "initiated",
+            "created_at": now.isoformat()
+        })
     
-    # Send notification to admin
-    asyncio.create_task(send_admin_order_notification(order_doc))
-    
-    # Send WhatsApp confirmation to customer if phone provided
-    customer_phone = order_doc.get("shipping", {}).get("phone")
-    if customer_phone:
-        asyncio.create_task(send_order_whatsapp_confirmation(order_doc, customer_phone))
-    
-    # Collect marketing contact
-    customer_name = order_doc.get("shipping", {}).get("first_name", "") + " " + order_doc.get("shipping", {}).get("last_name", "")
+    # Collect marketing contact (always)
+    customer_name = order_doc.get("shipping", {}).get("full_name", "")
     customer_email = order_doc.get("shipping", {}).get("email")
+    customer_phone = order_doc.get("shipping", {}).get("phone")
     asyncio.create_task(collect_marketing_contact(customer_name.strip(), customer_email, customer_phone, "order"))
     
-    # GA4 server-side purchase tracking
-    asyncio.create_task(track_purchase(order_doc))
-    
-    # Send push notification to user if subscribed
-    if user:
-        asyncio.create_task(send_push_to_user(
-            user.user_id,
-            "🎉 Commande confirmée !",
-            f"Votre commande #{order_id} a été reçue. Nous la préparons !",
-            f"{SITE_URL}/order/{order_id}"
-        ))
+    # GA4 server-side purchase tracking (only for confirmed orders)
+    if payment_method == "cash":
+        asyncio.create_task(track_purchase(order_doc))
     
     order_doc["created_at"] = now
     return order_doc
@@ -6125,7 +6249,7 @@ async def get_analytics(
     period: str = "month",  # day, week, month, year
     user: User = Depends(require_admin)
 ):
-    """Get comprehensive analytics data"""
+    """Get comprehensive analytics data - Only counts CONFIRMED payments"""
     now = datetime.now(timezone.utc)
     
     # Define period start
@@ -6140,26 +6264,43 @@ async def get_analytics(
     
     period_start_str = period_start.isoformat()
     
-    # Get orders in period
-    orders_in_period = await db.orders.find({
+    # Get ALL orders in period for tracking
+    all_orders_in_period = await db.orders.find({
         "created_at": {"$gte": period_start_str}
     }, {"_id": 0}).to_list(10000)
     
-    # Calculate metrics
-    total_orders = len(orders_in_period)
-    total_revenue = sum(o.get("total", 0) for o in orders_in_period)
-    paid_orders = [o for o in orders_in_period if o.get("payment_status") == "paid"]
-    paid_revenue = sum(o.get("total", 0) for o in paid_orders)
+    # ONLY count confirmed orders for revenue (paid or cod_pending for cash on delivery)
+    confirmed_payment_statuses = ["paid", "cod_pending"]  # cod_pending = cash on delivery confirmed
+    confirmed_orders = [o for o in all_orders_in_period if o.get("payment_status") in confirmed_payment_statuses]
     
-    # Orders by status
+    # Calculate metrics ONLY for confirmed orders
+    total_confirmed_orders = len(confirmed_orders)
+    total_confirmed_revenue = sum(o.get("total", 0) for o in confirmed_orders)
+    
+    # Separate stats
+    paid_online_orders = [o for o in all_orders_in_period if o.get("payment_status") == "paid"]
+    cod_orders = [o for o in all_orders_in_period if o.get("payment_status") == "cod_pending"]
+    pending_orders = [o for o in all_orders_in_period if o.get("payment_status") == "pending"]
+    failed_orders = [o for o in all_orders_in_period if o.get("payment_status") in ["failed", "cancelled"]]
+    
+    # Orders by status (for order management)
     status_counts = {}
-    for order in orders_in_period:
+    for order in all_orders_in_period:
         status = order.get("order_status", "unknown")
         status_counts[status] = status_counts.get(status, 0) + 1
     
-    # Orders by day (for chart)
+    # Payment status breakdown
+    payment_status_counts = {
+        "paid": len(paid_online_orders),
+        "cod_pending": len(cod_orders),
+        "pending": len(pending_orders),
+        "failed": len(failed_orders),
+        "total_confirmed": total_confirmed_orders
+    }
+    
+    # Orders by day (for chart) - ONLY confirmed orders
     daily_data = {}
-    for order in orders_in_period:
+    for order in confirmed_orders:
         date_str = order.get("created_at", "")[:10]  # YYYY-MM-DD
         if date_str:
             if date_str not in daily_data:
@@ -6173,9 +6314,9 @@ async def get_analytics(
         for date, data in sorted(daily_data.items())
     ]
     
-    # Top products
+    # Top products (from confirmed orders only)
     product_sales = {}
-    for order in orders_in_period:
+    for order in confirmed_orders:
         for item in order.get("items", []):
             pid = item.get("product_id", item.get("name", "unknown"))
             if pid not in product_sales:
@@ -6190,22 +6331,31 @@ async def get_analytics(
     
     top_products = sorted(product_sales.values(), key=lambda x: x["revenue"], reverse=True)[:10]
     
-    # Payment methods breakdown
+    # Payment methods breakdown (confirmed only)
     payment_methods = {}
-    for order in orders_in_period:
-        method = order.get("payment_method", "unknown")
+    for order in confirmed_orders:
+        method = order.get("payment_method_used", order.get("payment_method", "unknown"))
         payment_methods[method] = payment_methods.get(method, 0) + 1
     
-    # Get comparison with previous period
+    # Get comparison with previous period (confirmed orders only)
     prev_period_start = period_start - (now - period_start)
     prev_orders = await db.orders.find({
-        "created_at": {"$gte": prev_period_start.isoformat(), "$lt": period_start_str}
+        "created_at": {"$gte": prev_period_start.isoformat(), "$lt": period_start_str},
+        "payment_status": {"$in": confirmed_payment_statuses}
     }, {"_id": 0, "total": 1}).to_list(10000)
     prev_revenue = sum(o.get("total", 0) for o in prev_orders)
     prev_order_count = len(prev_orders)
     
-    # Calculate growth
-    revenue_growth = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
+    # Calculate growth - only show if we have valid comparison data
+    if prev_revenue > 0 and total_confirmed_revenue > 0:
+        revenue_growth = ((total_confirmed_revenue - prev_revenue) / prev_revenue * 100)
+    else:
+        revenue_growth = 0  # Don't show misleading percentages
+    
+    if prev_order_count > 0 and total_confirmed_orders > 0:
+        order_growth = ((total_confirmed_orders - prev_order_count) / prev_order_count * 100)
+    else:
+        order_growth = 0  # Don't show misleading percentages
     orders_growth = ((total_orders - prev_order_count) / prev_order_count * 100) if prev_order_count > 0 else 0
     
     # Customer stats
@@ -6220,16 +6370,24 @@ async def get_analytics(
     
     out_of_stock = await db.products.count_documents({"stock": {"$lte": 0}})
     
+    # Get failed payment attempts for admin follow-up
+    failed_payment_attempts = await db.payment_attempts.find({
+        "created_at": {"$gte": period_start_str},
+        "status": {"$in": ["failed", "cancelled", "initiated"]}
+    }, {"_id": 0}).sort("created_at", -1).limit(50).to_list(50)
+    
     return {
         "period": period,
         "summary": {
-            "total_orders": total_orders,
-            "total_revenue": total_revenue,
-            "paid_revenue": paid_revenue,
-            "average_order_value": total_revenue // total_orders if total_orders > 0 else 0,
-            "revenue_growth": round(revenue_growth, 1),
-            "orders_growth": round(orders_growth, 1)
+            "total_orders": total_confirmed_orders,  # Only confirmed orders
+            "total_revenue": total_confirmed_revenue,  # Only confirmed revenue
+            "paid_online": sum(o.get("total", 0) for o in paid_online_orders),
+            "cod_pending": sum(o.get("total", 0) for o in cod_orders),
+            "average_order_value": total_confirmed_revenue // total_confirmed_orders if total_confirmed_orders > 0 else 0,
+            "revenue_growth": round(revenue_growth, 1) if revenue_growth != 0 else None,
+            "orders_growth": round(order_growth, 1) if order_growth != 0 else None
         },
+        "payment_status_breakdown": payment_status_counts,
         "orders_by_status": status_counts,
         "payment_methods": payment_methods,
         "daily_chart": daily_chart[-30:],  # Last 30 days
@@ -6241,12 +6399,16 @@ async def get_analytics(
         "inventory": {
             "low_stock_products": low_stock,
             "out_of_stock_count": out_of_stock
-        }
+        },
+        "failed_payments": failed_payment_attempts[:10],  # Last 10 failed attempts for follow-up
+        "pending_payments_count": len(pending_orders),
+        "failed_payments_count": len(failed_orders)
     }
 
 @api_router.get("/admin/orders")
 async def get_all_orders(
     status: Optional[str] = None,
+    payment_status: Optional[str] = None,
     limit: int = 50,
     skip: int = 0,
     user: User = Depends(require_admin)
@@ -6254,6 +6416,8 @@ async def get_all_orders(
     query = {}
     if status:
         query["order_status"] = status
+    if payment_status:
+        query["payment_status"] = payment_status
     
     orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
@@ -6264,6 +6428,56 @@ async def get_all_orders(
     total = await db.orders.count_documents(query)
     
     return {"orders": orders, "total": total}
+
+
+@api_router.get("/admin/failed-payments")
+async def get_failed_payments(
+    limit: int = 50,
+    skip: int = 0,
+    user: User = Depends(require_admin)
+):
+    """Get failed/pending payment attempts for commercial follow-up"""
+    
+    # Get orders with failed or pending payments
+    failed_orders = await db.orders.find({
+        "payment_status": {"$in": ["pending", "failed", "cancelled", "awaiting_payment"]}
+    }, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Enrich with WhatsApp link for follow-up
+    for order in failed_orders:
+        phone = order.get("shipping", {}).get("phone", "")
+        if phone:
+            clean_phone = phone.replace(" ", "").replace("-", "")
+            if not clean_phone.startswith("+"):
+                clean_phone = "+221" + clean_phone.lstrip("0")
+            
+            message = f"""Bonjour {order.get('shipping', {}).get('full_name', '')},
+
+Nous avons remarqué que votre commande #{order.get('order_id')} n'a pas été finalisée.
+
+Total: {order.get('total', 0):,} FCFA
+
+Avez-vous rencontré un problème ? Nous sommes là pour vous aider !
+
+L'équipe GROUPE YAMA+""".replace(',', ' ')
+            
+            encoded_msg = message.replace("\n", "%0A").replace(" ", "%20")
+            order["whatsapp_followup_link"] = f"https://wa.me/{clean_phone.replace('+', '')}?text={encoded_msg}"
+    
+    total = await db.orders.count_documents({
+        "payment_status": {"$in": ["pending", "failed", "cancelled", "awaiting_payment"]}
+    })
+    
+    return {
+        "orders": failed_orders,
+        "total": total,
+        "statuses": {
+            "pending": await db.orders.count_documents({"payment_status": "pending"}),
+            "awaiting_payment": await db.orders.count_documents({"payment_status": "awaiting_payment"}),
+            "failed": await db.orders.count_documents({"payment_status": "failed"}),
+            "cancelled": await db.orders.count_documents({"payment_status": "cancelled"})
+        }
+    }
 
 @api_router.put("/admin/orders/{order_id}/status")
 async def update_order_status(
@@ -6730,25 +6944,90 @@ async def get_admin_order_invoice(order_id: str, user: User = Depends(require_ad
 
 @api_router.get("/admin/stats")
 async def get_admin_stats(user: User = Depends(require_admin)):
-    total_orders = await db.orders.count_documents({})
-    pending_orders = await db.orders.count_documents({"order_status": "pending"})
+    """Get admin dashboard stats - Only counts CONFIRMED payments"""
+    now = datetime.now(timezone.utc)
+    period_start = now - timedelta(days=30)
+    period_start_str = period_start.isoformat()
+    
+    # Total counts
     total_products = await db.products.count_documents({})
     total_users = await db.users.count_documents({})
     
-    # Calculate revenue
+    # Only count confirmed orders (paid or cod_pending)
+    confirmed_statuses = ["paid", "cod_pending"]
+    total_confirmed_orders = await db.orders.count_documents({
+        "payment_status": {"$in": confirmed_statuses}
+    })
+    
+    # Pending/awaiting payment orders (for tracking, not revenue)
+    pending_orders = await db.orders.count_documents({
+        "payment_status": {"$in": ["pending", "awaiting_payment"]}
+    })
+    
+    # Calculate revenue only from confirmed payments
     pipeline = [
-        {"$match": {"payment_status": "paid"}},
+        {"$match": {"payment_status": {"$in": confirmed_statuses}}},
         {"$group": {"_id": None, "total": {"$sum": "$total"}}}
     ]
     revenue_result = await db.orders.aggregate(pipeline).to_list(1)
     total_revenue = revenue_result[0]["total"] if revenue_result else 0
     
+    # Calculate growth percentages
+    prev_period_start = now - timedelta(days=60)
+    prev_period_end = period_start
+    
+    # Current period confirmed orders
+    current_period_orders = await db.orders.count_documents({
+        "payment_status": {"$in": confirmed_statuses},
+        "created_at": {"$gte": period_start_str}
+    })
+    
+    # Current period revenue
+    current_revenue_pipeline = [
+        {"$match": {
+            "payment_status": {"$in": confirmed_statuses},
+            "created_at": {"$gte": period_start_str}
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$total"}}}
+    ]
+    current_revenue_result = await db.orders.aggregate(current_revenue_pipeline).to_list(1)
+    current_revenue = current_revenue_result[0]["total"] if current_revenue_result else 0
+    
+    # Previous period orders
+    prev_period_orders = await db.orders.count_documents({
+        "payment_status": {"$in": confirmed_statuses},
+        "created_at": {"$gte": prev_period_start.isoformat(), "$lt": period_start_str}
+    })
+    
+    # Previous period revenue
+    prev_revenue_pipeline = [
+        {"$match": {
+            "payment_status": {"$in": confirmed_statuses},
+            "created_at": {"$gte": prev_period_start.isoformat(), "$lt": period_start_str}
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$total"}}}
+    ]
+    prev_revenue_result = await db.orders.aggregate(prev_revenue_pipeline).to_list(1)
+    prev_revenue = prev_revenue_result[0]["total"] if prev_revenue_result else 0
+    
+    # Calculate growth (only if we have valid comparison data)
+    revenue_growth = None
+    orders_growth = None
+    
+    if prev_revenue > 0 and current_revenue > 0:
+        revenue_growth = round(((current_revenue - prev_revenue) / prev_revenue) * 100, 1)
+    
+    if prev_period_orders > 0 and current_period_orders > 0:
+        orders_growth = round(((current_period_orders - prev_period_orders) / prev_period_orders) * 100, 1)
+    
     return {
-        "total_orders": total_orders,
+        "total_orders": total_confirmed_orders,
         "pending_orders": pending_orders,
         "total_products": total_products,
         "total_users": total_users,
-        "total_revenue": total_revenue
+        "total_revenue": total_revenue,
+        "revenue_growth": revenue_growth,
+        "orders_growth": orders_growth
     }
 
 @api_router.get("/admin/users")
@@ -9935,6 +10214,56 @@ async def send_custom_whatsapp(request: Request, user: User = Depends(require_ad
         "notification_id": notification["notification_id"],
         "whatsapp_link": whatsapp_link
     }
+
+
+# ============================================================
+# MANAGER NOTIFICATIONS
+# ============================================================
+
+@api_router.get("/admin/manager/notifications")
+async def get_manager_notifications(
+    status: Optional[str] = None,
+    limit: int = 50,
+    user: User = Depends(require_admin)
+):
+    """Get all manager WhatsApp notifications for order tracking"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    notifications = await db.manager_notifications.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Get counts by status
+    pending_count = await db.manager_notifications.count_documents({"status": "pending"})
+    sent_count = await db.manager_notifications.count_documents({"status": "sent"})
+    
+    return {
+        "notifications": notifications,
+        "counts": {
+            "pending": pending_count,
+            "sent": sent_count
+        },
+        "manager_config": {
+            "email": os.environ.get("MANAGER_EMAIL", ""),
+            "whatsapp": os.environ.get("MANAGER_WHATSAPP", "")
+        }
+    }
+
+
+@api_router.put("/admin/manager/notifications/{notification_id}/mark-sent")
+async def mark_manager_notification_sent(notification_id: str, user: User = Depends(require_admin)):
+    """Mark a manager notification as sent"""
+    result = await db.manager_notifications.update_one(
+        {"notification_id": notification_id},
+        {"$set": {
+            "status": "sent",
+            "sent_at": datetime.now(timezone.utc).isoformat(),
+            "sent_by": user.user_id
+        }}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Notification non trouvée")
+    return {"message": "Notification marquée comme envoyée"}
 
 @api_router.post("/admin/marketing/campaign")
 async def send_marketing_campaign(request: Request, user: User = Depends(require_admin)):

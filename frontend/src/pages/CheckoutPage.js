@@ -53,20 +53,20 @@ const paymentMethods = [
   { 
     id: "mobile_money", 
     name: "Mobile Money", 
-    description: "Wave, Orange Money",
+    description: "Wave, Orange Money, Free Money",
     recommended: true,
     logos: [
       "/assets/images/payment_wave.webp",
       "/assets/images/payment_orange_money.png"
     ],
-    infoText: "Vous serez redirigé vers la page de paiement sécurisée Paytech pour choisir Wave ou Orange Money."
+    infoText: "Paiement sécurisé via Wave, Orange Money ou Free Money. Vous serez redirigé vers la page de paiement."
   },
   { 
     id: "cash", 
     name: "Paiement à la livraison", 
     description: "Payez en espèces à la réception",
     icon: "cash",
-    infoText: "Payez en espèces lors de la réception de votre commande."
+    infoText: "Payez en espèces lors de la réception de votre commande. Commande confirmée immédiatement."
   },
   { 
     id: "card", 
@@ -76,7 +76,7 @@ const paymentMethods = [
       "/assets/images/payment_visa.png",
       "/assets/images/payment_mastercard.svg"
     ],
-    infoText: "Paiement sécurisé par carte bancaire via Paytech."
+    infoText: "Paiement sécurisé par carte bancaire Visa ou Mastercard."
   },
 ];
 
@@ -318,35 +318,46 @@ export default function CheckoutPage() {
       const response = await axios.post(`${API_URL}/api/orders`, orderData);
 
       const newOrderId = response.data.order_id;
+      const paymentStatus = response.data.payment_status;
 
-      // Track purchase event
-      Analytics.purchase(newOrderId, cart.items, total, shippingCost);
+      // Track purchase event (only for confirmed orders - cash on delivery)
+      if (paymentStatus === "cod_pending") {
+        Analytics.purchase(newOrderId, cart.items, total, shippingCost);
+      }
 
-      // For Mobile Money (Wave, Orange Money) or Card payments - redirect to PayTech
+      // For Mobile Money (Wave, Orange Money) or Card payments - redirect to PayDunya
       if (['mobile_money', 'card'].includes(formData.payment_method)) {
         try {
           const currentUrl = window.location.origin;
-          const paytechResponse = await axios.post(`${API_URL}/api/payments/paytech/initiate`, {
+          // Use PayDunya instead of PayTech
+          const paydunyaResponse = await axios.post(`${API_URL}/api/payments/paydunya/initiate`, {
             order_id: newOrderId,
             success_url: `${currentUrl}/order/${newOrderId}?payment=success`,
             cancel_url: `${currentUrl}/checkout?order_id=${newOrderId}&payment=cancel`,
           });
 
-          if (paytechResponse.data.success && paytechResponse.data.checkout_url) {
-            // Redirect to PayTech payment page
-            window.location.href = paytechResponse.data.checkout_url;
+          if (paydunyaResponse.data.success && paydunyaResponse.data.checkout_url) {
+            // Redirect to PayDunya payment page
+            window.location.href = paydunyaResponse.data.checkout_url;
             return;
           } else {
             toast.error("Erreur lors de l'initialisation du paiement");
           }
-        } catch (paytechError) {
-          console.error("PayTech error:", paytechError);
-          // If PayTech fails, still show order confirmation but notify about payment
-          toast.error(paytechError.response?.data?.detail || "Le paiement en ligne n'est pas disponible. Veuillez payer à la livraison.");
+        } catch (paymentError) {
+          console.error("Payment error:", paymentError);
+          // If payment initialization fails, show error and offer alternatives
+          const errorMessage = paymentError.response?.data?.detail || "Le paiement en ligne n'est pas disponible.";
+          toast.error(`${errorMessage} Vous pouvez payer à la livraison.`);
+          
+          // Still show order but with pending payment status
+          setOrderId(newOrderId);
+          setOrderComplete(true);
+          clearCart();
+          return;
         }
       }
 
-      // For cash on delivery or if PayTech failed
+      // For cash on delivery - order is immediately confirmed
       setOrderId(newOrderId);
       setOrderComplete(true);
       clearCart();
@@ -359,7 +370,7 @@ export default function CheckoutPage() {
     }
   };
 
-  // Handle payment callback from PayTech
+  // Handle payment callback from PayDunya
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
@@ -367,10 +378,23 @@ export default function CheckoutPage() {
 
     if (paymentStatus && orderIdFromUrl) {
       if (paymentStatus === 'success') {
+        // Verify payment status with backend
+        axios.get(`${API_URL}/api/payments/paydunya/verify/${orderIdFromUrl}`)
+          .then(res => {
+            if (res.data.payment_status === 'paid') {
+              Analytics.purchase(orderIdFromUrl, cart.items, total, shippingCost);
+              toast.success("Paiement effectué avec succès !");
+            } else {
+              toast.info("Paiement en cours de vérification...");
+            }
+          })
+          .catch(() => {
+            toast.info("Vérification du paiement en cours...");
+          });
+        
         setOrderId(orderIdFromUrl);
         setOrderComplete(true);
         clearCart();
-        toast.success("Paiement effectué avec succès !");
         // Clean URL
         window.history.replaceState({}, '', '/checkout');
       } else if (paymentStatus === 'cancel') {
@@ -381,7 +405,7 @@ export default function CheckoutPage() {
         window.history.replaceState({}, '', '/checkout');
       }
     }
-  }, [clearCart]);
+  }, [clearCart, cart.items, total, shippingCost]);
 
   const handleWhatsAppOrder = () => {
     const message = generateOrderMessage(cart.items, total, {

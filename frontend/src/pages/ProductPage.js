@@ -66,6 +66,10 @@ export default function ProductPage() {
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
   
+  // Variant states for phones
+  const [selectedCapacity, setSelectedCapacity] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  
   // Price Alert state
   const [showPriceAlertModal, setShowPriceAlertModal] = useState(false);
   const [priceAlertEmail, setPriceAlertEmail] = useState("");
@@ -75,14 +79,59 @@ export default function ProductPage() {
   const { addToCart, loading: cartLoading } = useCart();
   const { isInWishlist, toggleWishlist, loading: wishlistLoading } = useWishlist();
 
+  // Phone capacity labels
+  const CAPACITY_LABELS = {
+    "64go": "64 Go",
+    "128go": "128 Go",
+    "256go": "256 Go",
+    "512go": "512 Go",
+    "1to": "1 To"
+  };
+
+  // Color labels and hex values
+  const COLOR_INFO = {
+    noir: { name: "Noir", hex: "#1a1a1a" },
+    blanc: { name: "Blanc", hex: "#ffffff" },
+    gris: { name: "Gris", hex: "#808080" },
+    argent: { name: "Argent", hex: "#c0c0c0" },
+    or: { name: "Or", hex: "#ffd700" },
+    rose: { name: "Rose", hex: "#ffc0cb" },
+    bleu: { name: "Bleu", hex: "#0066cc" },
+    bleu_ciel: { name: "Bleu Ciel", hex: "#87ceeb" },
+    rouge: { name: "Rouge", hex: "#dc2626" },
+    vert: { name: "Vert", hex: "#22c55e" },
+    violet: { name: "Violet", hex: "#8b5cf6" },
+    titane_noir: { name: "Titane Noir", hex: "#3d3d3d" },
+    titane_naturel: { name: "Titane Naturel", hex: "#c4b8a8" },
+    titane_blanc: { name: "Titane Blanc", hex: "#f5f5f0" },
+    titane_bleu: { name: "Titane Bleu", hex: "#5a7d9a" },
+  };
+
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
       try {
         const response = await axios.get(`${API_URL}/api/products/${productId}`);
-        setProduct(response.data);
+        const prod = response.data;
+        setProduct(prod);
+        
+        // Initialize variant selection for phones
+        if (prod.has_variants && prod.variants?.length > 0) {
+          // Get unique capacities
+          const capacities = [...new Set(prod.variants.map(v => v.capacity))];
+          if (capacities.length > 0) {
+            setSelectedCapacity(capacities[0]);
+            // Find first variant with this capacity
+            const firstVariant = prod.variants.find(v => v.capacity === capacities[0]);
+            if (firstVariant) {
+              setSelectedVariant(firstVariant);
+              setSelectedColor(firstVariant.color);
+            }
+          }
+        }
+        
         // Track product view
-        Analytics.viewProduct(response.data);
+        Analytics.viewProduct(prod);
       } catch (error) {
         console.error("Error fetching product:", error);
       } finally {
@@ -92,6 +141,53 @@ export default function ProductPage() {
 
     fetchProduct();
   }, [productId]);
+
+  // Update selected variant when capacity or color changes
+  useEffect(() => {
+    if (product?.has_variants && product.variants?.length > 0 && selectedCapacity) {
+      const variant = product.variants.find(
+        v => v.capacity === selectedCapacity && (selectedColor ? v.color === selectedColor : true)
+      );
+      if (variant) {
+        setSelectedVariant(variant);
+        // Update image if variant has a specific image
+        if (variant.image && product.images) {
+          const imgIndex = product.images.indexOf(variant.image);
+          if (imgIndex >= 0) setSelectedImage(imgIndex);
+        }
+      }
+    }
+  }, [selectedCapacity, selectedColor, product]);
+
+  // Get current price based on variant or base price
+  const getCurrentPrice = () => {
+    if (selectedVariant) {
+      return selectedVariant.price;
+    }
+    return product?.price || 0;
+  };
+
+  // Get current stock based on variant
+  const getCurrentStock = () => {
+    if (selectedVariant) {
+      return selectedVariant.stock;
+    }
+    return product?.stock || 0;
+  };
+
+  // Get available colors for selected capacity
+  const getAvailableColors = () => {
+    if (!product?.has_variants || !product.variants || !selectedCapacity) return [];
+    return product.variants
+      .filter(v => v.capacity === selectedCapacity)
+      .map(v => v.color);
+  };
+
+  // Get unique capacities from variants
+  const getUniqueCapacities = () => {
+    if (!product?.has_variants || !product.variants) return [];
+    return [...new Set(product.variants.map(v => v.capacity))];
+  };
 
   if (loading) {
     return (
@@ -117,17 +213,39 @@ export default function ProductPage() {
         <div className="text-center">
           <h1 className="text-2xl font-semibold mb-4">Produit non trouvé</h1>
           <Link to="/" className="btn-primary">
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </Link>
         </div>
       </main>
     );
   }
 
-  const discount = calculateDiscount(product.original_price, product.price);
+  const discount = calculateDiscount(product.original_price, getCurrentPrice());
   const inWishlist = isInWishlist(product.product_id);
+  const currentPrice = getCurrentPrice();
+  const currentStock = getCurrentStock();
 
   const handleAddToCart = () => {
+    // For products with variants, check variant selection
+    if (product.has_variants && product.variants?.length > 0) {
+      if (!selectedVariant) {
+        toast.error("Veuillez sélectionner une variante");
+        return;
+      }
+      if (selectedVariant.stock <= 0) {
+        toast.error("Cette variante est en rupture de stock");
+        return;
+      }
+      // Add to cart with variant info
+      addToCart(product.product_id, quantity, { 
+        color: COLOR_INFO[selectedColor]?.name || selectedColor,
+        capacity: CAPACITY_LABELS[selectedCapacity] || selectedCapacity,
+        variant_id: selectedVariant.id,
+        variant_price: selectedVariant.price
+      });
+      return;
+    }
+    
     // Validate color/size selection if required
     if (product.colors?.length > 0 && !selectedColor) {
       toast.error("Veuillez sélectionner une couleur");
@@ -142,13 +260,14 @@ export default function ProductPage() {
 
   const handleWhatsAppOrder = () => {
     let productName = product.name;
-    if (selectedColor) productName += ` (${selectedColor})`;
+    if (selectedCapacity) productName += ` — ${CAPACITY_LABELS[selectedCapacity] || selectedCapacity}`;
+    if (selectedColor) productName += ` — ${COLOR_INFO[selectedColor]?.name || selectedColor}`;
     if (selectedSize) productName += ` - Taille ${selectedSize}`;
     
     const items = [
       {
         name: productName,
-        price: product.price,
+        price: currentPrice,
         quantity: quantity,
       },
     ];
@@ -319,14 +438,117 @@ export default function ProductPage() {
                   className="text-3xl font-semibold price-fcfa"
                   data-testid="product-price"
                 >
-                  {formatPrice(product.price)}
+                  {formatPrice(currentPrice)}
                 </span>
-                {product.original_price && product.original_price > product.price && (
+                {product.original_price && product.original_price > currentPrice && (
                   <span className="text-xl text-muted-foreground line-through price-fcfa">
                     {formatPrice(product.original_price)}
                   </span>
                 )}
               </div>
+
+              {/* Variant Selection for Phones */}
+              {product.has_variants && product.variants?.length > 0 && (
+                <div className="space-y-6 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                  {/* Capacity Selection */}
+                  <div>
+                    <label className="block text-sm font-medium mb-3">
+                      Capacité {selectedCapacity && <span className="text-orange-600">: {CAPACITY_LABELS[selectedCapacity] || selectedCapacity}</span>}
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {getUniqueCapacities().map((capacity) => {
+                        const variantForCapacity = product.variants.find(v => v.capacity === capacity);
+                        return (
+                          <button
+                            key={capacity}
+                            onClick={() => {
+                              setSelectedCapacity(capacity);
+                              // Reset color selection and find first available color
+                              const colorsForCapacity = product.variants
+                                .filter(v => v.capacity === capacity)
+                                .map(v => v.color);
+                              if (colorsForCapacity.length > 0) {
+                                setSelectedColor(colorsForCapacity[0]);
+                              }
+                            }}
+                            className={cn(
+                              "px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all",
+                              selectedCapacity === capacity
+                                ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600"
+                                : "border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30"
+                            )}
+                          >
+                            <div className="font-semibold">{CAPACITY_LABELS[capacity] || capacity}</div>
+                            {variantForCapacity && (
+                              <div className="text-xs mt-1 text-muted-foreground">
+                                {formatPrice(variantForCapacity.price)}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Color Selection for Variant */}
+                  {getAvailableColors().length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium mb-3">
+                        Couleur {selectedColor && <span className="text-orange-600">: {COLOR_INFO[selectedColor]?.name || selectedColor}</span>}
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {getAvailableColors().map((color) => {
+                          const colorInfo = COLOR_INFO[color] || { name: color, hex: "#ccc" };
+                          const variantForColor = product.variants.find(
+                            v => v.capacity === selectedCapacity && v.color === color
+                          );
+                          const isOutOfStock = variantForColor && variantForColor.stock <= 0;
+                          
+                          return (
+                            <button
+                              key={color}
+                              onClick={() => !isOutOfStock && setSelectedColor(color)}
+                              disabled={isOutOfStock}
+                              className={cn(
+                                "flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all",
+                                selectedColor === color
+                                  ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20"
+                                  : "border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30",
+                                isOutOfStock && "opacity-50 cursor-not-allowed line-through"
+                              )}
+                            >
+                              <span 
+                                className="w-5 h-5 rounded-full border border-gray-300 shadow-inner"
+                                style={{ backgroundColor: colorInfo.hex }}
+                              />
+                              <span>{colorInfo.name}</span>
+                              {isOutOfStock && <span className="text-xs text-red-500">(Épuisé)</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stock info for selected variant */}
+                  {selectedVariant && (
+                    <div className={cn(
+                      "text-sm px-3 py-2 rounded-lg",
+                      selectedVariant.stock > 5 
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+                        : selectedVariant.stock > 0 
+                          ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                    )}>
+                      {selectedVariant.stock > 5 
+                        ? `✓ En stock (${selectedVariant.stock} disponibles)`
+                        : selectedVariant.stock > 0 
+                          ? `⚠ Stock limité (${selectedVariant.stock} restants)`
+                          : "✗ Rupture de stock"}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* On Order Badge */}
               {product.is_on_order && (
@@ -350,7 +572,7 @@ export default function ProductPage() {
               )}
 
               {/* Price Alert Button */}
-              {(product.stock > 0 || product.is_on_order) && (
+              {(currentStock > 0 || product.is_on_order) && (
                 <button
                   onClick={() => setShowPriceAlertModal(true)}
                   className="mb-8 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline transition-colors"
@@ -361,8 +583,8 @@ export default function ProductPage() {
                 </button>
               )}
 
-              {/* Color Selection */}
-              {product.colors && product.colors.length > 0 && (
+              {/* Color Selection - Only for products WITHOUT variants */}
+              {!product.has_variants && product.colors && product.colors.length > 0 && (
                 <div className="mb-6">
                   <label className="block text-sm font-medium mb-3">
                     Couleur {selectedColor && <span className="text-muted-foreground">: {selectedColor}</span>}
@@ -387,7 +609,7 @@ export default function ProductPage() {
               )}
 
               {/* Size Selection */}
-              {product.sizes && product.sizes.length > 0 && (
+              {!product.has_variants && product.sizes && product.sizes.length > 0 && (
                 <div className="mb-6">
                   <label className="block text-sm font-medium mb-3">
                     Taille {selectedSize && <span className="text-muted-foreground">: {selectedSize}</span>}
@@ -425,18 +647,18 @@ export default function ProductPage() {
                   <span className="w-16 text-center font-medium">{quantity}</span>
                   <button
                     onClick={() =>
-                      setQuantity(Math.min(product.stock, quantity + 1))
+                      setQuantity(Math.min(currentStock, quantity + 1))
                     }
-                    disabled={quantity >= product.stock}
+                    disabled={quantity >= currentStock}
                     className="quantity-btn rounded-r-xl"
                     aria-label="Augmenter la quantité"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
-                {product.stock <= 5 && product.stock > 0 && (
+                {!product.has_variants && currentStock <= 5 && currentStock > 0 && (
                   <p className="text-sm text-orange-500 mt-2">
-                    Plus que {product.stock} en stock
+                    Plus que {currentStock} en stock
                   </p>
                 )}
               </div>
@@ -445,7 +667,7 @@ export default function ProductPage() {
               <div className="flex flex-col gap-3 mb-8">
                 {/* Add to Cart - NOT for vehicles/immobilier */}
                 {!NO_CART_CATEGORIES.includes(product.category?.toLowerCase()) && (
-                  product.stock === 0 && !product.is_on_order ? (
+                  currentStock === 0 && !product.is_on_order ? (
                     <button
                       onClick={() => setShowNotifyModal(true)}
                       className="btn-primary w-full justify-center py-4 text-base bg-orange-500 border-orange-500 hover:bg-orange-600"
