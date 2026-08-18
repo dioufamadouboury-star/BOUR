@@ -28,6 +28,16 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 - **Previous**: Showed for automobile, mobilier, electromenager, meubles, immobilier, decoration
 - **Now**: Only shows for `automobile`, `automobiles`, `immobilier`
 
+#### Sitemap Dynamique
+- **Feature Added**: Sitemap XML automatiquement généré depuis la base de données
+- **Endpoint**: `/api/sitemap.xml`
+- **Contents**:
+  - 21 pages statiques (accueil, catégories, blog, etc.)
+  - Tous les produits avec images et titres
+  - Articles de blog publiés
+- **File Created**: `/app/backend/routes/sitemap.py`
+- **SEO Benefits**: Meilleur indexation Google, images dans Google Images
+
 #### Image Fallback Improvements
 - **Issue**: Broken product images showing "?" on production VPS
 - **Fix**: Improved fallback mechanism with inline SVG placeholder that always works

@@ -277,6 +277,7 @@ from routes.push_notifications import router as push_notifications_router
 from routes.paydunya import router as paydunya_router
 from routes.reviews import router as reviews_router
 from routes.orange_sms import router as orange_sms_router
+from routes.sitemap import router as sitemap_router
 api_router.include_router(gift_box_router)
 api_router.include_router(blog_router)
 api_router.include_router(real_estate_router)
@@ -285,6 +286,7 @@ api_router.include_router(push_notifications_router)
 api_router.include_router(paydunya_router)
 api_router.include_router(reviews_router)
 api_router.include_router(orange_sms_router)
+api_router.include_router(sitemap_router)
 
 # SEO Prerender router (served at /api/prerender/ for bot detection by Nginx)
 prerender_router = APIRouter(prefix="/api/prerender")
