@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, ArrowRight, Clock, Flame, Timer, TrendingDown, ShoppingBag, Sparkles } from "lucide-react";
 import axios from "axios";
-import { formatPrice, calculateDiscount, getImageUrls } from "../lib/utils";
+import { formatPrice, calculateDiscount, getImageUrls, PLACEHOLDER_IMAGE } from "../lib/utils";
 import { useCart } from "../contexts/CartContext";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -122,7 +122,7 @@ function FlashProductCard({ product, index }) {
   
   // Auto-scroll images if product has multiple images (max 3)
   // Use centralized getImageUrls for consistent URL resolution
-  const images = getImageUrls(product.images?.slice(0, 3), "/placeholder.jpg");
+  const images = getImageUrls(product.images?.slice(0, 3), PLACEHOLDER_IMAGE);
   
   useEffect(() => {
     if (images.length <= 1) return;

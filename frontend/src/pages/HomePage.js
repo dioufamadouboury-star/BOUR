@@ -8,7 +8,7 @@ import FlashSalesSection from "../components/FlashSalesSection";
 import TrustBanner from "../components/TrustBanner";
 import TestimonialsSection from "../components/TestimonialsSection";
 import SEO from "../components/SEO";
-import { formatPrice } from "../lib/utils";
+import { formatPrice, PLACEHOLDER_IMAGE, getImageUrl } from "../lib/utils";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -385,9 +385,10 @@ export default function HomePage() {
                           {/* Product Image */}
                           <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
                             <img
-                              src={product.images?.[0] || "/placeholder.jpg"}
+                              src={getImageUrl(product.images?.[0], PLACEHOLDER_IMAGE)}
                               alt={product.name}
                               className="w-full h-full object-cover"
+                              onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMAGE; }}
                             />
                             {/* Badges */}
                             <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -441,9 +442,10 @@ export default function HomePage() {
                         >
                           <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
                             <img
-                              src={product.images?.[0] || "/placeholder.jpg"}
+                              src={getImageUrl(product.images?.[0], PLACEHOLDER_IMAGE)}
                               alt={product.name}
                               className="w-full h-full object-cover"
+                              onError={(e) => { e.target.onerror = null; e.target.src = PLACEHOLDER_IMAGE; }}
                             />
                             <div className="absolute top-4 left-4 flex flex-col gap-2">
                               {product.featured && (

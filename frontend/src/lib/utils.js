@@ -164,8 +164,8 @@ export function generateOrderMessage(items, total, shipping) {
 // IMAGE URL HANDLING - SIMPLIFIED AND ROBUST
 // ============================================
 
-// Placeholder image (SVG data URI - always works)
-export const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect fill='%23f5f5f7' width='400' height='400'/%3E%3Ctext fill='%23999' font-family='system-ui,sans-serif' font-size='16' x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle'%3EImage%3C/text%3E%3C/svg%3E";
+// Placeholder image (SVG data URI - always works, shows "Image non disponible")
+export const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect fill='%23f5f5f7' width='400' height='400'/%3E%3Crect x='140' y='140' width='120' height='90' rx='8' fill='none' stroke='%23ccc' stroke-width='3'/%3E%3Ccircle cx='165' cy='165' r='12' fill='%23ccc'/%3E%3Cpath d='M150 215 L185 180 L220 215 L245 190' fill='none' stroke='%23ccc' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ctext fill='%23999' font-family='system-ui,sans-serif' font-size='14' x='50%25' y='75%25' text-anchor='middle'%3EImage non disponible%3C/text%3E%3C/svg%3E";
 
 // Get the base URL for API calls
 function getBaseUrl() {

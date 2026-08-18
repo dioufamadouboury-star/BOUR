@@ -28,6 +28,17 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 - **Previous**: Showed for automobile, mobilier, electromenager, meubles, immobilier, decoration
 - **Now**: Only shows for `automobile`, `automobiles`, `immobilier`
 
+#### Image Fallback Improvements
+- **Issue**: Broken product images showing "?" on production VPS
+- **Fix**: Improved fallback mechanism with inline SVG placeholder that always works
+- **Files Modified**: 
+  - `/app/frontend/src/lib/utils.js` - Enhanced PLACEHOLDER_IMAGE
+  - `/app/frontend/src/components/ProductCard.js` - Use centralized placeholder
+  - `/app/frontend/src/components/FlashSalesSection.js` - Use centralized placeholder
+  - `/app/frontend/src/pages/HomePage.js` - Added onError fallback
+- **Root Cause**: The image URLs in the production database are invalid or pointing to missing resources
+- **User Action Required**: Update product images in Admin panel or use a script to fix invalid URLs
+
 #### PayDunya Card Payment (Known Issue)
 - **Status**: Card payment UI not displaying on PayDunya checkout page
 - **Investigation**: Backend API returns successful checkout URL with `channels=["card"]`

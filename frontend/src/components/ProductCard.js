@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ShoppingBag, Check, Phone, MessageCircle, Calendar, Star } from "lucide-react";
-import { calculateDiscount, getImageUrls, cn } from "../lib/utils";
+import { calculateDiscount, getImageUrls, cn, PLACEHOLDER_IMAGE } from "../lib/utils";
 import { useCart } from "../contexts/CartContext";
 import { useWishlist } from "../contexts/WishlistContext";
 import { useCurrency } from "./CurrencySelector";
@@ -51,7 +51,7 @@ export default function ProductCard({ product, index = 0, onRequestVisit }) {
   
   // Auto-scroll images if product has multiple images (max 3)
   // Use centralized getImageUrls for consistent URL resolution
-  const images = getImageUrls(product.images?.slice(0, 3), "/placeholder.jpg");
+  const images = getImageUrls(product.images?.slice(0, 3), PLACEHOLDER_IMAGE);
   
   useEffect(() => {
     if (images.length <= 1) return;
@@ -98,7 +98,7 @@ export default function ProductCard({ product, index = 0, onRequestVisit }) {
         <AnimatePresence mode="wait">
           <motion.img
             key={currentImageIndex}
-            src={images[currentImageIndex] || "/placeholder-product.png"}
+            src={images[currentImageIndex] || PLACEHOLDER_IMAGE}
             alt={product.name}
             className="w-full h-full object-contain bg-white"
             initial={{ opacity: 0 }}
@@ -108,7 +108,7 @@ export default function ProductCard({ product, index = 0, onRequestVisit }) {
             loading="lazy"
             onError={(e) => {
               e.target.onerror = null;
-              e.target.src = "/placeholder-product.svg";
+              e.target.src = PLACEHOLDER_IMAGE;
             }}
           />
         </AnimatePresence>
