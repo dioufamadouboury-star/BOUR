@@ -12,6 +12,30 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 
 ---
 
+## Session Changes (August 18, 2026) - Latest
+
+### ✅ Bug Fixes & Improvements
+
+#### Currency Converter API Fix
+- **Bug Fixed**: API `/api/currency/rates` was returning 404
+- **Cause**: Double prefix in `routes/currency.py` - changed from `/api/currency` to `/currency`
+- **Result**: Currency selector now works correctly (XOF, EUR, USD)
+- **Testing**: 100% pass rate (9/9 backend tests, 4/4 frontend tests)
+
+#### Appointment Button Restriction
+- **Change**: "Prendre rendez-vous" button now only appears for Automobile and Immobilier categories
+- **File Modified**: `/app/frontend/src/pages/ProductPage.js`
+- **Previous**: Showed for automobile, mobilier, electromenager, meubles, immobilier, decoration
+- **Now**: Only shows for `automobile`, `automobiles`, `immobilier`
+
+#### PayDunya Card Payment (Known Issue)
+- **Status**: Card payment UI not displaying on PayDunya checkout page
+- **Investigation**: Backend API returns successful checkout URL with `channels=["card"]`
+- **Root Cause**: Likely merchant configuration issue on PayDunya dashboard
+- **User Action Required**: Verify "Carte Bancaire" is enabled in PayDunya merchant settings
+
+---
+
 ## Session Changes (August 17, 2026)
 
 ### ✅ PHASE 1 - COMPLETED
@@ -197,16 +221,19 @@ GET    /api/r/{code}                           - Redirection parrainage
 - + Products, Orders, Immobilier, Automobile, SMS, etc.
 
 ## P1 - Backlog Tasks
-1. Déploiement VPS du système Revendeurs (rsync to groupeyamaplus.com)
-2. WhatsApp Chatbot (attente identifiants Meta API)
+1. PayDunya Carte Bancaire - User needs to verify merchant settings
+2. SEO Dynamic Sitemap - Generate sitemap.xml from products database
+3. Add Automobile/Immobilier test products to verify appointment button
 
 ## P2 - Future Tasks
 1. Refactoring server.py (extract more modules to /routes/)
-2. App mobile React Native
-3. Portail Client/Partenaire B2B
+2. WhatsApp Chatbot (attente identifiants Meta API)
+3. App mobile React Native
+4. Portail Client/Partenaire B2B
 
 ## Known Issues
-- Orange SMS blocked (external - contact Orange Support)
+- PayDunya Card Payment UI not showing (merchant config issue)
+- Orange SMS may be blocked (external - contact Orange Support)
 - server.py ~10200 lines - needs refactoring
 
 ## Credentials

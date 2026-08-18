@@ -46,8 +46,8 @@ import { toast } from "sonner";
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const WHATSAPP_NUMBER = "+221783827575";
 
-// Categories that allow visit appointments
-const APPOINTMENT_CATEGORIES = ["automobile", "mobilier", "electromenager", "automobiles", "meubles", "immobilier", "decoration"];
+// Categories that allow visit appointments (only for high-value items requiring physical visit)
+const APPOINTMENT_CATEGORIES = ["automobile", "automobiles", "immobilier"];
 
 // Categories that should NOT have add to cart (high-value items requiring consultation)
 const NO_CART_CATEGORIES = ["automobile", "automobiles", "immobilier"];

@@ -9,7 +9,7 @@ import httpx
 import asyncio
 from datetime import datetime, timedelta
 
-router = APIRouter(prefix="/api/currency", tags=["Currency"])
+router = APIRouter(prefix="/currency", tags=["Currency"])
 
 # Cache for exchange rates (refresh every 6 hours)
 RATES_CACHE = {
