@@ -12,7 +12,46 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 
 ---
 
-## Session Changes (August 18, 2026) - Latest
+## Session Changes (August 21, 2026) - Latest
+
+### ✅ Phase 2 - Variantes & Notifications
+
+#### Email System (Resend) - WORKING ✅
+- Tested email sending via Resend API
+- Successfully sent test email to amadoubourydiouf@gmail.com
+- Configuration verified on production VPS
+
+#### SMS System (Orange) - CONFIGURATION ISSUE ⚠️
+- Orange API token obtention: ✅ Working
+- SMS sending: ❌ Blocked by Orange
+- Error: "Forbidden senderName YAMAPLUS : not whitelisted"
+- **User Action Required**: Contact Orange Developer to whitelist "GROUPE YAMA" or "YAMAPLUS" as sender name
+
+#### Climatiseur Variants (CV/Puissance) - IMPLEMENTED ✅
+- Added power variant options: 1CV, 1.5CV, 2CV, 2.5CV, 3CV, 4CV, 5CV
+- Each variant has its own price and stock
+- Available in Admin → Products → Options tab (for Électroménager/Climatiseur)
+
+#### Matelas Variants (Dimensions) - IMPLEMENTED ✅
+- Added dimension options: 90×190, 120×190, 140×190, 160×200, 180×200, 200×200 cm
+- Each dimension has its own price and stock
+- Available in Admin → Products → Options tab (for Décoration/Literie & Matelas)
+
+#### TV Specifications - IMPLEMENTED ✅
+- Added comprehensive TV specs in Admin → Products → Specs tab:
+  - Screen size (32"-85" pouces)
+  - Resolution (HD, Full HD, 4K, 8K)
+  - Smart TV (Oui/Non)
+  - Android TV (Oui/Non)
+  - Google TV (Oui/Non)
+  - Wi-Fi / Bluetooth
+  - Netflix / YouTube
+  - HDMI ports / USB ports
+  - Warranty
+
+---
+
+## Session Changes (August 18, 2026)
 
 ### ✅ PHASE 1 - Dashboard & Paiements (COMPLETED)
 

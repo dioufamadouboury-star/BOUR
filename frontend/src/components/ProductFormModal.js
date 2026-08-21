@@ -712,7 +712,7 @@ const ProductFormModal = memo(({
             {/* Variants Tab */}
             {activeTab === "variants" && (
               <div className="space-y-6">
-                {/* Phone variants toggle - only for electronique/smartphones */}
+                {/* Phone variants toggle - for smartphones */}
                 {(form.category === "electronique" && (form.subcategory === "Smartphones" || form.subcategory?.toLowerCase()?.includes("téléphone"))) && (
                   <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -723,9 +723,49 @@ const ProductFormModal = memo(({
                         className="w-5 h-5 rounded border-blue-300"
                       />
                       <div>
-                        <span className="font-medium text-blue-800 dark:text-blue-200">Activer les variantes</span>
+                        <span className="font-medium text-blue-800 dark:text-blue-200">Activer les variantes (Capacité/Couleur)</span>
                         <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
                           Permet de définir différents prix/stocks pour chaque capacité et couleur
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
+
+                {/* Climatiseur variants - CV/Puissance */}
+                {(form.category === "electromenager" && form.subcategory === "Climatiseur") && (
+                  <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-xl p-4 border border-cyan-200 dark:border-cyan-800">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.has_variants}
+                        onChange={(e) => updateField('has_variants', e.target.checked)}
+                        className="w-5 h-5 rounded border-cyan-300"
+                      />
+                      <div>
+                        <span className="font-medium text-cyan-800 dark:text-cyan-200">Activer les variantes (Puissance CV)</span>
+                        <p className="text-xs text-cyan-600 dark:text-cyan-300 mt-1">
+                          Définir différents prix selon la puissance (1 CV, 1.5 CV, 2 CV, etc.)
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
+
+                {/* Matelas variants - Dimensions */}
+                {(form.category === "decoration" && (form.subcategory === "Literie & Matelas" || form.subcategory?.toLowerCase()?.includes("matelas"))) && (
+                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.has_variants}
+                        onChange={(e) => updateField('has_variants', e.target.checked)}
+                        className="w-5 h-5 rounded border-purple-300"
+                      />
+                      <div>
+                        <span className="font-medium text-purple-800 dark:text-purple-200">Activer les variantes (Dimensions)</span>
+                        <p className="text-xs text-purple-600 dark:text-purple-300 mt-1">
+                          Définir différents prix selon les dimensions (90×190, 140×190, 160×200, etc.)
                         </p>
                       </div>
                     </label>
@@ -740,14 +780,29 @@ const ProductFormModal = memo(({
                       <button
                         type="button"
                         onClick={() => {
-                          const newVariant = {
+                          // Create variant based on product type
+                          let newVariant = {
                             id: `var-${Date.now()}`,
-                            capacity: "128go",
-                            color: "noir",
                             price: parseInt(form.price) || 0,
                             stock: 0,
                             image: form.images[0] || ""
                           };
+                          
+                          // Climatiseur - CV variants
+                          if (form.category === "electromenager" && form.subcategory === "Climatiseur") {
+                            newVariant.puissance = "1";
+                            newVariant.unit = "CV";
+                          }
+                          // Matelas - Dimension variants
+                          else if (form.category === "decoration" && (form.subcategory === "Literie & Matelas" || form.subcategory?.toLowerCase()?.includes("matelas"))) {
+                            newVariant.dimension = "90x190";
+                          }
+                          // Phone - Capacity/Color variants
+                          else {
+                            newVariant.capacity = "128go";
+                            newVariant.color = "noir";
+                          }
+                          
                           updateField('variants', [...form.variants, newVariant]);
                         }}
                         className="text-sm text-blue-600 hover:text-blue-700 font-medium"
@@ -781,43 +836,100 @@ const ProductFormModal = memo(({
                         </div>
                         
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          {/* Capacity */}
-                          <div>
-                            <label className="block text-xs font-medium mb-1">Capacité</label>
-                            <select
-                              value={variant.capacity}
-                              onChange={(e) => {
-                                const newVariants = [...form.variants];
-                                newVariants[index] = { ...variant, capacity: e.target.value };
-                                updateField('variants', newVariants);
-                              }}
-                              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900"
-                            >
-                              {PHONE_CAPACITIES.map(cap => (
-                                <option key={cap.id} value={cap.id}>{cap.name}</option>
-                              ))}
-                            </select>
-                          </div>
+                          {/* Climatiseur - Puissance CV */}
+                          {form.category === "electromenager" && form.subcategory === "Climatiseur" && (
+                            <div className="col-span-2">
+                              <label className="block text-xs font-medium mb-1">Puissance (CV)</label>
+                              <select
+                                value={variant.puissance || "1"}
+                                onChange={(e) => {
+                                  const newVariants = [...form.variants];
+                                  newVariants[index].puissance = e.target.value;
+                                  updateField('variants', newVariants);
+                                }}
+                                className="w-full p-2 text-sm border rounded-lg bg-white dark:bg-gray-700"
+                              >
+                                <option value="1">1 CV</option>
+                                <option value="1.5">1.5 CV</option>
+                                <option value="2">2 CV</option>
+                                <option value="2.5">2.5 CV</option>
+                                <option value="3">3 CV</option>
+                                <option value="4">4 CV</option>
+                                <option value="5">5 CV</option>
+                              </select>
+                            </div>
+                          )}
 
-                          {/* Color */}
-                          <div>
-                            <label className="block text-xs font-medium mb-1">Couleur</label>
-                            <select
-                              value={variant.color}
-                              onChange={(e) => {
-                                const newVariants = [...form.variants];
-                                newVariants[index] = { ...variant, color: e.target.value };
-                                updateField('variants', newVariants);
-                              }}
-                              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900"
-                            >
-                              {AVAILABLE_COLORS.map(color => (
-                                <option key={color.id} value={color.id}>{color.name}</option>
-                              ))}
-                            </select>
-                          </div>
+                          {/* Matelas - Dimensions */}
+                          {form.category === "decoration" && (form.subcategory === "Literie & Matelas" || form.subcategory?.toLowerCase()?.includes("matelas")) && (
+                            <div className="col-span-2">
+                              <label className="block text-xs font-medium mb-1">Dimensions (cm)</label>
+                              <select
+                                value={variant.dimension || "90x190"}
+                                onChange={(e) => {
+                                  const newVariants = [...form.variants];
+                                  newVariants[index].dimension = e.target.value;
+                                  updateField('variants', newVariants);
+                                }}
+                                className="w-full p-2 text-sm border rounded-lg bg-white dark:bg-gray-700"
+                              >
+                                <option value="90x190">90 × 190 cm (1 place)</option>
+                                <option value="120x190">120 × 190 cm (1.5 place)</option>
+                                <option value="140x190">140 × 190 cm (2 places)</option>
+                                <option value="160x200">160 × 200 cm (Queen)</option>
+                                <option value="180x200">180 × 200 cm (King)</option>
+                                <option value="200x200">200 × 200 cm (Super King)</option>
+                              </select>
+                            </div>
+                          )}
 
-                          {/* Price */}
+                          {/* Phone - Capacity */}
+                          {form.category === "electronique" && (form.subcategory === "Smartphones" || form.subcategory?.toLowerCase()?.includes("téléphone")) && (
+                            <>
+                              <div>
+                                <label className="block text-xs font-medium mb-1">Capacité</label>
+                                <select
+                                  value={variant.capacity || "128go"}
+                                  onChange={(e) => {
+                                    const newVariants = [...form.variants];
+                                    newVariants[index].capacity = e.target.value;
+                                    updateField('variants', newVariants);
+                                  }}
+                                  className="w-full p-2 text-sm border rounded-lg bg-white dark:bg-gray-700"
+                                >
+                                  <option value="64go">64 Go</option>
+                                  <option value="128go">128 Go</option>
+                                  <option value="256go">256 Go</option>
+                                  <option value="512go">512 Go</option>
+                                  <option value="1to">1 To</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium mb-1">Couleur</label>
+                                <select
+                                  value={variant.color || "noir"}
+                                  onChange={(e) => {
+                                    const newVariants = [...form.variants];
+                                    newVariants[index].color = e.target.value;
+                                    updateField('variants', newVariants);
+                                  }}
+                                  className="w-full p-2 text-sm border rounded-lg bg-white dark:bg-gray-700"
+                                >
+                                  <option value="noir">Noir</option>
+                                  <option value="blanc">Blanc</option>
+                                  <option value="bleu">Bleu</option>
+                                  <option value="rouge">Rouge</option>
+                                  <option value="vert">Vert</option>
+                                  <option value="or">Or</option>
+                                  <option value="argent">Argent</option>
+                                  <option value="violet">Violet</option>
+                                  <option value="rose">Rose</option>
+                                </select>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Price - Common for all variants */}
                           <div>
                             <label className="block text-xs font-medium mb-1">Prix (FCFA)</label>
                             <input
@@ -832,7 +944,7 @@ const ProductFormModal = memo(({
                             />
                           </div>
 
-                          {/* Stock */}
+                          {/* Stock - Common for all variants */}
                           <div>
                             <label className="block text-xs font-medium mb-1">Stock</label>
                             <input
@@ -954,10 +1066,212 @@ const ProductFormModal = memo(({
 
             {/* Specs Tab */}
             {activeTab === "specs" && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Les spécifications seront ajoutées automatiquement basées sur la catégorie.
-                </p>
+              <div className="space-y-6">
+                {/* TV Specifications */}
+                {(form.category === "electronique" && (form.subcategory === "TV & Écrans" || form.subcategory?.toLowerCase()?.includes("tv"))) && (
+                  <div className="space-y-4">
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 border border-indigo-200 dark:border-indigo-800">
+                      <h4 className="font-medium text-indigo-800 dark:text-indigo-200 mb-1">Caractéristiques Téléviseur</h4>
+                      <p className="text-sm text-indigo-600 dark:text-indigo-300">
+                        Remplissez les spécifications techniques du téléviseur
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {/* Taille en pouces */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Taille (pouces)</label>
+                        <select
+                          value={form.specs?.screen_size || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, screen_size: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="32">32 pouces</option>
+                          <option value="40">40 pouces</option>
+                          <option value="43">43 pouces</option>
+                          <option value="50">50 pouces</option>
+                          <option value="55">55 pouces</option>
+                          <option value="58">58 pouces</option>
+                          <option value="65">65 pouces</option>
+                          <option value="70">70 pouces</option>
+                          <option value="75">75 pouces</option>
+                          <option value="85">85 pouces</option>
+                        </select>
+                      </div>
+
+                      {/* Résolution */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Résolution</label>
+                        <select
+                          value={form.specs?.resolution || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, resolution: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="HD">HD (720p)</option>
+                          <option value="Full HD">Full HD (1080p)</option>
+                          <option value="4K">4K UHD</option>
+                          <option value="8K">8K UHD</option>
+                        </select>
+                      </div>
+
+                      {/* Smart TV */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Smart TV</label>
+                        <select
+                          value={form.specs?.smart_tv || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, smart_tv: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="Oui">Oui</option>
+                          <option value="Non">Non</option>
+                        </select>
+                      </div>
+
+                      {/* Android TV */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Android TV</label>
+                        <select
+                          value={form.specs?.android_tv || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, android_tv: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="Oui">Oui</option>
+                          <option value="Non">Non</option>
+                        </select>
+                      </div>
+
+                      {/* Google TV */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Google TV</label>
+                        <select
+                          value={form.specs?.google_tv || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, google_tv: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="Oui">Oui</option>
+                          <option value="Non">Non</option>
+                        </select>
+                      </div>
+
+                      {/* Wi-Fi */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Wi-Fi</label>
+                        <select
+                          value={form.specs?.wifi || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, wifi: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="Oui">Oui</option>
+                          <option value="Non">Non</option>
+                        </select>
+                      </div>
+
+                      {/* Bluetooth */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Bluetooth</label>
+                        <select
+                          value={form.specs?.bluetooth || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, bluetooth: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="Oui">Oui</option>
+                          <option value="Non">Non</option>
+                        </select>
+                      </div>
+
+                      {/* Netflix */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Netflix</label>
+                        <select
+                          value={form.specs?.netflix || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, netflix: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="Oui">Oui</option>
+                          <option value="Non">Non</option>
+                        </select>
+                      </div>
+
+                      {/* YouTube */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">YouTube</label>
+                        <select
+                          value={form.specs?.youtube || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, youtube: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="Oui">Oui</option>
+                          <option value="Non">Non</option>
+                        </select>
+                      </div>
+
+                      {/* Ports HDMI */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Ports HDMI</label>
+                        <select
+                          value={form.specs?.hdmi_ports || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, hdmi_ports: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="1">1 port</option>
+                          <option value="2">2 ports</option>
+                          <option value="3">3 ports</option>
+                          <option value="4">4 ports</option>
+                        </select>
+                      </div>
+
+                      {/* Ports USB */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Ports USB</label>
+                        <select
+                          value={form.specs?.usb_ports || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, usb_ports: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="1">1 port</option>
+                          <option value="2">2 ports</option>
+                          <option value="3">3 ports</option>
+                        </select>
+                      </div>
+
+                      {/* Garantie */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Garantie</label>
+                        <select
+                          value={form.specs?.warranty || ""}
+                          onChange={(e) => updateField("specs", { ...form.specs, warranty: e.target.value })}
+                          className="w-full p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="6 mois">6 mois</option>
+                          <option value="1 an">1 an</option>
+                          <option value="2 ans">2 ans</option>
+                          <option value="3 ans">3 ans</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Default message for other categories */}
+                {!(form.category === "electronique" && (form.subcategory === "TV & Écrans" || form.subcategory?.toLowerCase()?.includes("tv"))) && (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      Les spécifications détaillées sont disponibles pour certaines catégories (TV, Climatiseurs, etc.)
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
