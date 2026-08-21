@@ -42,7 +42,7 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold mb-4 text-foreground">Article 4 - Paiement</h2>
             <p>
               Le paiement peut être effectué par Wave, Orange Money, Free Money, carte bancaire ou 
-              en espèces à la livraison. Le paiement est sécurisé via notre partenaire PayTech.
+              en espèces à la livraison. Le paiement est sécurisé via notre partenaire PayDunya.
             </p>
           </section>
 

@@ -154,10 +154,14 @@ export default function CheckoutPage() {
       
       setCalculatingShipping(true);
       try {
+        // Get unique categories from cart items
+        const categories = [...new Set(cart.items.map(item => item.category).filter(Boolean))];
+        
         const response = await axios.post(`${API_URL}/api/delivery/calculate`, {
           city: formData.city,
           address: formData.address,
-          region: formData.region
+          region: formData.region,
+          categories: categories
         });
         
         setShippingInfo({
@@ -165,7 +169,9 @@ export default function CheckoutPage() {
           zone: response.data.zone,
           label: response.data.zone_label,
           message: response.data.message,
-          isRange: response.data.is_range || false
+          isRange: response.data.is_range || false,
+          noDelivery: response.data.no_delivery || false,
+          categoryRule: response.data.category_rule || null
         });
       } catch (error) {
         console.error("Error calculating shipping:", error);
@@ -176,7 +182,7 @@ export default function CheckoutPage() {
 
     const timeoutId = setTimeout(calculateShipping, 500);
     return () => clearTimeout(timeoutId);
-  }, [formData.city, formData.address, formData.region]);
+  }, [formData.city, formData.address, formData.region, cart.items]);
 
   // Filter neighborhoods for autocomplete
   const handleCityChange = (value) => {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ShoppingBag, Check, Phone, MessageCircle, Calendar, Star } from "lucide-react";
@@ -53,15 +53,23 @@ export default function ProductCard({ product, index = 0, onRequestVisit }) {
   // Use centralized getImageUrls for consistent URL resolution
   const images = getImageUrls(product.images?.slice(0, 3), PLACEHOLDER_IMAGE);
   
+  // Random delay offset to prevent all products from changing images simultaneously
+  const randomOffset = useMemo(() => Math.random() * 3000, []);
+  
   useEffect(() => {
     if (images.length <= 1) return;
     
-    const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % images.length);
-    }, 3500);
+    // Start with a random delay, then use consistent 6.5 second interval
+    const timeout = setTimeout(() => {
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      }, 6500); // 6.5 seconds between transitions
+      
+      return () => clearInterval(interval);
+    }, randomOffset);
     
-    return () => clearInterval(interval);
-  }, [images.length]);
+    return () => clearTimeout(timeout);
+  }, [images.length, randomOffset]);
 
   const handleAddToCart = async (e) => {
     e.preventDefault();

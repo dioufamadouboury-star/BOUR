@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, ArrowRight, Clock, Flame, Timer, TrendingDown, ShoppingBag, Sparkles } from "lucide-react";
@@ -124,15 +124,23 @@ function FlashProductCard({ product, index }) {
   // Use centralized getImageUrls for consistent URL resolution
   const images = getImageUrls(product.images?.slice(0, 3), PLACEHOLDER_IMAGE);
   
+  // Random delay offset to prevent synchronized image changes
+  const randomOffset = useMemo(() => Math.random() * 3000, []);
+  
   useEffect(() => {
     if (images.length <= 1) return;
     
-    const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % images.length);
-    }, 3000);
+    // Start with a random delay, then use consistent 6.5 second interval
+    const timeout = setTimeout(() => {
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      }, 6500);
+      
+      return () => clearInterval(interval);
+    }, randomOffset);
     
-    return () => clearInterval(interval);
-  }, [images.length]);
+    return () => clearTimeout(timeout);
+  }, [images.length, randomOffset]);
   
   return (
     <motion.div

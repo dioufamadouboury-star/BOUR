@@ -14,6 +14,60 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 
 ## Session Changes (August 18, 2026) - Latest
 
+### ✅ PHASE 1 - Dashboard & Paiements (COMPLETED)
+
+#### Dashboard Analytics Fix
+- **Bug Fixed**: Dashboard showing 0 revenue and 0 orders
+- **Root Cause**: Cash orders had `payment_status: "pending"` instead of `"cod_pending"`
+- **Fix Applied**: Updated 4 cash orders to proper status
+- **Result**: Dashboard now shows:
+  - 4 confirmed orders (cod_pending)
+  - 340,200 FCFA revenue
+  - 116 products
+  - 8 users
+
+#### Payment Status Logic
+- Cash/COD orders → `payment_status: "cod_pending"`, `status: "confirmed"`
+- Online payments (Wave, Card) pending → `payment_status: "pending"` (NOT counted in revenue)
+- Only `paid` and `cod_pending` orders count toward revenue
+
+#### Category-Based Delivery Fees (NEW)
+- **Décoration/Mobilier**: 15,000 FCFA (Dakar centre), 20,000 FCFA (Banlieue), 25,000 FCFA (Hors Dakar)
+- **Électroménager**: 10,000 FCFA (Dakar centre), 15,000 FCFA (Banlieue), 20,000 FCFA (Proche Dakar), 25,000 FCFA (Régions)
+- **Automobile/Immobilier**: No delivery (pickup/visit only)
+- **Other categories**: Standard rates
+
+#### PayTech → PayDunya
+- Replaced PayTech mention in Terms page with PayDunya
+
+#### Image Carousel Speed
+- Changed from 3.5s to 6.5s between transitions
+- Added random delay offset to prevent synchronized changes
+- Smoother, calmer browsing experience
+
+### ⏳ REMAINING TASKS
+
+#### Phase 2 - Variants & Product Features
+- [ ] Climatiseur variants (CV/puissance)
+- [ ] Matelas variants (dimensions)
+- [ ] TV specifications fields
+- [ ] Structured product pages by category
+
+#### Phase 3 - Notifications
+- [ ] Fix email sending
+- [ ] Fix SMS sending
+- [ ] WhatsApp notifications
+- [ ] Notification history
+
+#### Phase 4 - UI/UX
+- [ ] Visual depth improvements
+- [ ] Manual ordering for "Produits à la une" / "Nouveautés"
+- [ ] Invoice improvements (images, variants)
+
+---
+
+## Session Changes (August 18, 2026) - Earlier
+
 ### ✅ Bug Fixes & Improvements
 
 #### Currency Converter API Fix

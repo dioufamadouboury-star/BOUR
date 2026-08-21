@@ -176,7 +176,47 @@ STORE_EMAIL = "contact@groupeyamaplus.com"
 ADMIN_NOTIFICATION_EMAIL = "amadoubourydiouf@gmail.com"  # Email to receive order and appointment notifications
 SITE_URL = os.environ.get("SITE_URL", "https://groupeyamaplus.com")  # Production site URL
 
-# Delivery Zones Configuration
+# Category-specific Delivery Fees
+CATEGORY_DELIVERY_FEES = {
+    "decoration": {
+        "dakar_centre": 15000,
+        "banlieue": 20000,
+        "hors_dakar": 25000,
+        "no_delivery": False
+    },
+    "mobilier": {
+        "dakar_centre": 15000,
+        "banlieue": 20000,
+        "hors_dakar": 25000,
+        "no_delivery": False
+    },
+    "electromenager": {
+        "dakar_centre": 10000,
+        "banlieue": 15000,
+        "proche_dakar": 20000,
+        "regions": 25000,
+        "no_delivery": False
+    },
+    "automobile": {
+        "no_delivery": True  # No delivery for automobiles
+    },
+    "immobilier": {
+        "no_delivery": True  # No delivery for real estate
+    }
+}
+
+# Zone mapping for category-based shipping
+ZONE_CATEGORY_MAPPING = {
+    "zone_1500": "dakar_centre",
+    "zone_2000": "dakar_centre",
+    "zone_2500": "banlieue",
+    "zone_3000": "banlieue",
+    "zone_4000": "proche_dakar",
+    "zone_5000": "proche_dakar",
+    "autre_region": "regions"
+}
+
+# Delivery Zones Configuration (standard rates for other categories)
 DELIVERY_ZONES = {
     "zone_1500": {
         "price": 1500,
@@ -234,35 +274,112 @@ DELIVERY_ZONES = {
     }
 }
 
-def calculate_shipping_cost(city: str, address: str = "") -> dict:
-    """Calculate shipping cost based on city/area"""
+def calculate_shipping_cost(city: str, address: str = "", categories: list = None) -> dict:
+    """Calculate shipping cost based on city/area and product categories"""
     search_text = f"{city} {address}".lower().strip()
     
-    # Check each zone
-    for zone_id, zone_data in DELIVERY_ZONES.items():
-        if zone_id == "autre_region":
-            continue
-        for area in zone_data["areas"]:
-            if area in search_text:
-                result = {
-                    "zone": zone_id,
-                    "zone_label": zone_data["label"],
-                    "shipping_cost": zone_data["price"],
-                    "message": f"Livraison {zone_data['label']}: {zone_data['price']:,} FCFA".replace(',', ' ')
-                }
-                # Special case for zone_5000
-                if zone_id == "zone_5000":
-                    result["message"] = "Livraison Zone Éloignée: entre 4 000 et 5 000 FCFA"
-                    result["is_range"] = True
-                return result
+    # Determine the base zone first
+    zone_id = "autre_region"
+    zone_data = DELIVERY_ZONES["autre_region"]
     
-    # Default to autre région
-    return {
-        "zone": "autre_region",
-        "zone_label": "Autre Région",
-        "shipping_cost": 3500,
-        "message": "Livraison Autre Région: 3 500 FCFA"
+    for zid, zdata in DELIVERY_ZONES.items():
+        if zid == "autre_region":
+            continue
+        for area in zdata["areas"]:
+            if area in search_text:
+                zone_id = zid
+                zone_data = zdata
+                break
+        if zone_id != "autre_region":
+            break
+    
+    # If categories provided, check for special shipping rules
+    if categories:
+        categories_lower = [c.lower() for c in categories]
+        
+        # Check if any product is automobile - no delivery
+        if "automobile" in categories_lower or "automobiles" in categories_lower:
+            return {
+                "zone": zone_id,
+                "zone_label": zone_data["label"],
+                "shipping_cost": 0,
+                "message": "Retrait en magasin uniquement (Automobile)",
+                "no_delivery": True,
+                "category_rule": "automobile"
+            }
+        
+        # Check if any product is immobilier - no delivery
+        if "immobilier" in categories_lower:
+            return {
+                "zone": zone_id,
+                "zone_label": zone_data["label"],
+                "shipping_cost": 0,
+                "message": "Visite sur place uniquement (Immobilier)",
+                "no_delivery": True,
+                "category_rule": "immobilier"
+            }
+        
+        # Check for decoration/mobilier (higher shipping costs)
+        has_furniture = any(c in categories_lower for c in ["decoration", "mobilier", "meubles"])
+        if has_furniture:
+            category_zone = ZONE_CATEGORY_MAPPING.get(zone_id, "regions")
+            if category_zone == "dakar_centre":
+                cost = 15000
+                label = "Dakar Centre (Mobilier/Décoration)"
+            elif category_zone == "banlieue":
+                cost = 20000
+                label = "Banlieue (Mobilier/Décoration)"
+            else:
+                cost = 25000
+                label = "Hors Dakar (Mobilier/Décoration)"
+            
+            return {
+                "zone": zone_id,
+                "zone_label": label,
+                "shipping_cost": cost,
+                "message": f"Livraison {label}: {cost:,} FCFA".replace(',', ' '),
+                "category_rule": "mobilier"
+            }
+        
+        # Check for electromenager (special rates)
+        has_appliances = any(c in categories_lower for c in ["electromenager", "électroménager"])
+        if has_appliances:
+            category_zone = ZONE_CATEGORY_MAPPING.get(zone_id, "regions")
+            if category_zone == "dakar_centre":
+                cost = 10000
+                label = "Dakar Centre (Électroménager)"
+            elif category_zone == "banlieue":
+                cost = 15000
+                label = "Banlieue (Électroménager)"
+            elif category_zone == "proche_dakar":
+                cost = 20000
+                label = "Proche Dakar (Électroménager)"
+            else:
+                cost = 25000
+                label = "Régions (Électroménager)"
+            
+            return {
+                "zone": zone_id,
+                "zone_label": label,
+                "shipping_cost": cost,
+                "message": f"Livraison {label}: {cost:,} FCFA".replace(',', ' '),
+                "category_rule": "electromenager"
+            }
+    
+    # Default shipping calculation for other categories
+    result = {
+        "zone": zone_id,
+        "zone_label": zone_data["label"],
+        "shipping_cost": zone_data["price"],
+        "message": f"Livraison {zone_data['label']}: {zone_data['price']:,} FCFA".replace(',', ' ')
     }
+    
+    # Special case for zone_5000
+    if zone_id == "zone_5000":
+        result["message"] = "Livraison Zone Éloignée: entre 4 000 et 5 000 FCFA"
+        result["is_range"] = True
+    
+    return result
 
 app = FastAPI(title="Lumina Senegal E-Commerce API")
 api_router = APIRouter(prefix="/api")
@@ -5306,37 +5423,42 @@ async def get_delivery_zones():
 
 @api_router.post("/delivery/calculate")
 async def calculate_delivery(request: Request):
-    """Calculate shipping cost based on address"""
+    """Calculate shipping cost based on address and product categories"""
     body = await request.json()
     city = body.get("city", "")
     address = body.get("address", "")
     region = body.get("region", "")
+    categories = body.get("categories", [])  # List of product categories in cart
     
-    # If region is not Dakar, it's autre région
-    if region and region.lower() not in ["dakar", "région de dakar", "region de dakar"]:
-        return {
-            "zone": "autre_region",
-            "zone_label": "Autre Région",
-            "shipping_cost": 3500,
-            "message": "Livraison Autre Région: 3 500 FCFA"
-        }
+    # If region is not Dakar, use autre_region zone but still check category rules
+    is_hors_dakar = region and region.lower() not in ["dakar", "région de dakar", "region de dakar"]
     
-    result = calculate_shipping_cost(city, address)
+    if is_hors_dakar:
+        # Still apply category-specific rules for hors Dakar
+        result = calculate_shipping_cost("autre_region", "", categories)
+        if not result.get("no_delivery"):
+            result["zone"] = "autre_region"
+            result["zone_label"] = "Autre Région"
+        return result
+    
+    result = calculate_shipping_cost(city, address, categories)
     return result
 
 @api_router.get("/delivery/calculate")
-async def calculate_delivery_get(city: str = "", address: str = "", region: str = ""):
+async def calculate_delivery_get(city: str = "", address: str = "", region: str = "", categories: str = ""):
     """Calculate shipping cost based on address (GET version)"""
-    # If region is not Dakar, it's autre région
-    if region and region.lower() not in ["dakar", "région de dakar", "region de dakar"]:
-        return {
-            "zone": "autre_region",
-            "zone_label": "Autre Région",
-            "shipping_cost": 3500,
-            "message": "Livraison Autre Région: 3 500 FCFA"
-        }
+    # Parse categories from comma-separated string
+    cat_list = [c.strip() for c in categories.split(",") if c.strip()] if categories else []
     
-    result = calculate_shipping_cost(city, address)
+    # If region is not Dakar, use autre_region zone but still check category rules
+    if region and region.lower() not in ["dakar", "région de dakar", "region de dakar"]:
+        result = calculate_shipping_cost("autre_region", "", cat_list)
+        if not result.get("no_delivery"):
+            result["zone"] = "autre_region"
+            result["zone_label"] = "Autre Région"
+        return result
+    
+    result = calculate_shipping_cost(city, address, cat_list)
     return result
 
 # ============== CART ROUTES ==============
@@ -6395,7 +6517,7 @@ async def get_analytics(
         order_growth = ((total_confirmed_orders - prev_order_count) / prev_order_count * 100)
     else:
         order_growth = 0  # Don't show misleading percentages
-    orders_growth = ((total_orders - prev_order_count) / prev_order_count * 100) if prev_order_count > 0 else 0
+    orders_growth = order_growth  # Use the calculated growth
     
     # Customer stats
     total_customers = await db.users.count_documents({})
