@@ -1,0 +1,83 @@
+{
+  "summary": "Comprehensive regression testing for GROUPE YAMA+ e-commerce platform. Tested Dashboard Analytics (only counting cod_pending and paid orders), Category-based shipping calculation, Product variants for Climatiseur (Puissance CV) and Matelas (Dimensions), Featured/New products sorting, PayDunya payment integration, and Subcategory filtering. All backend tests pass (23/23). All frontend tests pass (17/17).",
+  "mode": "update",
+  "baseline_commit": "759747a5303787ed353cc0a5798b6301dfa0ef7f",
+  "head_commit": "d42322b50253502ead223b5e0635143a2ab0d9ec",
+  "specs_created": [
+    "/app/backend/tests/test_dashboard_shipping.py",
+    "/app/tests/e2e/core-features.spec.ts",
+    "/app/tests/e2e/admin-features.spec.ts"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_dashboard_shipping.py",
+    "/app/tests/e2e/core-features.spec.ts",
+    "/app/tests/e2e/admin-features.spec.ts",
+    "/app/test_reports/pytest/pytest_dashboard_shipping.xml"
+  ],
+  "regression_results": {
+    "total_specs": 5,
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/backend/tests/test_dashboard_shipping.py",
+    "/app/tests/e2e/core-features.spec.ts",
+    "/app/tests/e2e/admin-features.spec.ts"
+  ],
+  "test_results": {
+    "backend": "100% (23/23 tests passed)",
+    "frontend": "100% (17/17 tests passed)"
+  },
+  "features_tested": {
+    "dashboard_analytics": {
+      "status": "PASS",
+      "details": "Dashboard stats API correctly counts only cod_pending and paid orders for revenue. Pending/failed orders tracked separately."
+    },
+    "category_based_shipping": {
+      "status": "PASS",
+      "details": "Shipping calculation works correctly: Décoration/Mobilier (15K-25K), Électroménager (10K-25K), Automobile (no delivery), Immobilier (no delivery), Standard (1.5K-5K)"
+    },
+    "product_variants_climatiseur": {
+      "status": "PASS",
+      "details": "ProductFormModal shows 'Activer les variantes (Puissance CV)' option when category=electromenager and subcategory=Climatiseur"
+    },
+    "product_variants_matelas": {
+      "status": "PASS",
+      "details": "ProductFormModal shows 'Activer les variantes (Dimensions)' option when category=decoration and subcategory=Literie & Matelas"
+    },
+    "featured_products_sorting": {
+      "status": "PASS",
+      "details": "Featured/New products have featured_order and new_order fields. Admin page allows manual sorting."
+    },
+    "paydunya_payment": {
+      "status": "PASS",
+      "details": "PayDunya payment methods endpoint returns Wave, Orange Money, Card, Free Money, Expresso, Djamo"
+    },
+    "subcategory_filtering": {
+      "status": "PASS",
+      "details": "Category pages display subcategory filter buttons (Climatiseur, Réfrigérateur, Salons, Literie, Smartphones, etc.)"
+    },
+    "admin_login": {
+      "status": "PASS",
+      "details": "Admin can login with admin@yamaplus.com / Admin123!"
+    },
+    "admin_dashboard": {
+      "status": "PASS",
+      "details": "Dashboard shows revenue (1,821,000 FCFA), orders (8), products (16), clients (6)"
+    },
+    "checkout_flow": {
+      "status": "PASS",
+      "details": "Checkout page shows shipping form, order summary, and payment methods"
+    }
+  },
+  "seed_data_creation": "No test data created",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All major features tested and working. Dashboard analytics correctly counts only paid/cod_pending orders. Category-based shipping rules implemented for Décoration/Mobilier (higher rates), Électroménager (medium rates), Automobile/Immobilier (no delivery). Product variants UI shows correctly for Climatiseur (Puissance CV) and Matelas (Dimensions). PayDunya payment integration working. Subcategory filters visible on category pages.",
+  "rca_of_issue": "No issues found. All features working as expected."
+}

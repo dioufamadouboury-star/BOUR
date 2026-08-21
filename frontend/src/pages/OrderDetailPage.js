@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
@@ -13,6 +13,9 @@ import {
   XCircle,
   Loader2,
   AlertTriangle,
+  RefreshCw,
+  Truck,
+  CheckCircle2,
 } from "lucide-react";
 import { formatPrice, formatDate, getOrderStatusDisplay } from "../lib/utils";
 import OrderTimeline from "../components/OrderTimeline";
@@ -23,6 +26,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function OrderDetailPage() {
   const { orderId } = useParams();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated, token } = useAuth();
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
@@ -31,6 +35,18 @@ export default function OrderDetailPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const [retryingPayment, setRetryingPayment] = useState(false);
+  const [switchingToCOD, setSwitchingToCOD] = useState(false);
+
+  // Check for payment result from URL params
+  useEffect(() => {
+    const paymentResult = searchParams.get("payment");
+    if (paymentResult === "success") {
+      toast.success("Paiement effectué avec succès !");
+    } else if (paymentResult === "cancelled") {
+      toast.info("Paiement annulé. Vous pouvez réessayer ou choisir le paiement à la livraison.");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -49,7 +65,7 @@ export default function OrderDetailPage() {
             navigate("/login", { state: { from: `/order/${orderId}` } });
             return;
           }
-          setError("Vous n'avez pas accès à cette commande");
+          setError("Vous n&apos;avez pas accès à cette commande");
         } else {
           setError("Erreur lors du chargement de la commande");
         }
@@ -63,11 +79,55 @@ export default function OrderDetailPage() {
 
   // Check if order can be cancelled
   const canCancel = order && ["pending", "confirmed"].includes(order.order_status);
+  
+  // Check if payment can be retried or switched to COD
+  const canRetryPayment = order && ["pending", "failed", "awaiting_payment"].includes(order.payment_status);
+
+  // Handle retry payment
+  const handleRetryPayment = async () => {
+    setRetryingPayment(true);
+    try {
+      const response = await axios.post(`${API_URL}/api/payments/paydunya/retry/${orderId}`, {
+        success_url: `${window.location.origin}/order/${orderId}?payment=success`,
+        cancel_url: `${window.location.origin}/order/${orderId}?payment=cancelled`
+      });
+      
+      if (response.data.checkout_url) {
+        window.location.href = response.data.checkout_url;
+      } else {
+        toast.error("Erreur lors de l&apos;initialisation du paiement");
+      }
+    } catch (error) {
+      console.error("Error retrying payment:", error);
+      toast.error(error.response?.data?.detail || "Erreur lors du paiement");
+    } finally {
+      setRetryingPayment(false);
+    }
+  };
+
+  // Handle switch to Cash on Delivery
+  const handleSwitchToCOD = async () => {
+    setSwitchingToCOD(true);
+    try {
+      await axios.post(`${API_URL}/api/payments/paydunya/switch-to-cod/${orderId}`);
+      toast.success("Commande confirmée ! Vous paierez à la livraison.");
+      
+      // Refresh order data
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      const response = await axios.get(`${API_URL}/api/orders/${orderId}`, config);
+      setOrder(response.data);
+    } catch (error) {
+      console.error("Error switching to COD:", error);
+      toast.error(error.response?.data?.detail || "Erreur lors du changement");
+    } finally {
+      setSwitchingToCOD(false);
+    }
+  };
 
   // Handle order cancellation
   const handleCancelOrder = async () => {
     if (!cancelReason.trim()) {
-      toast.error("Veuillez indiquer la raison de l'annulation");
+      toast.error("Veuillez indiquer la raison de l&apos;annulation");
       return;
     }
 
@@ -91,7 +151,7 @@ export default function OrderDetailPage() {
       setOrder(response.data);
     } catch (error) {
       console.error("Error cancelling order:", error);
-      toast.error(error.response?.data?.detail || "Erreur lors de l'annulation");
+      toast.error(error.response?.data?.detail || "Erreur lors de l&apos;annulation");
     } finally {
       setCancelling(false);
     }
@@ -121,7 +181,7 @@ export default function OrderDetailPage() {
           <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h1 className="text-2xl font-semibold mb-4">{error || "Commande non trouvée"}</h1>
           <Link to="/" className="btn-primary">
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </Link>
         </div>
       </main>
@@ -198,7 +258,7 @@ export default function OrderDetailPage() {
             </div>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Raison de l'annulation</label>
+              <label className="block text-sm font-medium mb-2">Raison de l&apos;annulation</label>
               <select
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
@@ -206,7 +266,7 @@ export default function OrderDetailPage() {
                 data-testid="cancel-reason-select"
               >
                 <option value="">Sélectionnez une raison</option>
-                <option value="Changement d'avis">Changement d'avis</option>
+                <option value="Changement d&apos;avis">Changement d&apos;avis</option>
                 <option value="Délai de livraison trop long">Délai de livraison trop long</option>
                 <option value="Commande en double">Commande en double</option>
                 <option value="Prix trouvé ailleurs moins cher">Prix trouvé ailleurs moins cher</option>
@@ -249,6 +309,85 @@ export default function OrderDetailPage() {
       {/* Content */}
       <section className="py-8">
         <div className="container-lumina">
+          {/* Payment Pending Alert - Show for failed/pending payments */}
+          {canRetryPayment && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-2xl p-6"
+              data-testid="payment-pending-alert"
+            >
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-orange-900 dark:text-orange-200">
+                      Paiement en attente
+                    </h3>
+                    <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                      Votre commande n&apos;a pas encore été payée. Vous pouvez réessayer le paiement en ligne ou choisir de payer à la livraison.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3 ml-0 md:ml-4">
+                  <button
+                    onClick={handleRetryPayment}
+                    disabled={retryingPayment}
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-xl font-medium hover:bg-orange-700 disabled:opacity-50 transition-colors"
+                    data-testid="retry-payment-btn"
+                  >
+                    {retryingPayment ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                    Réessayer le paiement
+                  </button>
+                  
+                  <button
+                    onClick={handleSwitchToCOD}
+                    disabled={switchingToCOD}
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 rounded-xl font-medium hover:bg-orange-50 dark:hover:bg-orange-900/30 disabled:opacity-50 transition-colors"
+                    data-testid="switch-to-cod-btn"
+                  >
+                    {switchingToCOD ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Truck className="w-4 h-4" />
+                    )}
+                    Payer à la livraison
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Payment Success Alert - Show when switched to COD */}
+          {order.switched_to_cod && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-6"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-green-900 dark:text-green-200">
+                    Commande confirmée !
+                  </h3>
+                  <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                    Vous avez choisi de payer à la livraison. Notre équipe vous contactera pour confirmer la livraison.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
@@ -347,15 +486,23 @@ export default function OrderDetailPage() {
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Méthode</span>
-                    <span className="font-medium capitalize">{order.payment_method}</span>
+                    <span className="font-medium capitalize">
+                      {order.payment_method === "cash" ? "À la livraison" : order.payment_method}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Statut</span>
                     <span className={cn(
                       "font-medium",
-                      order.payment_status === "paid" ? "text-green-600" : "text-orange-500"
+                      order.payment_status === "paid" ? "text-green-600" : 
+                      order.payment_status === "cod_pending" ? "text-blue-600" :
+                      order.payment_status === "failed" ? "text-red-600" :
+                      "text-orange-500"
                     )}>
-                      {order.payment_status === "paid" ? "Payé" : "En attente"}
+                      {order.payment_status === "paid" ? "Payé" : 
+                       order.payment_status === "cod_pending" ? "À la livraison" :
+                       order.payment_status === "failed" ? "Échoué" :
+                       "En attente"}
                     </span>
                   </div>
                 </div>
@@ -388,7 +535,7 @@ export default function OrderDetailPage() {
 
               {/* Contact Support */}
               <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-2">Besoin d'aide ?</p>
+                <p className="text-sm text-muted-foreground mb-2">Besoin d&apos;aide ?</p>
                 <a
                   href="https://wa.me/221783827575"
                   target="_blank"

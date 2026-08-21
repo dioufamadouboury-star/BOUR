@@ -559,6 +559,7 @@ class ProductBase(BaseModel):
     colors: Optional[List[str]] = None  # Available colors
     sizes: Optional[List[str]] = None   # Available sizes
     variants: Optional[List[dict]] = None  # Complex variants [{color, size, stock, price_modifier}]
+    has_variants: bool = False  # Whether product has price variants
     # On-order products
     is_on_order: bool = False  # Product available only on order
     order_delivery_days: Optional[int] = None  # Estimated delivery time in days
@@ -1736,6 +1737,44 @@ async def delete_product(product_id: str, user: User = Depends(require_admin)):
     clear_cache()
     
     return {"message": "Produit supprimé", "deleted": True}
+
+@api_router.put("/admin/products/{product_id}")
+async def admin_update_product(product_id: str, request: Request, user: User = Depends(require_admin)):
+    """Partial update for admin - update specific fields like featured, is_new, order"""
+    body = await request.json()
+    
+    existing = await db.products.find_one({"product_id": product_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Produit non trouvé")
+    
+    # Build update document with only provided fields
+    update_fields = {}
+    allowed_fields = [
+        "featured", "is_new", "is_promo", "featured_order", "new_order", 
+        "position", "stock", "price", "original_price", "is_on_order",
+        "order_delivery_days", "name", "description", "category", "subcategory"
+    ]
+    
+    for field in allowed_fields:
+        if field in body:
+            update_fields[field] = body[field]
+    
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="Aucun champ valide à mettre à jour")
+    
+    update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.products.update_one(
+        {"product_id": product_id},
+        {"$set": update_fields}
+    )
+    
+    # Clear cache
+    clear_cache("products")
+    clear_cache("flash_sales")
+    
+    updated = await db.products.find_one({"product_id": product_id}, {"_id": 0})
+    return {"message": "Produit mis à jour", "product": updated}
 
 
 # ============== PRODUCT POSITIONING ==============
@@ -3435,19 +3474,28 @@ def get_order_confirmation_template(order: dict) -> str:
         
         variant_html = f'<p style="margin: 3px 0 0 0; color: #888; font-size: 12px;">{variant_info}</p>' if variant_info else ""
         
+        # Get proper image URL
+        image_url = item.get('image', '')
+        if image_url and not image_url.startswith('http'):
+            image_url = f"{SITE_URL}{image_url}" if image_url.startswith('/') else f"{SITE_URL}/{image_url}"
+        
         items_html += f"""
         <tr>
-            <td style="padding: 15px 0; border-bottom: 1px solid #eee;">
-                <div style="display: flex; align-items: center;">
-                    <img src="{item.get('image', '')}" alt="{item.get('name', '')}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
-                    <div>
-                        <p style="margin: 0; font-weight: 600; color: #333;">{item.get('name', 'Produit')}</p>
-                        {variant_html}
-                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Qté: {item.get('quantity', 1)}</p>
-                    </div>
-                </div>
+            <td style="padding: 15px 0; border-bottom: 1px solid #eee; vertical-align: top;">
+                <table cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td style="vertical-align: top; padding-right: 15px;">
+                            <img src="{image_url}" alt="{item.get('name', '')}" width="70" height="70" style="display: block; width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 1px solid #eee;">
+                        </td>
+                        <td style="vertical-align: top;">
+                            <p style="margin: 0; font-weight: 600; color: #333; font-size: 14px;">{item.get('name', 'Produit')}</p>
+                            {variant_html}
+                            <p style="margin: 5px 0 0 0; color: #666; font-size: 13px;">Qté: {item.get('quantity', 1)}</p>
+                        </td>
+                    </tr>
+                </table>
             </td>
-            <td style="padding: 15px 0; border-bottom: 1px solid #eee; text-align: right; font-weight: 600; color: #333;">
+            <td style="padding: 15px 0; border-bottom: 1px solid #eee; text-align: right; font-weight: 600; color: #333; vertical-align: top;">
                 {item.get('price', 0):,} FCFA
             </td>
         </tr>
@@ -4010,14 +4058,37 @@ async def send_order_sms_orange(order: dict, phone: str):
         
         order_id = order.get("order_id", "")
         total = order.get("total", 0)
-        customer_name = order.get("shipping", {}).get("full_name", "").split()[0] if order.get("shipping", {}).get("full_name") else "Client"
+        
+        # Get customer first name from full_name
+        full_name = order.get("shipping", {}).get("full_name", "")
+        customer_name = full_name.split()[0] if full_name else "Client"
+        
+        # Get product(s) info - show up to 2 products
+        items = order.get("items", [])
+        products_text = ""
+        if items:
+            first_item = items[0]
+            product_name = first_item.get("name", "Produit")[:30]  # Limit to 30 chars
+            qty = first_item.get("quantity", 1)
+            products_text = f"{product_name} x{qty}"
+            
+            if len(items) > 1:
+                products_text += f" +{len(items)-1} autre(s)"
+        
+        # Build tracking link
+        tracking_link = f"{SITE_URL}/order/{order_id}"
+        
+        # Format total without comma (for SMS compatibility)
+        total_formatted = f"{total:,}".replace(",", " ")
         
         message = f"""GROUPE YAMA+
-Bonjour {customer_name},
-Votre commande #{order_id} ({total:,} FCFA) est confirmee!
-Livraison sous 24-48h a Dakar.
-Questions? +221 78 382 75 75
-Merci pour votre confiance!""".replace(",", " ")
+Bonjour {customer_name}, commande #{order_id} confirmee!
+{products_text}
+Total: {total_formatted} FCFA
+Livraison 24-48h Dakar
+Suivi: {tracking_link}
+Assistance: +221 78 382 75 75
+Merci!"""
         
         result = await send_sms(phone, message)
         
@@ -5546,11 +5617,14 @@ async def add_to_cart(item: CartItem, request: Request, response: Response):
             path="/"
         )
     
-    # Check product exists and has stock
+    # Check product exists and has stock (or is available on order)
     product = await db.products.find_one({"product_id": item.product_id}, {"_id": 0})
     if not product:
         raise HTTPException(status_code=404, detail="Produit non trouvé")
-    if product["stock"] < item.quantity:
+    
+    # Products marked as "sur commande" don't require stock
+    is_on_order = product.get("is_on_order", False)
+    if not is_on_order and product["stock"] < item.quantity:
         raise HTTPException(status_code=400, detail="Stock insuffisant")
     
     query = {"user_id": user.user_id} if user else {"session_id": session_id}

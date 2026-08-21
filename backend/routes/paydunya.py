@@ -278,14 +278,38 @@ async def send_order_sms_confirmation(order: dict, phone: str):
         
         order_id = order.get("order_id", "")
         total = order.get("total", 0)
-        customer_name = order.get("shipping", {}).get("full_name", "").split()[0] if order.get("shipping", {}).get("full_name") else "Client"
+        
+        # Get customer first name from full_name
+        full_name = order.get("shipping", {}).get("full_name", "")
+        customer_name = full_name.split()[0] if full_name else "Client"
+        
+        # Get product(s) info - show up to 2 products
+        items = order.get("items", [])
+        products_text = ""
+        if items:
+            first_item = items[0]
+            product_name = first_item.get("name", "Produit")[:30]  # Limit to 30 chars
+            qty = first_item.get("quantity", 1)
+            products_text = f"{product_name} x{qty}"
+            
+            if len(items) > 1:
+                products_text += f" +{len(items)-1} autre(s)"
+        
+        # Build tracking link
+        from server import SITE_URL
+        tracking_link = f"{SITE_URL}/order/{order_id}"
+        
+        # Format total without comma (for SMS compatibility)
+        total_formatted = f"{total:,}".replace(",", " ")
         
         message = f"""GROUPE YAMA+
-Bonjour {customer_name},
-Votre commande #{order_id} ({total:,} FCFA) est confirmee!
-Livraison sous 24-48h a Dakar.
-Questions? +221 78 382 75 75
-Merci pour votre confiance!""".replace(",", " ")
+Bonjour {customer_name}, commande #{order_id} confirmee!
+{products_text}
+Total: {total_formatted} FCFA
+Livraison 24-48h Dakar
+Suivi: {tracking_link}
+Assistance: +221 78 382 75 75
+Merci!"""
         
         result = await send_sms(phone, message)
         
@@ -596,3 +620,125 @@ async def get_payment_methods():
             }
         ]
     }
+
+
+@router.post("/retry/{order_id}")
+async def retry_payment(order_id: str, request: Request):
+    """Retry payment for a failed/pending order"""
+    db = get_db()
+    
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+    
+    # Only allow retry for pending or failed payments
+    if order.get("payment_status") in ["paid", "cod_pending"]:
+        raise HTTPException(status_code=400, detail="Cette commande est déjà confirmée")
+    
+    body = await request.json()
+    success_url = body.get("success_url", f"{FRONTEND_URL}/order/{order_id}?payment=success")
+    cancel_url = body.get("cancel_url", f"{FRONTEND_URL}/order/{order_id}?payment=cancelled")
+    payment_channel = body.get("payment_channel")
+    
+    # Create new payment request
+    checkout_request = PayDunyaCheckoutRequest(
+        order_id=order_id,
+        success_url=success_url,
+        cancel_url=cancel_url,
+        payment_channel=payment_channel
+    )
+    
+    # Track retry attempt
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {
+            "$inc": {"payment_retry_count": 1},
+            "$set": {"last_payment_attempt": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+    
+    return await initiate_paydunya_payment(checkout_request)
+
+
+@router.post("/switch-to-cod/{order_id}")
+async def switch_to_cod(order_id: str):
+    """Switch a failed/pending payment order to Cash on Delivery"""
+    db = get_db()
+    
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+    
+    # Only allow switch for pending or failed payments
+    if order.get("payment_status") in ["paid", "cod_pending"]:
+        raise HTTPException(status_code=400, detail="Cette commande est déjà confirmée")
+    
+    # Update order to COD
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {
+            "$set": {
+                "payment_method": "cash",
+                "payment_status": "cod_pending",
+                "order_status": "confirmed",
+                "switched_to_cod": True,
+                "switched_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    # Reload updated order
+    updated_order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    
+    # Send confirmations
+    from server import send_order_confirmation_email, send_order_whatsapp_confirmation, send_order_sms_orange
+    import asyncio
+    
+    asyncio.create_task(send_order_confirmation_email(updated_order))
+    
+    customer_phone = updated_order.get("shipping", {}).get("phone")
+    if customer_phone:
+        asyncio.create_task(send_order_whatsapp_confirmation(updated_order, customer_phone))
+        asyncio.create_task(send_order_sms_orange(updated_order, customer_phone))
+    
+    # Send manager notification
+    asyncio.create_task(send_manager_notification(updated_order, "cod_pending"))
+    
+    logger.info(f"Order {order_id} switched to Cash on Delivery")
+    
+    return {
+        "success": True,
+        "message": "Commande confirmée en paiement à la livraison",
+        "order_id": order_id,
+        "payment_status": "cod_pending"
+    }
+
+
+@router.get("/pending-orders/{phone}")
+async def get_pending_orders_by_phone(phone: str):
+    """Get pending payment orders for a customer by phone number"""
+    db = get_db()
+    
+    # Clean phone number
+    clean_phone = phone.replace(" ", "").replace("-", "")
+    if not clean_phone.startswith("+"):
+        if clean_phone.startswith("221"):
+            clean_phone = f"+{clean_phone}"
+        elif clean_phone.startswith("7") or clean_phone.startswith("0"):
+            clean_phone = f"+221{clean_phone.lstrip('0')}"
+    
+    # Find pending orders
+    orders = await db.orders.find({
+        "$or": [
+            {"shipping.phone": {"$regex": phone.replace("+", "\\+"), "$options": "i"}},
+            {"shipping.phone": {"$regex": clean_phone.replace("+", "\\+"), "$options": "i"}}
+        ],
+        "payment_status": {"$in": ["pending", "failed", "awaiting_payment"]}
+    }, {"_id": 0}).sort("created_at", -1).to_list(10)
+    
+    return {
+        "orders": orders,
+        "count": len(orders)
+    }
+

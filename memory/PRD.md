@@ -8,401 +8,166 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 - **Backend**: FastAPI (Python), Motor (async MongoDB)
 - **Database**: MongoDB
 - **Deployment**: Hostinger VPS (Ubuntu), Nginx, Systemd
-- **Integrations**: Google OAuth, PayDunya (Payments), Resend (Email), Gemini Vision, Facebook Pixel, GA4
+- **Integrations**: Google OAuth, PayDunya (Payments), Resend (Email), Orange SMS, Gemini Vision, Facebook Pixel, GA4
 
 ---
 
-## Session Changes (August 21, 2026) - Latest
+## Session Changes (August 21, 2026 - Latest Session)
 
-### ✅ Phase 2 - Variantes & Notifications
+### ✅ Bugs Fixed
 
-#### Email System (Resend) - WORKING ✅
-- Tested email sending via Resend API
-- Successfully sent test email to amadoubourydiouf@gmail.com
-- Configuration verified on production VPS
+#### 1. Admin Featured Products Page - FIXED ✅
+- **Bug**: Impossible d'ajouter ou déplacer un produit dans "Mise en avant"
+- **Root Cause**: Missing endpoint `PUT /api/admin/products/{id}` for partial updates
+- **Fix Applied**: 
+  - Created new endpoint with authentication
+  - Fixed FeaturedProductsAdmin.js to use Bearer token
+  - Moved ProductCard component outside main component to avoid re-renders
+- **Status**: Working (17/17 backend tests pass)
 
-#### SMS System (Orange) - CONFIGURATION ISSUE ⚠️
-- Orange API token obtention: ✅ Working
-- SMS sending: ❌ Blocked by Orange
-- Error: "Forbidden senderName YAMAPLUS : not whitelisted"
-- **User Action Required**: Contact Orange Developer to whitelist "GROUPE YAMA" or "YAMAPLUS" as sender name
+#### 2. SMS Client Notification - FIXED ✅
+- **Bug**: SMS showing "Bonjour Admin" instead of customer name
+- **Root Cause**: SMS template not extracting customer first name properly
+- **Fix Applied**: 
+  - Extract first name from `shipping.full_name`
+  - Include product name(s) in SMS
+  - Add order tracking link
+  - Format: `GROUPE YAMA+ Bonjour {Prénom}, commande #{ID} confirmée! {Produit} x{qty} Total: {montant} FCFA Suivi: {lien}`
+- **Status**: Implemented
 
-#### Climatiseur Variants (CV/Puissance) - IMPLEMENTED ✅
-- Added power variant options: 1CV, 1.5CV, 2CV, 2.5CV, 3CV, 4CV, 5CV
-- Each variant has its own price and stock
-- Available in Admin → Products → Options tab (for Électroménager/Climatiseur)
+#### 3. Email Product Image Cut Off - FIXED ✅
+- **Bug**: Product images in confirmation emails were cut off
+- **Root Cause**: Using CSS `display: flex` which doesn't work in email clients
+- **Fix Applied**: Replaced with table-based layout (70x70px images with proper borders)
+- **Status**: Implemented
 
-#### Matelas Variants (Dimensions) - IMPLEMENTED ✅
-- Added dimension options: 90×190, 120×190, 140×190, 160×200, 180×200, 200×200 cm
-- Each dimension has its own price and stock
-- Available in Admin → Products → Options tab (for Décoration/Literie & Matelas)
+#### 4. Products "Sur Commande" Stock - FIXED ✅
+- **Bug**: Products marked as "sur commande" still required stock validation
+- **Fix Applied**: Cart add-to-cart now skips stock check if `is_on_order=true`
+- **Status**: Working (test passes)
 
-#### TV Specifications - IMPLEMENTED ✅
-- Added comprehensive TV specs in Admin → Products → Specs tab:
-  - Screen size (32"-85" pouces)
-  - Resolution (HD, Full HD, 4K, 8K)
-  - Smart TV (Oui/Non)
-  - Android TV (Oui/Non)
-  - Google TV (Oui/Non)
-  - Wi-Fi / Bluetooth
-  - Netflix / YouTube
-  - HDMI ports / USB ports
-  - Warranty
+#### 5. Failed Payment Recovery Workflow - IMPLEMENTED ✅
+- **New Feature**: When online payment fails, customer can:
+  - "Réessayer le paiement" (retry with PayDunya)
+  - "Payer à la livraison" (switch to COD)
+- **Endpoints Added**:
+  - `POST /api/payments/paydunya/retry/{order_id}` - Create new payment request
+  - `POST /api/payments/paydunya/switch-to-cod/{order_id}` - Convert to COD
+- **Frontend**: OrderDetailPage shows alert with buttons for pending payments
+- **Status**: Working (backend + frontend tests pass)
 
----
+### ⚠️ User Clarification Required
 
-## Session Changes (August 18, 2026)
+#### iPhone Variants (Capacity/Color)
+- **User Report**: Variants not saving when multiple colors selected
+- **Current Behavior**: Each variant (capacity + color combination) must be added separately as individual SKUs
+- **This is intended design**: Each variant is a unique SKU with its own price and stock
+- **UI Flow**: Click "Ajouter une variante" for each capacity/color combination (e.g., 128Go Noir, 128Go Blanc, 256Go Noir...)
+- **Note**: The system supports unlimited variants per product
 
-### ✅ PHASE 1 - Dashboard & Paiements (COMPLETED)
+### ✅ Previously Completed Features
 
-#### Dashboard Analytics Fix
-- **Bug Fixed**: Dashboard showing 0 revenue and 0 orders
-- **Root Cause**: Cash orders had `payment_status: "pending"` instead of `"cod_pending"`
-- **Fix Applied**: Updated 4 cash orders to proper status
-- **Result**: Dashboard now shows:
-  - 4 confirmed orders (cod_pending)
-  - 340,200 FCFA revenue
-  - 116 products
-  - 8 users
+#### Product Variants - WORKING ✅
+- Smartphones: Capacity (64Go-1To) + Color variants
+- Climatiseurs: Puissance CV (1-5 CV) variants  
+- Matelas: Dimensions (90x190 to 200x200) variants
+- Each variant has own price and stock
 
-#### Payment Status Logic
-- Cash/COD orders → `payment_status: "cod_pending"`, `status: "confirmed"`
-- Online payments (Wave, Card) pending → `payment_status: "pending"` (NOT counted in revenue)
-- Only `paid` and `cod_pending` orders count toward revenue
-
-#### Category-Based Delivery Fees (NEW)
-- **Décoration/Mobilier**: 15,000 FCFA (Dakar centre), 20,000 FCFA (Banlieue), 25,000 FCFA (Hors Dakar)
-- **Électroménager**: 10,000 FCFA (Dakar centre), 15,000 FCFA (Banlieue), 20,000 FCFA (Proche Dakar), 25,000 FCFA (Régions)
-- **Automobile/Immobilier**: No delivery (pickup/visit only)
-- **Other categories**: Standard rates
-
-#### PayTech → PayDunya
-- Replaced PayTech mention in Terms page with PayDunya
-
-#### Image Carousel Speed
-- Changed from 3.5s to 6.5s between transitions
-- Added random delay offset to prevent synchronized changes
-- Smoother, calmer browsing experience
-
-### ⏳ REMAINING TASKS
-
-#### Phase 2 - Variants & Product Features
-- [ ] Climatiseur variants (CV/puissance)
-- [ ] Matelas variants (dimensions)
-- [ ] TV specifications fields
-- [ ] Structured product pages by category
-
-#### Phase 3 - Notifications
-- [ ] Fix email sending
-- [ ] Fix SMS sending
-- [ ] WhatsApp notifications
-- [ ] Notification history
-
-#### Phase 4 - UI/UX
-- [ ] Visual depth improvements
-- [ ] Manual ordering for "Produits à la une" / "Nouveautés"
-- [ ] Invoice improvements (images, variants)
+#### Admin Updates - WORKING ✅
+- PUT /api/admin/products/{id} for featured/is_new/order updates
+- FeaturedProductsAdmin properly authenticated
+- Featured products sorting and ordering
 
 ---
 
-## Session Changes (August 18, 2026) - Earlier
+## Test Results Summary (August 21, 2026)
+- **Backend Tests**: 17/17 passed (100%)
+- **Frontend Tests**: 10/10 passed, 1 skipped (100%)
+- **Total**: 27 tests passed
 
-### ✅ Bug Fixes & Improvements
-
-#### Currency Converter API Fix
-- **Bug Fixed**: API `/api/currency/rates` was returning 404
-- **Cause**: Double prefix in `routes/currency.py` - changed from `/api/currency` to `/currency`
-- **Result**: Currency selector now works correctly (XOF, EUR, USD)
-- **Testing**: 100% pass rate (9/9 backend tests, 4/4 frontend tests)
-
-#### Appointment Button Restriction
-- **Change**: "Prendre rendez-vous" button now only appears for Automobile and Immobilier categories
-- **File Modified**: `/app/frontend/src/pages/ProductPage.js`
-- **Previous**: Showed for automobile, mobilier, electromenager, meubles, immobilier, decoration
-- **Now**: Only shows for `automobile`, `automobiles`, `immobilier`
-
-#### Sitemap Dynamique
-- **Feature Added**: Sitemap XML automatiquement généré depuis la base de données
-- **Endpoint**: `/api/sitemap.xml`
-- **Contents**:
-  - 21 pages statiques (accueil, catégories, blog, etc.)
-  - Tous les produits avec images et titres
-  - Articles de blog publiés
-- **File Created**: `/app/backend/routes/sitemap.py`
-- **SEO Benefits**: Meilleur indexation Google, images dans Google Images
-
-#### Image Fallback Improvements
-- **Issue**: Broken product images showing "?" on production VPS
-- **Fix**: Improved fallback mechanism with inline SVG placeholder that always works
-- **Files Modified**: 
-  - `/app/frontend/src/lib/utils.js` - Enhanced PLACEHOLDER_IMAGE
-  - `/app/frontend/src/components/ProductCard.js` - Use centralized placeholder
-  - `/app/frontend/src/components/FlashSalesSection.js` - Use centralized placeholder
-  - `/app/frontend/src/pages/HomePage.js` - Added onError fallback
-- **Root Cause**: The image URLs in the production database are invalid or pointing to missing resources
-- **User Action Required**: Update product images in Admin panel or use a script to fix invalid URLs
-
-#### PayDunya Card Payment (Known Issue)
-- **Status**: Card payment UI not displaying on PayDunya checkout page
-- **Investigation**: Backend API returns successful checkout URL with `channels=["card"]`
-- **Root Cause**: Likely merchant configuration issue on PayDunya dashboard
-- **User Action Required**: Verify "Carte Bancaire" is enabled in PayDunya merchant settings
+### Features Verified by Tests:
+1. Admin Featured Products API ✅
+2. PayDunya Retry Payment ✅
+3. PayDunya Switch to COD ✅
+4. Product Variants (Smartphones) ✅
+5. Product Variants (Climatiseur) ✅
+6. Product Variants (Matelas) ✅
+7. Sur Commande Stock Skip ✅
+8. Order Detail Payment Retry UI ✅
+9. Featured Products Query ✅
+10. PayDunya Payment Methods ✅
 
 ---
 
-## Session Changes (August 17, 2026)
+## Remaining Tasks (Prioritized)
 
-### ✅ PHASE 1 - COMPLETED
+### P1 - High Priority
+- [ ] SEO Meta tags and Schema.org structured data
+- [ ] Structured product specs display (icons like Real Estate cards)
 
-#### PayDunya Payment Integration
-- **Replaced PayTech** with PayDunya for better support in Senegal
-- **Payment Methods**: Wave, Orange Money, Carte Bancaire, Free Money, Expresso, Djamo
-- **API Endpoints**:
-  - `POST /api/payments/paydunya/initiate`
-  - `POST /api/payments/paydunya/callback` (IPN webhook)
-  - `GET /api/payments/paydunya/verify/{order_id}`
-  - `GET /api/payments/paydunya/methods`
-- **Files**: `/app/backend/routes/paydunya.py`
+### P2 - Medium Priority
+- [ ] WhatsApp automated notifications on order confirmation
+- [ ] Guarantees & Returns UI on product pages
 
-#### Secure Order Status Management
-- `paid` - Online payment confirmed
-- `cod_pending` - Cash on delivery (order confirmed)
-- `pending` / `awaiting_payment` - Awaiting online payment
-- `failed` - Payment failed
-- `cancelled` - Order cancelled
-
-#### Manager Notifications
-- **Email**: ndeyeaminatadiouf3101@gmail.com
-- **WhatsApp**: +221 78 598 75 18
-- All orders notify manager with full details
-- Failed payments also tracked for follow-up
-
-#### Dashboard Statistics Fix
-- Revenue only counts confirmed payments
-- Fake growth percentages removed
-- `GET /api/admin/failed-payments` for commercial follow-up
-
-#### Resend Email Configuration
-- Domain verified: `groupeyamaplus.com`
-- From: `noreply@groupeyamaplus.com`
-
-### ✅ PHASE 2 - COMPLETED
-
-#### Product Variants (Admin + Frontend)
-- Admin UI for phone variants (Capacity, Color, Price, Stock)
-- Frontend ProductPage updated to show variant selectors
-- Price updates dynamically when capacity/color selected
-- Stock shown per variant
-
-#### Floating Buttons Optimized
-- Reduced size on mobile (w-12 h-12)
-- Better positioning to not cover products
-- WhatsApp at bottom, Gift above
-- Less intrusive pulse animation
-
-#### Homepage Reorganization
-- "Produits à la une" - Featured/Promo products carousel
-- "Nouveautés" - Recently added products grid
-- Sections now distinct and not duplicated
+### P3 - Future/Backlog
+- [ ] Refactor server.py (>11k lines → split into routes/)
+- [ ] Ad campaign tutorial (Facebook/Google/YouTube)
 
 ---
 
-## PENDING TASKS (User Priority Order)
+## API Endpoints Reference
 
-### ✅ COMPLETED & DEPLOYED - Product Position Control Feature
-- **Issue Fixed**: Admin Dashboard product limit bug (limit increased to 500)
-- **New Feature**: Position control for product display ordering
-  - Position column added to Admin products table
-  - **Drag & Drop** with @dnd-kit for intuitive reordering
-  - **Monter/Descendre (↑↓) buttons** for quick reordering
-  - Editable position inputs with visual feedback (green border when modified)
-  - "Enregistrer positions" button for batch saving
-  - Products sorted by position (lower number = higher priority, default 999)
-- **API Endpoints**:
-  - `PUT /api/admin/products/positions` - Batch update positions
-  - `PUT /api/admin/products/{id}/position` - Single product position update
-- **Files Modified**:
-  - `/app/backend/server.py` (lines 1590-1625)
-  - `/app/frontend/src/pages/AdminPage.js`
-- **Testing**: 100% pass rate (10/10 backend, 6/6 frontend)
-- **VPS Deployment**: ✅ DEPLOYED to groupeyamaplus.com
+### Payment Recovery (NEW)
+- `POST /api/payments/paydunya/retry/{order_id}` - Retry failed payment
+- `POST /api/payments/paydunya/switch-to-cod/{order_id}` - Convert to Cash on Delivery
+- `GET /api/payments/paydunya/pending-orders/{phone}` - Get pending orders by phone
 
-### ✅ Google OAuth Credentials Updated
-- Client ID: 763267425480-15uf3c8paehi566h6nuoieq2gjuh05ks.apps.googleusercontent.com
-- **IMPORTANT**: User must configure authorized redirect URIs in Google Cloud Console:
-  - `https://groupeyamaplus.com/login`
-  - `https://groupeyamaplus.com/auth/callback`
+### Admin Products (UPDATED)
+- `PUT /api/admin/products/{product_id}` - Partial update (featured, is_new, order fields)
+- `PUT /api/products/{product_id}` - Full product update
+- `DELETE /api/admin/products/{product_id}` - Delete product
+
+### Orders
+- `GET /api/orders/{order_id}` - Get order details (shows payment retry options if pending)
 
 ---
 
-## Changes (May 21, 2026)
+## Database Schema Updates
 
-### ✅ DEPLOYED TO PRODUCTION - Complete Verification & Bug Fixes
-- All APIs integrated and working: /api/sourcing/*, /api/b2b/*
-- Backend server.py updated with sourcing and B2B endpoints
-- Frontend deployed with all new pages and components
-- VPS production (groupeyamaplus.com) fully updated
-
-### ✅ NEW - B2B Portal (/b2b)
-- Partner registration and login system
-- Wholesale pricing tiers (0%, -5%, -10%, -15%, -20% based on quantity)
-- Quote request system
-- Partner dashboard with orders and stats
-- Admin management panel for partners and quotes
-- Files: `/app/backend/routes/b2b_portal.py`, `/app/frontend/src/pages/B2BPortalPage.js`
-
-### ✅ NEW - International Sourcing (/sourcing, /import-chine)
-- China to Senegal shipping service
-- Shipping rates:
-  - Air General: 8000-6600 FCFA/KG (8-12 days)
-  - Air Sensitive: 8000-6800 FCFA/KG (12-16 days) + 300 FCFA/phone
-  - Maritime: by CBM (30-45 days)
-- Shipping calculator with volumetric weight (1 CBM = 167 KG)
-- Order request form with product link
-- Tracking system with status steps
-- Admin management panel for quotes and orders
-- Files: `/app/backend/routes/sourcing.py`, `/app/frontend/src/pages/SourcingPage.js`, `/app/frontend/src/components/Admin/SourcingAdmin.js`
-
-### ✅ CONFIGURATION COMPLETE
-- Footer links added: "Espace Revendeurs", "Espace B2B Pro", "Import Chine 🇨🇳"
-- Navbar secondary items: "Import Chine", "B2B Pro"
-- Admin sidebar: "Partenaires B2B", "Import Chine"
-- All deployed to VPS production
-
-### ✅ COMPLETED - Server.py Refactoring (Full)
-- **Total modules created**: 24 files in `/app/backend/routes/`
-- **Total lines extracted**: ~6,700 lines
-- **Module categories**:
-  - **Core E-commerce**: products, cart, orders, promo_codes
-  - **User Features**: wishlist, loyalty, newsletter
-  - **Business Features**: resellers, appointments, game
-  - **Admin**: admin (analytics, orders, users, exports)
-  - **Active/Integrated**: auth, blog, commercial_routes, currency, gift_box, marketing, platform_reset, push_notifications, real_estate, reservations, seo_prerender, sms_templates
-- **Status**: Complete modular architecture. Ready for progressive integration.
-
----
-
-## Changes (March 30, 2026)
-
-### ✅ COMPLETED - Système Revendeur/Affilié
-1. **Admin Revendeurs** ✅
-   - Création de revendeurs (nom, email, téléphone, taux commission)
-   - Génération automatique de code unique et mot de passe temporaire
-   - Statistiques globales (total revendeurs, ventes, commissions)
-   - Activation/désactivation des revendeurs
-   - Versement des commissions (Wave, OM, Free Money, Cash, Banque)
-
-2. **Portail Revendeur** ✅
-   - Login sécurisé à `/reseller/login`
-   - Dashboard avec statistiques (ventes, commissions, solde)
-   - Historique des ventes et des versements
-   - Lien de parrainage personnalisé
-
-3. **Système de Tracking Affilié** ✅
-   - URL de parrainage: `/r/{code}`
-   - Stockage du code en localStorage (30 jours)
-   - Intégration checkout: code envoyé avec chaque commande
-   - Commission automatique calculée à la création de commande
-
-### API Endpoints - Revendeurs
-```
-POST   /api/admin/resellers                    - Créer revendeur
-GET    /api/admin/resellers                    - Liste revendeurs
-GET    /api/admin/resellers/{id}               - Détails revendeur
-PUT    /api/admin/resellers/{id}               - Modifier revendeur
-POST   /api/admin/resellers/{id}/pay-commission - Verser commission
-POST   /api/reseller/login                     - Connexion revendeur
-GET    /api/reseller/me                        - Profil revendeur
-GET    /api/reseller/dashboard                 - Stats revendeur
-GET    /api/reseller/products                  - Produits avec liens affiliés
-GET    /api/r/{code}                           - Redirection parrainage
+### Products Collection
+```javascript
+{
+  has_variants: Boolean,  // NEW - Whether product has price variants
+  variants: [             // Array of variant objects
+    {
+      id: String,
+      capacity: String,   // For phones: "64go", "128go", etc.
+      color: String,      // For phones: "noir", "blanc", etc.
+      puissance: String,  // For AC: "1", "1.5", "2", etc.
+      dimension: String,  // For mattresses: "90x190", "160x200", etc.
+      price: Number,
+      stock: Number,
+      image: String       // Optional variant-specific image
+    }
+  ],
+  is_on_order: Boolean,   // Products available only "sur commande"
+  // ... other fields
+}
 ```
 
-## What's Implemented
+### Orders Collection
+```javascript
+{
+  payment_retry_count: Number,      // NEW - Track retry attempts
+  last_payment_attempt: String,     // NEW - ISO datetime
+  switched_to_cod: Boolean,         // NEW - If switched from online to COD
+  switched_at: String,              // NEW - When switched
+  // ... other fields
+}
+```
 
-### Core E-commerce
-- Product catalog, cart, checkout (PayTech), order management, auth (JWT + Google OAuth), promo codes, flash sales, newsletter
-
-### Premium Category Pages with Subcategories
-- Electronique, Électroménager, Décoration, Mode & Beauté, Automobile (Covoiturage)
-
-### Admin Dashboard
-- **Revendeurs**: Gestion du programme d'affiliation
-- **Réservations**: Gestion des réservations transport/services
-- **Marketing**: Collecte contacts + Campagnes
-- **Gestion Commerciale**: Devis, Factures, Proforma, Bons de Livraison, Attestations
-- **Réinitialisation**: Reset plateforme avec backup
-- + Products, Orders, Immobilier, Automobile, SMS, etc.
-
-## P1 - Backlog Tasks
-1. PayDunya Carte Bancaire - User needs to verify merchant settings
-2. SEO Dynamic Sitemap - Generate sitemap.xml from products database
-3. Add Automobile/Immobilier test products to verify appointment button
-
-## P2 - Future Tasks
-1. Refactoring server.py (extract more modules to /routes/)
-2. WhatsApp Chatbot (attente identifiants Meta API)
-3. App mobile React Native
-4. Portail Client/Partenaire B2B
-
-## Known Issues
-- PayDunya Card Payment UI not showing (merchant config issue)
-- Orange SMS may be blocked (external - contact Orange Support)
-- server.py ~10200 lines - needs refactoring
+---
 
 ## Credentials
-- Admin: admin@yamaplus.com / Admin123!
-- Test Reseller: testrevendeur@example.com / 3p3rLEZ3PLI
-- VPS: root@76.13.58.76
-- Production: https://groupeyamaplus.com
-
-## Key Files - Reseller System
-- /app/backend/server.py - Backend (reseller endpoints lines 9835-10190)
-- /app/frontend/src/components/Admin/ResellersAdmin.js - Admin interface
-- /app/frontend/src/pages/ResellerPortalPage.js - Reseller login & dashboard
-- /app/frontend/src/pages/ReferralRedirectPage.js - URL tracking /r/:code
-- /app/frontend/src/pages/CheckoutPage.js - Sends reseller_code with orders
-- /app/frontend/src/pages/AdminPage.js - Includes ResellersAdmin tab
-- /app/frontend/src/App.js - Routes for /reseller/*, /r/:code, /admin/resellers
-
-## DB Schema - Resellers
-```javascript
-// resellers collection
-{
-  reseller_id: "RSL-XXXXXXXX",
-  reseller_code: "NAMEXXX",
-  name: String,
-  email: String,
-  phone: String,
-  hashed_password: String,
-  commission_rate: Number (default 10),
-  is_active: Boolean,
-  total_sales: Number,
-  total_commission: Number,
-  pending_commission: Number,
-  paid_commission: Number,
-  referral_link: String,
-  created_at: ISODate,
-  created_by: String
-}
-
-// orders collection (extended)
-{
-  ...existing_fields,
-  reseller_code: String (optional),
-  reseller_id: String (optional),
-  reseller_commission_rate: Number,
-  reseller_commission: Number
-}
-
-// reseller_commissions collection
-{
-  commission_id: String,
-  reseller_id: String,
-  type: "earned" | "payment",
-  amount: Number,
-  order_id: String (for earned),
-  payment_method: String (for payment),
-  created_at: ISODate
-}
-```
+- **Admin**: admin@yamaplus.com / Admin123!
+- **VPS**: groupeyamaplus.com (SSH via bash history)

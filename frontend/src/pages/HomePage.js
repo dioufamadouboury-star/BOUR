@@ -346,8 +346,12 @@ export default function HomePage() {
       </section>
 
       {/* New Arrivals - Spotlight Carousel (One product at a time, centered) */}
-      <section className="section-padding bg-[#F5F5F7] dark:bg-[#1C1C1E] overflow-hidden">
-        <div className="container-lumina">
+      <section className="section-padding overflow-hidden relative">
+        {/* Premium gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#F5F5F7] via-[#FAFAFA] to-white dark:from-[#1C1C1E] dark:via-[#111] dark:to-black" />
+        <div className="absolute inset-0 hero-gradient" />
+        
+        <div className="container-lumina relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -537,14 +541,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Promo Banner */}
-      <section className="py-16 md:py-24 bg-black text-white">
-        <div className="container-lumina">
+      {/* Promo Banner - Enhanced with gradient */}
+      <section className="py-16 md:py-24 relative overflow-hidden">
+        {/* Premium dark gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black via-[#1a1a2e] to-[#16213e]" />
+        <div className="absolute inset-0 opacity-30" style={{backgroundImage: 'radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(0, 113, 227, 0.1) 0%, transparent 50%)'}} />
+        
+        <div className="container-lumina relative z-10">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="text-center"
+            className="text-center text-white"
           >
             <p className="text-[#D4AF37] text-sm font-medium tracking-widest uppercase mb-4">
               Offre spéciale
@@ -562,9 +570,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* New Products */}
-      <section className="section-padding bg-white dark:bg-[#0B0B0B]">
-        <div className="container-lumina">
+      {/* New Products - Enhanced section */}
+      <section className="section-padding relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-white via-[#FAFAFA] to-[#F5F5F7] dark:from-[#0B0B0B] dark:via-[#111] dark:to-[#1C1C1E]" />
+        
+        <div className="container-lumina relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}

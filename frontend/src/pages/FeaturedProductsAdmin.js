@@ -1,15 +1,67 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { toast } from "sonner";
 import { 
   ArrowLeft, Star, Sparkles, GripVertical, Eye, EyeOff, 
   ChevronUp, ChevronDown, Save, RefreshCw 
 } from "lucide-react";
-import { formatPrice } from "../lib/utils";
+import { formatPrice, getImageUrl } from "../lib/utils";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Product Card Component (defined outside main component to avoid re-renders)
+function ProductCard({ product, index, onMoveUp, onMoveDown, canMoveUp, canMoveDown, onRemove }) {
+  return (
+    <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="flex flex-col gap-1">
+        <button
+          onClick={onMoveUp}
+          disabled={!canMoveUp}
+          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-30"
+        >
+          <ChevronUp className="w-4 h-4" />
+        </button>
+        <button
+          onClick={onMoveDown}
+          disabled={!canMoveDown}
+          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-30"
+        >
+          <ChevronDown className="w-4 h-4" />
+        </button>
+      </div>
+      
+      <GripVertical className="w-5 h-5 text-gray-400 cursor-move" />
+      
+      <span className="w-8 h-8 flex items-center justify-center bg-primary/10 text-primary rounded-full font-bold text-sm">
+        {index + 1}
+      </span>
+      
+      <img
+        src={getImageUrl(product.images?.[0])}
+        alt={product.name}
+        className="w-12 h-12 object-cover rounded-lg bg-gray-100"
+        onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='1'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M9 9h.01M15 15l-6-6'/%3E%3C/svg%3E"; }}
+      />
+      
+      <div className="flex-1 min-w-0">
+        <h4 className="font-medium text-sm truncate">{product.name}</h4>
+        <p className="text-xs text-muted-foreground">{formatPrice(product.price)}</p>
+      </div>
+      
+      <button
+        onClick={onRemove}
+        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+        title="Retirer de la liste"
+      >
+        <EyeOff className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 export default function FeaturedProductsAdmin() {
+  const navigate = useNavigate();
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [newProducts, setNewProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
@@ -17,6 +69,9 @@ export default function FeaturedProductsAdmin() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("featured");
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Get auth token from localStorage
+  const getToken = () => localStorage.getItem("token");
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -40,14 +95,22 @@ export default function FeaturedProductsAdmin() {
       setAllProducts(allRes.data);
     } catch (error) {
       console.error("Error fetching products:", error);
+      toast.error("Erreur lors du chargement des produits");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    // Check authentication
+    const token = getToken();
+    if (!token) {
+      toast.error("Veuillez vous connecter");
+      navigate("/login");
+      return;
+    }
     fetchProducts();
-  }, [fetchProducts]);
+  }, [fetchProducts, navigate]);
 
   const moveProduct = (list, setList, index, direction) => {
     const newList = [...list];
@@ -59,30 +122,53 @@ export default function FeaturedProductsAdmin() {
   };
 
   const toggleFeatured = async (product, isFeatured) => {
+    const token = getToken();
+    if (!token) {
+      toast.error("Session expirée. Veuillez vous reconnecter.");
+      return;
+    }
     try {
       await axios.put(`${API_URL}/api/admin/products/${product.product_id}`, {
         featured: isFeatured,
         featured_order: isFeatured ? featuredProducts.length + 1 : null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      toast.success(isFeatured ? "Produit ajouté aux favoris" : "Produit retiré des favoris");
       fetchProducts();
     } catch (error) {
       console.error("Error updating product:", error);
+      toast.error("Erreur lors de la mise à jour");
     }
   };
 
   const toggleNew = async (product, isNew) => {
+    const token = getToken();
+    if (!token) {
+      toast.error("Session expirée. Veuillez vous reconnecter.");
+      return;
+    }
     try {
       await axios.put(`${API_URL}/api/admin/products/${product.product_id}`, {
         is_new: isNew,
         new_order: isNew ? newProducts.length + 1 : null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      toast.success(isNew ? "Produit ajouté aux nouveautés" : "Produit retiré des nouveautés");
       fetchProducts();
     } catch (error) {
       console.error("Error updating product:", error);
+      toast.error("Erreur lors de la mise à jour");
     }
   };
 
   const saveOrder = async (type) => {
+    const token = getToken();
+    if (!token) {
+      toast.error("Session expirée. Veuillez vous reconnecter.");
+      return;
+    }
     setSaving(true);
     try {
       const products = type === "featured" ? featuredProducts : newProducts;
@@ -91,13 +177,15 @@ export default function FeaturedProductsAdmin() {
       await Promise.all(products.map((product, index) => 
         axios.put(`${API_URL}/api/admin/products/${product.product_id}`, {
           [orderField]: index + 1
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
         })
       ));
       
-      alert("Ordre sauvegardé avec succès !");
+      toast.success("Ordre sauvegardé avec succès !");
     } catch (error) {
       console.error("Error saving order:", error);
-      alert("Erreur lors de la sauvegarde");
+      toast.error("Erreur lors de la sauvegarde");
     } finally {
       setSaving(false);
     }
@@ -106,53 +194,6 @@ export default function FeaturedProductsAdmin() {
   const filteredProducts = allProducts.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.category?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const ProductCard = ({ product, index, list, setList, type }) => (
-    <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div className="flex flex-col gap-1">
-        <button
-          onClick={() => moveProduct(list, setList, index, -1)}
-          disabled={index === 0}
-          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-30"
-        >
-          <ChevronUp className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => moveProduct(list, setList, index, 1)}
-          disabled={index === list.length - 1}
-          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-30"
-        >
-          <ChevronDown className="w-4 h-4" />
-        </button>
-      </div>
-      
-      <GripVertical className="w-5 h-5 text-gray-400 cursor-move" />
-      
-      <span className="w-8 h-8 flex items-center justify-center bg-primary/10 text-primary rounded-full font-bold text-sm">
-        {index + 1}
-      </span>
-      
-      <img
-        src={product.images?.[0] || "/placeholder.svg"}
-        alt={product.name}
-        className="w-12 h-12 object-cover rounded-lg"
-        onError={(e) => { e.target.src = "/placeholder.svg"; }}
-      />
-      
-      <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-sm truncate">{product.name}</h4>
-        <p className="text-xs text-muted-foreground">{formatPrice(product.price)}</p>
-      </div>
-      
-      <button
-        onClick={() => type === "featured" ? toggleFeatured(product, false) : toggleNew(product, false)}
-        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-        title="Retirer de la liste"
-      >
-        <EyeOff className="w-4 h-4" />
-      </button>
-    </div>
   );
 
   return (
@@ -166,7 +207,7 @@ export default function FeaturedProductsAdmin() {
             </Link>
             <div>
               <h1 className="text-xl font-bold">Mise en avant des produits</h1>
-              <p className="text-sm text-muted-foreground">Gérez l'ordre d'affichage sur la page d'accueil</p>
+              <p className="text-sm text-muted-foreground">Gérez l&apos;ordre d&apos;affichage sur la page d&apos;accueil</p>
             </div>
           </div>
         </div>
@@ -229,16 +270,22 @@ export default function FeaturedProductsAdmin() {
               <div className="text-center py-8 text-muted-foreground">Chargement...</div>
             ) : (
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                {(activeTab === "featured" ? featuredProducts : newProducts).map((product, index) => (
-                  <ProductCard
-                    key={product.product_id}
-                    product={product}
-                    index={index}
-                    list={activeTab === "featured" ? featuredProducts : newProducts}
-                    setList={activeTab === "featured" ? setFeaturedProducts : setNewProducts}
-                    type={activeTab}
-                  />
-                ))}
+                {(activeTab === "featured" ? featuredProducts : newProducts).map((product, index) => {
+                  const list = activeTab === "featured" ? featuredProducts : newProducts;
+                  const setList = activeTab === "featured" ? setFeaturedProducts : setNewProducts;
+                  return (
+                    <ProductCard
+                      key={product.product_id}
+                      product={product}
+                      index={index}
+                      canMoveUp={index > 0}
+                      canMoveDown={index < list.length - 1}
+                      onMoveUp={() => moveProduct(list, setList, index, -1)}
+                      onMoveDown={() => moveProduct(list, setList, index, 1)}
+                      onRemove={() => activeTab === "featured" ? toggleFeatured(product, false) : toggleNew(product, false)}
+                    />
+                  );
+                })}
                 {(activeTab === "featured" ? featuredProducts : newProducts).length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     Aucun produit dans cette liste
@@ -273,10 +320,10 @@ export default function FeaturedProductsAdmin() {
                     className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg"
                   >
                     <img
-                      src={product.images?.[0] || "/placeholder.svg"}
+                      src={getImageUrl(product.images?.[0])}
                       alt={product.name}
                       className="w-10 h-10 object-cover rounded"
-                      onError={(e) => { e.target.src = "/placeholder.svg"; }}
+                      onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='1'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M9 9h.01M15 15l-6-6'/%3E%3C/svg%3E"; }}
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-sm truncate">{product.name}</h4>

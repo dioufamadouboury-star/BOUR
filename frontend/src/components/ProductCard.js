@@ -94,13 +94,13 @@ export default function ProductCard({ product, index = 0, onRequestVisit }) {
         delay: index * 0.05,
         ease: [0.16, 1, 0.3, 1]
       }}
-      className="product-card group relative bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300"
+      className="product-card group relative bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden border border-black/5 dark:border-white/5"
       data-testid={`product-card-${product.product_id}`}
     >
       {/* Image Container with Carousel */}
       <Link
         to={`/product/${product.product_id}`}
-        className="block relative aspect-[4/3] overflow-hidden bg-[#F5F5F7] dark:bg-[#2C2C2E]"
+        className="block relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#FAFAFA] to-[#F0F0F2] dark:from-[#2C2C2E] dark:to-[#1C1C1E]"
       >
         {/* Image Carousel */}
         <AnimatePresence mode="wait">
