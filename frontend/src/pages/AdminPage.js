@@ -64,6 +64,7 @@ import {
   Home,
   Car,
   MessageSquare,
+  MessageCircle,
   Smartphone,
   Calendar,
   Target,
@@ -1525,12 +1526,26 @@ export default function AdminPage() {
                     <p className="text-sm">{formatDate(order.created_at)}</p>
                   </td>
                   <td className="p-4">
-                    <Link
-                      to={`/order/${order.order_id}`}
-                      className="p-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors inline-flex"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/order/${order.order_id}`}
+                        className="p-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors inline-flex"
+                        title="Voir la commande"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Link>
+                      {order.shipping?.phone && (
+                        <a
+                          href={`https://wa.me/${order.shipping.phone.replace(/[^0-9]/g, '').replace(/^0/, '221')}?text=${encodeURIComponent(`Bonjour ${order.shipping?.full_name || 'cher client'},\n\nVotre commande *${order.order_id}* d'un montant de *${order.total?.toLocaleString('fr-FR')} FCFA* est bien enregistrée.\n\nStatut: ${order.order_status === 'processing' ? '📦 En préparation' : order.order_status === 'shipped' ? '🚚 En livraison' : order.order_status === 'delivered' ? '✅ Livrée' : '⏳ En attente'}\n\nSuivez votre commande: https://groupeyamaplus.com/order/${order.order_id}\n\nMerci pour votre confiance !\nGROUPE YAMA+`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors inline-flex"
+                          title="Envoyer sur WhatsApp"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

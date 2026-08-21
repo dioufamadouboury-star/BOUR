@@ -1,6 +1,6 @@
 """
 Orange SMS API Integration for Senegal
-Supports: SMS sending with custom sender name "GROUPE YAMA"
+Supports: SMS sending with authorized sender "YamaPlus"
 """
 import os
 import logging
@@ -18,11 +18,12 @@ router = APIRouter(prefix="/sms/orange", tags=["Orange SMS"])
 ORANGE_CLIENT_ID = os.environ.get("ORANGE_CLIENT_ID", "")
 ORANGE_CLIENT_SECRET = os.environ.get("ORANGE_CLIENT_SECRET", "")
 ORANGE_AUTH_HEADER = os.environ.get("ORANGE_AUTH_HEADER", "")
-ORANGE_SENDER_NAME = os.environ.get("ORANGE_SENDER_NAME", "GROUPE YAMA")
+ORANGE_SENDER_NAME = "YamaPlus"  # Authorized sender name from Orange dashboard
+ORANGE_SENDER_ADDRESS = "tel:+221000000000"  # Virtual sender address
 
 # Orange API URLs
 ORANGE_TOKEN_URL = "https://api.orange.com/oauth/v3/token"
-ORANGE_SMS_URL = "https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B2210000/requests"
+ORANGE_SMS_URL = "https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B221000000000/requests"
 
 # Cache for access token
 _token_cache = {
@@ -128,7 +129,7 @@ async def send_sms(phone: str, message: str) -> dict:
     payload = {
         "outboundSMSMessageRequest": {
             "address": f"tel:{formatted_phone}",
-            "senderAddress": "tel:+2210000",
+            "senderAddress": ORANGE_SENDER_ADDRESS,
             "senderName": ORANGE_SENDER_NAME,
             "outboundSMSTextMessage": {
                 "message": message

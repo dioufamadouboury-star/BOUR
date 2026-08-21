@@ -825,14 +825,38 @@ export default function ProductPage() {
                     </AccordionTrigger>
                     <AccordionContent>
                       <dl className="space-y-3">
-                        {Object.entries(product.specs).map(([key, value]) => (
-                          <div key={key} className="flex justify-between">
-                            <dt className="text-muted-foreground capitalize">
-                              {key.replace(/_/g, " ")}
-                            </dt>
-                            <dd className="font-medium">{value}</dd>
-                          </div>
-                        ))}
+                        {Object.entries(product.specs).filter(([_, value]) => value && value !== "").map(([key, value]) => {
+                          // French labels for specs
+                          const labels = {
+                            screen_size: "Taille d'écran",
+                            resolution: "Résolution",
+                            smart_tv: "Smart TV",
+                            android_tv: "Android TV",
+                            google_tv: "Google TV",
+                            wifi: "Wi-Fi",
+                            bluetooth: "Bluetooth",
+                            netflix: "Netflix",
+                            youtube: "YouTube",
+                            hdmi_ports: "Ports HDMI",
+                            usb_ports: "Ports USB",
+                            warranty: "Garantie",
+                            puissance: "Puissance",
+                            inverter: "Inverter",
+                            surface: "Surface recommandée",
+                            dimension: "Dimensions",
+                            epaisseur: "Épaisseur",
+                            fermete: "Fermeté",
+                            matiere: "Matière"
+                          };
+                          const label = labels[key] || key.replace(/_/g, " ");
+                          const displayValue = value === "Oui" ? "✅ Oui" : value === "Non" ? "❌ Non" : value;
+                          return (
+                            <div key={key} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                              <dt className="text-muted-foreground capitalize">{label}</dt>
+                              <dd className="font-medium">{key === "screen_size" ? `${displayValue}"` : displayValue}</dd>
+                            </div>
+                          );
+                        })}
                       </dl>
                     </AccordionContent>
                   </AccordionItem>
