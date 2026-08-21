@@ -546,7 +546,9 @@ class ProductBase(BaseModel):
     images: List[str] = []  # Default empty list
     stock: int = 0
     featured: bool = False
+    featured_order: Optional[int] = None  # Order for featured products display
     is_new: bool = False
+    new_order: Optional[int] = None  # Order for new products display
     is_promo: bool = False
     is_flash_sale: bool = False
     flash_sale_end: Optional[str] = None  # ISO datetime string
@@ -1632,7 +1634,9 @@ async def get_products(
         "images": {"$slice": 2},  # Limit to first 2 images
         "stock": 1,
         "featured": 1,
+        "featured_order": 1,
         "is_new": 1,
+        "new_order": 1,
         "is_promo": 1,
         "is_flash_sale": 1,
         "flash_sale_price": 1,
@@ -1647,8 +1651,9 @@ async def get_products(
         "position": 1
     }
     
-    # Sort by position first (lower = higher priority), then by created_at
-    products = await db.products.find(query, projection).sort([("position", 1), ("created_at", -1)]).skip(skip).limit(limit).to_list(limit)
+    # Sort: featured_order for featured products, new_order for new products, then position and created_at
+    sort_order = [("featured_order", 1), ("new_order", 1), ("position", 1), ("created_at", -1)]
+    products = await db.products.find(query, projection).sort(sort_order).skip(skip).limit(limit).to_list(limit)
     
     for product in products:
         for field in ['created_at', 'updated_at']:
@@ -3406,13 +3411,38 @@ def get_order_confirmation_template(order: dict) -> str:
     """Order confirmation email template"""
     items_html = ""
     for item in order.get("items", []):
+        # Build variant info
+        variant_info = ""
+        if item.get('selected_variant'):
+            variant = item['selected_variant']
+            parts = []
+            if variant.get('capacity'):
+                parts.append(f"Capacité: {variant['capacity'].upper()}")
+            if variant.get('color'):
+                parts.append(f"Couleur: {variant['color'].capitalize()}")
+            if variant.get('puissance'):
+                parts.append(f"Puissance: {variant['puissance']} CV")
+            if variant.get('dimension'):
+                parts.append(f"Dimensions: {variant['dimension']} cm")
+            if parts:
+                variant_info = " | ".join(parts)
+        
+        # Also check direct fields
+        if item.get('capacity') and not variant_info:
+            variant_info = f"Capacité: {item['capacity'].upper()}"
+        if item.get('color') and not variant_info:
+            variant_info = f"Couleur: {item['color'].capitalize()}"
+        
+        variant_html = f'<p style="margin: 3px 0 0 0; color: #888; font-size: 12px;">{variant_info}</p>' if variant_info else ""
+        
         items_html += f"""
         <tr>
             <td style="padding: 15px 0; border-bottom: 1px solid #eee;">
                 <div style="display: flex; align-items: center;">
                     <img src="{item.get('image', '')}" alt="{item.get('name', '')}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px;">
                     <div>
-                        <p style="margin: 0; font-weight: 600; color: #333;">{item.get('name', '')}</p>
+                        <p style="margin: 0; font-weight: 600; color: #333;">{item.get('name', 'Produit')}</p>
+                        {variant_html}
                         <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Qté: {item.get('quantity', 1)}</p>
                     </div>
                 </div>
@@ -6935,30 +6965,51 @@ RCCM : SN DKR 2026 A 4814</font>"""
     
     for item in items:
         name = item.get('name', 'Produit')[:40]
-        # Get description from product database if not in order
-        description = item.get('description', '') or item.get('short_description', '')
-        if description:
-            description = description[:60]
         qty = item.get('quantity', 1)
         price = item.get('price', 0)
         total_price = price * qty
         
-        # Product name with description
+        # Build product description with variants
+        variant_parts = []
+        
+        # Check for variant details
+        if item.get('selected_variant'):
+            variant = item['selected_variant']
+            if variant.get('capacity'):
+                variant_parts.append(f"Capacité: {variant['capacity'].upper()}")
+            if variant.get('color'):
+                variant_parts.append(f"Couleur: {variant['color'].capitalize()}")
+            if variant.get('puissance'):
+                variant_parts.append(f"Puissance: {variant['puissance']} CV")
+            if variant.get('dimension'):
+                variant_parts.append(f"Dimensions: {variant['dimension']} cm")
+        
+        # Also check direct item fields
+        if item.get('capacity'):
+            variant_parts.append(f"Capacité: {item['capacity'].upper()}")
+        if item.get('color'):
+            variant_parts.append(f"Couleur: {item['color'].capitalize()}")
+        if item.get('selectedSize'):
+            variant_parts.append(f"Taille: {item['selectedSize']}")
+        
+        # Build product text
         product_text = f"<b>{name}</b>"
-        if description:
-            product_text += f"<br/><font size='7' color='#666666'>{description}...</font>"
+        if variant_parts:
+            variant_text = " | ".join(variant_parts)
+            product_text += f"<br/><font size='7' color='#333333'>{variant_text}</font>"
         
         # Try to get product image
         img_cell = ''
         try:
-            img_url = item.get('image', '')
+            img_url = item.get('image', '') or (item.get('images', [None])[0] if item.get('images') else '')
             if img_url and img_url.startswith('http'):
                 import urllib.request
                 import tempfile
                 img_path = f"/tmp/prod_{item.get('product_id', 'temp')}.jpg"
                 urllib.request.urlretrieve(img_url, img_path)
                 img_cell = Image(img_path, width=1.2*cm, height=1.2*cm)
-        except:
+        except Exception as img_error:
+            logging.debug(f"Could not load product image: {img_error}")
             img_cell = ''
         
         table_data.append([

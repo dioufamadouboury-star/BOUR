@@ -33,6 +33,7 @@ import ContactPage from "./pages/ContactPage";
 import FAQPage from "./pages/FAQPage";
 import AccountPage from "./pages/AccountPage";
 import AdminPage from "./pages/AdminPage";
+import FeaturedProductsAdmin from "./pages/FeaturedProductsAdmin";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import ProductComparisonPage from "./components/ProductComparison";
 import LoyaltyPage from "./components/LoyaltyProgram";
@@ -154,6 +155,7 @@ function AppRouter() {
       <Route path="/admin/ads-guide" element={<AdminPage />} />
       <Route path="/admin/reset" element={<AdminPage />} />
       <Route path="/admin/resellers" element={<AdminPage />} />
+      <Route path="/admin/featured" element={<FeaturedProductsAdmin />} />
 
       {/* Public Pages */}
       <Route

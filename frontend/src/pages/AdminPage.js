@@ -99,6 +99,7 @@ const menuItems = [
   { id: "analytics", label: "Analytics", icon: BarChart3, href: "/admin/analytics" },
   { id: "commercial", label: "Gestion Commerciale", icon: FileText, href: "/admin/commercial" },
   { id: "products", label: "Produits", icon: Package, href: "/admin/products" },
+  { id: "featured", label: "Mise en avant", icon: Sparkles, href: "/admin/featured" },
   { id: "flash-sales", label: "Ventes Flash", icon: Zap, href: "/admin/flash-sales" },
   { id: "gift-boxes", label: "Coffrets Cadeaux", icon: Gift, href: "/admin/gift-boxes" },
   { id: "orders", label: "Commandes", icon: ShoppingCart, href: "/admin/orders" },
