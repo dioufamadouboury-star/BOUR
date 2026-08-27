@@ -16,6 +16,26 @@ import {
   Bell,
   TrendingDown,
   Calendar,
+  Tv,
+  Thermometer,
+  Wifi,
+  Bluetooth,
+  Zap,
+  Monitor,
+  Smartphone,
+  HardDrive,
+  Palette,
+  Ruler,
+  Home,
+  Bed,
+  Car,
+  Fuel,
+  Gauge,
+  MapPin,
+  Bath,
+  Square,
+  Wind,
+  Snowflake,
 } from "lucide-react";
 import { useCart } from "../contexts/CartContext";
 import { useWishlist } from "../contexts/WishlistContext";
@@ -804,6 +824,271 @@ export default function ProductPage() {
                   <p className="text-xs text-muted-foreground">Retour facile</p>
                 </div>
               </div>
+
+              {/* Visual Specs Cards - Like Real Estate Style */}
+              {product.specs && Object.keys(product.specs).filter(k => product.specs[k] && product.specs[k] !== "").length > 0 && (
+                <div className="mb-8" data-testid="visual-specs-section">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-primary" />
+                    Caractéristiques
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" data-testid="specs-cards-grid">
+                    {/* TV Specs */}
+                    {product.specs.screen_size && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-100 dark:border-blue-800" data-testid="spec-card-screen-size">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                          <Monitor className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Écran</p>
+                          <p className="font-semibold">{product.specs.screen_size}&quot;</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.resolution && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-100 dark:border-purple-800" data-testid="spec-card-resolution">
+                        <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                          <Tv className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Résolution</p>
+                          <p className="font-semibold">{product.specs.resolution}</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.smart_tv === "Oui" && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-100 dark:border-green-800" data-testid="spec-card-smart-tv">
+                        <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                          <Wifi className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Smart TV</p>
+                          <p className="font-semibold">Connectée</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.wifi === "Oui" && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-cyan-50 to-sky-50 dark:from-cyan-900/20 dark:to-sky-900/20 rounded-xl border border-cyan-100 dark:border-cyan-800" data-testid="spec-card-wifi">
+                        <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                          <Wifi className="w-5 h-5 text-cyan-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Wi-Fi</p>
+                          <p className="font-semibold">Intégré</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.bluetooth === "Oui" && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                        <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                          <Bluetooth className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Bluetooth</p>
+                          <p className="font-semibold">Oui</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.hdmi_ports && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl border border-orange-100 dark:border-orange-800">
+                        <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                          <HardDrive className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">HDMI</p>
+                          <p className="font-semibold">{product.specs.hdmi_ports} ports</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Climatiseur Specs */}
+                    {product.specs.puissance && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-xl border border-cyan-100 dark:border-cyan-800" data-testid="spec-card-puissance">
+                        <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                          <Snowflake className="w-5 h-5 text-cyan-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Puissance</p>
+                          <p className="font-semibold">{product.specs.puissance}</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.inverter === "Oui" && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 rounded-xl border border-green-100 dark:border-green-800" data-testid="spec-card-inverter">
+                        <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                          <Zap className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Technologie</p>
+                          <p className="font-semibold">Inverter</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.surface && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-100 dark:border-amber-800" data-testid="spec-card-surface">
+                        <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                          <Square className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Surface</p>
+                          <p className="font-semibold">{product.specs.surface}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Matelas Specs */}
+                    {product.specs.dimension && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl border border-violet-100 dark:border-violet-800" data-testid="spec-card-dimension">
+                        <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                          <Ruler className="w-5 h-5 text-violet-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Dimensions</p>
+                          <p className="font-semibold">{product.specs.dimension}</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.epaisseur && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-slate-50 to-gray-50 dark:from-slate-900/20 dark:to-gray-900/20 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <div className="w-10 h-10 rounded-lg bg-slate-500/10 flex items-center justify-center">
+                          <Bed className="w-5 h-5 text-slate-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Épaisseur</p>
+                          <p className="font-semibold">{product.specs.epaisseur}</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.fermete && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20 rounded-xl border border-rose-100 dark:border-rose-800">
+                        <div className="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                          <Gauge className="w-5 h-5 text-rose-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Fermeté</p>
+                          <p className="font-semibold">{product.specs.fermete}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Phone Specs */}
+                    {product.specs.storage && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-100 dark:border-blue-800" data-testid="spec-card-storage">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                          <HardDrive className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Stockage</p>
+                          <p className="font-semibold">{product.specs.storage}</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.color && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 rounded-xl border border-pink-100 dark:border-pink-800" data-testid="spec-card-color">
+                        <div className="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center">
+                          <Palette className="w-5 h-5 text-pink-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Couleur</p>
+                          <p className="font-semibold">{product.specs.color}</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.display && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl border border-teal-100 dark:border-teal-800" data-testid="spec-card-display">
+                        <div className="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                          <Smartphone className="w-5 h-5 text-teal-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Écran</p>
+                          <p className="font-semibold">{product.specs.display}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Automobile/Immobilier Specs */}
+                    {product.specs.kilometrage && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800" data-testid="spec-card-kilometrage">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                          <Gauge className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Kilométrage</p>
+                          <p className="font-semibold">{product.specs.kilometrage}</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.carburant && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl border border-amber-100 dark:border-amber-800" data-testid="spec-card-carburant">
+                        <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                          <Fuel className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Carburant</p>
+                          <p className="font-semibold">{product.specs.carburant}</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.chambres && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800" data-testid="spec-card-chambres">
+                        <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                          <Bed className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Chambres</p>
+                          <p className="font-semibold">{product.specs.chambres}</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.salles_bain && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-sky-900/20 dark:to-cyan-900/20 rounded-xl border border-sky-100 dark:border-sky-800" data-testid="spec-card-salles-bain">
+                        <div className="w-10 h-10 rounded-lg bg-sky-500/10 flex items-center justify-center">
+                          <Bath className="w-5 h-5 text-sky-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Salles de bain</p>
+                          <p className="font-semibold">{product.specs.salles_bain}</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.superficie && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-lime-50 to-green-50 dark:from-lime-900/20 dark:to-green-900/20 rounded-xl border border-lime-100 dark:border-lime-800" data-testid="spec-card-superficie">
+                        <div className="w-10 h-10 rounded-lg bg-lime-500/10 flex items-center justify-center">
+                          <Square className="w-5 h-5 text-lime-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Superficie</p>
+                          <p className="font-semibold">{product.specs.superficie}</p>
+                        </div>
+                      </div>
+                    )}
+                    {product.specs.localisation && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl border border-red-100 dark:border-red-800">
+                        <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                          <MapPin className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Localisation</p>
+                          <p className="font-semibold">{product.specs.localisation}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Warranty - Common */}
+                    {product.specs.warranty && (
+                      <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                          <Shield className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Garantie</p>
+                          <p className="font-semibold">{product.specs.warranty}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Description & Specs */}
               <Accordion type="single" collapsible className="w-full">

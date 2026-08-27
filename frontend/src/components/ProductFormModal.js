@@ -12,6 +12,7 @@ import {
   Loader2,
   Sparkles,
   Search,
+  Car,
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -130,6 +131,20 @@ const ProductFormModal = memo(({
     // Phone variants support
     has_variants: editingProduct?.has_variants || false,
     variants: editingProduct?.variants || [],
+    // Vehicle specs for automobile category
+    vehicle_specs: editingProduct?.vehicle_specs || {
+      marque: "",
+      modele: "",
+      annee: "",
+      kilometrage: "",
+      prix_sous_douane: "",
+      carburant: "",
+      transmission: "",
+      places: "",
+      couleur: "",
+      puissance: "",
+      etat: ""
+    },
   }), [editingProduct]);
 
   const [form, setForm] = useState(getInitialForm);
@@ -163,6 +178,20 @@ const ProductFormModal = memo(({
         meta_description: editingProduct?.meta_description || "",
         has_variants: editingProduct?.has_variants || false,
         variants: editingProduct?.variants ? [...editingProduct.variants] : [],
+        // Vehicle specs for automobile category
+        vehicle_specs: editingProduct?.vehicle_specs ? {...editingProduct.vehicle_specs} : {
+          marque: "",
+          modele: "",
+          annee: "",
+          kilometrage: "",
+          prix_sous_douane: "",
+          carburant: "",
+          transmission: "",
+          places: "",
+          couleur: "",
+          puissance: "",
+          etat: ""
+        },
       };
       setForm(newForm);
       setActiveTab("general");
@@ -380,13 +409,18 @@ const ProductFormModal = memo(({
 
   if (!isOpen) return null;
 
-  const tabs = [
+  // Dynamic tabs based on category
+  const baseTabs = [
     { id: "general", label: "Général", icon: FileText },
     { id: "media", label: "Images", icon: ImageIcon },
     { id: "variants", label: "Options", icon: Palette },
     { id: "specs", label: "Spécifications", icon: Ruler },
-    { id: "seo", label: "SEO", icon: Search },
   ];
+  
+  // Add Vehicle tab for automobile category
+  const tabs = form.category === "automobile" 
+    ? [...baseTabs.slice(0, 3), { id: "vehicle", label: "Véhicule", icon: Car }, ...baseTabs.slice(3), { id: "seo", label: "SEO", icon: Search }]
+    : [...baseTabs, { id: "seo", label: "SEO", icon: Search }];
 
   return (
     <div
@@ -775,40 +809,135 @@ const ProductFormModal = memo(({
                 {/* Variants Management */}
                 {form.has_variants && (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <label className="text-sm font-medium">Variantes du produit</label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          // Create variant based on product type
-                          let newVariant = {
-                            id: `var-${Date.now()}`,
-                            price: parseInt(form.price) || 0,
-                            stock: 0,
-                            image: form.images[0] || ""
-                          };
-                          
-                          // Climatiseur - CV variants
-                          if (form.category === "electromenager" && form.subcategory === "Climatiseur") {
-                            newVariant.puissance = "1";
-                            newVariant.unit = "CV";
-                          }
-                          // Matelas - Dimension variants
-                          else if (form.category === "decoration" && (form.subcategory === "Literie & Matelas" || form.subcategory?.toLowerCase()?.includes("matelas"))) {
-                            newVariant.dimension = "90x190";
-                          }
-                          // Phone - Capacity/Color variants
-                          else {
-                            newVariant.capacity = "128go";
-                            newVariant.color = "noir";
-                          }
-                          
-                          updateField('variants', [...form.variants, newVariant]);
-                        }}
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        + Ajouter une variante
-                      </button>
+                      <div className="flex gap-2">
+                        {/* Auto-generate all combinations for phones */}
+                        {form.category === "electronique" && (form.subcategory === "Smartphones" || form.subcategory?.toLowerCase()?.includes("téléphone")) && (
+                          <button
+                            type="button"
+                            data-testid="generate-phone-variants-btn"
+                            onClick={() => {
+                              const capacities = ["64go", "128go", "256go", "512go", "1to"];
+                              const colors = ["noir", "blanc", "bleu", "or", "argent", "rose", "violet", "vert", "rouge"];
+                              const basePrice = parseInt(form.price) || 0;
+                              const priceIncrement = { "64go": 0, "128go": 50000, "256go": 100000, "512go": 200000, "1to": 350000 };
+                              
+                              // Show selection modal or generate common combinations
+                              const selectedCapacities = ["128go", "256go", "512go"];
+                              const selectedColors = ["noir", "blanc", "bleu"];
+                              
+                              const newVariants = [];
+                              selectedCapacities.forEach(cap => {
+                                selectedColors.forEach(col => {
+                                  newVariants.push({
+                                    id: `var-${Date.now()}-${cap}-${col}`,
+                                    capacity: cap,
+                                    color: col,
+                                    price: basePrice + (priceIncrement[cap] || 0),
+                                    stock: 5,
+                                    image: form.images[0] || ""
+                                  });
+                                });
+                              });
+                              
+                              updateField('variants', [...form.variants, ...newVariants]);
+                              toast.success(`${newVariants.length} variantes générées (3 capacités × 3 couleurs)`);
+                            }}
+                            className="text-xs px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:opacity-90 font-medium"
+                          >
+                            ⚡ Générer combinaisons
+                          </button>
+                        )}
+                        
+                        {/* Auto-generate for Climatiseur */}
+                        {form.category === "electromenager" && form.subcategory === "Climatiseur" && (
+                          <button
+                            type="button"
+                            data-testid="generate-ac-variants-btn"
+                            onClick={() => {
+                              const puissances = ["1", "1.5", "2", "2.5", "3"];
+                              const basePrice = parseInt(form.price) || 0;
+                              const priceMap = { "1": 0, "1.5": 75000, "2": 150000, "2.5": 225000, "3": 350000 };
+                              
+                              const newVariants = puissances.map(p => ({
+                                id: `var-${Date.now()}-${p}cv`,
+                                puissance: p,
+                                unit: "CV",
+                                price: basePrice + (priceMap[p] || 0),
+                                stock: 3,
+                                image: form.images[0] || ""
+                              }));
+                              
+                              updateField('variants', [...form.variants, ...newVariants]);
+                              toast.success(`${newVariants.length} variantes générées (1CV à 3CV)`);
+                            }}
+                            className="text-xs px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:opacity-90 font-medium"
+                          >
+                            ⚡ Générer 1-3 CV
+                          </button>
+                        )}
+                        
+                        {/* Auto-generate for Matelas */}
+                        {form.category === "decoration" && (form.subcategory === "Literie & Matelas" || form.subcategory?.toLowerCase()?.includes("matelas")) && (
+                          <button
+                            type="button"
+                            data-testid="generate-mattress-variants-btn"
+                            onClick={() => {
+                              const dimensions = ["90x190", "120x190", "140x190", "160x200", "180x200"];
+                              const basePrice = parseInt(form.price) || 0;
+                              const priceMap = { "90x190": 0, "120x190": 30000, "140x190": 60000, "160x200": 100000, "180x200": 150000 };
+                              
+                              const newVariants = dimensions.map(d => ({
+                                id: `var-${Date.now()}-${d}`,
+                                dimension: d,
+                                price: basePrice + (priceMap[d] || 0),
+                                stock: 2,
+                                image: form.images[0] || ""
+                              }));
+                              
+                              updateField('variants', [...form.variants, ...newVariants]);
+                              toast.success(`${newVariants.length} variantes générées (5 dimensions)`);
+                            }}
+                            className="text-xs px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 font-medium"
+                          >
+                            ⚡ Générer dimensions
+                          </button>
+                        )}
+                        
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Create variant based on product type
+                            let newVariant = {
+                              id: `var-${Date.now()}`,
+                              price: parseInt(form.price) || 0,
+                              stock: 0,
+                              image: form.images[0] || ""
+                            };
+                            
+                            // Climatiseur - CV variants
+                            if (form.category === "electromenager" && form.subcategory === "Climatiseur") {
+                              newVariant.puissance = "1";
+                              newVariant.unit = "CV";
+                            }
+                            // Matelas - Dimension variants
+                            else if (form.category === "decoration" && (form.subcategory === "Literie & Matelas" || form.subcategory?.toLowerCase()?.includes("matelas"))) {
+                              newVariant.dimension = "90x190";
+                            }
+                            // Phone - Capacity/Color variants
+                            else {
+                              newVariant.capacity = "128go";
+                              newVariant.color = "noir";
+                            }
+                            
+                            updateField('variants', [...form.variants, newVariant]);
+                          }}
+                          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          + Ajouter une
+                        </button>
+                      </div>
                     </div>
 
                     {form.variants.length === 0 && (
@@ -1272,6 +1401,175 @@ const ProductFormModal = memo(({
                     </p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Vehicle Tab - Only for Automobile category */}
+            {activeTab === "vehicle" && form.category === "automobile" && (
+              <div className="space-y-6">
+                <div className="bg-slate-50 dark:bg-slate-900/20 rounded-xl p-4">
+                  <h4 className="font-medium text-slate-800 dark:text-slate-200 mb-1">Caractéristiques du véhicule</h4>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                    Ces informations seront affichées sur la fiche produit et aideront les clients à prendre leur décision.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Marque */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Marque</label>
+                    <input
+                      type="text"
+                      value={form.vehicle_specs?.marque || ""}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, marque: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-transparent"
+                      placeholder="Toyota, Mercedes, BMW..."
+                    />
+                  </div>
+
+                  {/* Modèle */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Modèle</label>
+                    <input
+                      type="text"
+                      value={form.vehicle_specs?.modele || ""}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, modele: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-transparent"
+                      placeholder="Corolla, Classe C, X5..."
+                    />
+                  </div>
+
+                  {/* Année */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Année</label>
+                    <input
+                      type="number"
+                      value={form.vehicle_specs?.annee || ""}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, annee: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-transparent"
+                      placeholder="2023"
+                      min="1990"
+                      max="2027"
+                    />
+                  </div>
+
+                  {/* Kilométrage */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Kilométrage</label>
+                    <input
+                      type="text"
+                      value={form.vehicle_specs?.kilometrage || ""}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, kilometrage: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-transparent"
+                      placeholder="50 000 km"
+                    />
+                  </div>
+
+                  {/* Prix sous douane */}
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-2">
+                      Prix sous douane (FCFA)
+                      <span className="text-xs text-amber-600 ml-2">* Prix avant dédouanement</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={form.vehicle_specs?.prix_sous_douane || ""}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, prix_sous_douane: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/20"
+                      placeholder="8 000 000"
+                    />
+                  </div>
+
+                  {/* Carburant */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Carburant</label>
+                    <select
+                      value={form.vehicle_specs?.carburant || ""}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, carburant: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-transparent"
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="Essence">Essence</option>
+                      <option value="Diesel">Diesel</option>
+                      <option value="Hybride">Hybride</option>
+                      <option value="Électrique">Électrique</option>
+                      <option value="GPL">GPL</option>
+                    </select>
+                  </div>
+
+                  {/* Transmission */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Transmission</label>
+                    <select
+                      value={form.vehicle_specs?.transmission || ""}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, transmission: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-transparent"
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="Manuelle">Manuelle</option>
+                      <option value="Automatique">Automatique</option>
+                      <option value="Semi-automatique">Semi-automatique</option>
+                    </select>
+                  </div>
+
+                  {/* Nombre de places */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Nombre de places</label>
+                    <select
+                      value={form.vehicle_specs?.places || ""}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, places: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-transparent"
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="2">2 places</option>
+                      <option value="4">4 places</option>
+                      <option value="5">5 places</option>
+                      <option value="7">7 places</option>
+                      <option value="8+">8+ places</option>
+                    </select>
+                  </div>
+
+                  {/* Couleur */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Couleur</label>
+                    <input
+                      type="text"
+                      value={form.vehicle_specs?.couleur || ""}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, couleur: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-transparent"
+                      placeholder="Noir, Blanc, Gris..."
+                    />
+                  </div>
+
+                  {/* Puissance */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Puissance</label>
+                    <input
+                      type="text"
+                      value={form.vehicle_specs?.puissance || ""}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, puissance: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-transparent"
+                      placeholder="150 CV, 2.0L..."
+                    />
+                  </div>
+
+                  {/* État */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">État</label>
+                    <select
+                      value={form.vehicle_specs?.etat || ""}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, etat: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-transparent"
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="Neuf">Neuf</option>
+                      <option value="Occasion - Excellent">Occasion - Excellent</option>
+                      <option value="Occasion - Très bon">Occasion - Très bon</option>
+                      <option value="Occasion - Bon">Occasion - Bon</option>
+                      <option value="À rénover">À rénover</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             )}
 

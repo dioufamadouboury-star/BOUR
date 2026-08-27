@@ -13,6 +13,7 @@ import CartDrawer from "./components/CartDrawer";
 import NewsletterPopup from "./components/NewsletterPopup";
 import GameFloatingButton from "./components/GameFloatingButton";
 import WhatsAppButton from "./components/WhatsAppButton";
+import MobileBottomNav from "./components/MobileBottomNav";
 // LiveChat removed per user request (overlapping with WhatsApp button)
 // PushNotificationPrompt removed per user request (not showing properly)
 import { CompareFloatingBar } from "./components/ProductComparison";
@@ -58,6 +59,7 @@ import PropertyDetailPage from "./pages/PropertyDetailPage";
 import ResellerPortalPage from "./pages/ResellerPortalPage";
 import ReferralRedirectPage from "./pages/ReferralRedirectPage";
 import B2BPortalPage from "./pages/B2BPortalPage";
+import CategoriesBrowsePage from "./pages/CategoriesBrowsePage";
 import SourcingPage from "./pages/SourcingPage";
 
 import "./App.css";
@@ -102,12 +104,17 @@ function PublicLayout({ children }) {
         {!isAdminPage && <NotificationBanner />}
         {!isAdminPage && <Navbar />}
       </div>
-      {children}
+      {/* Main content with bottom padding for mobile nav */}
+      <div className="pb-16 md:pb-0">
+        {children}
+      </div>
       {!isAdminPage && <Footer />}
       <CartDrawer />
       {!isAdminPage && <GameFloatingButton />}
       {!isAdminPage && <CompareFloatingBar />}
       {!isAdminPage && <WhatsAppButton />}
+      {/* Mobile Bottom Navigation */}
+      {!isAdminPage && <MobileBottomNav />}
     </>
   );
 }
@@ -163,6 +170,14 @@ function AppRouter() {
         element={
           <PublicLayout>
             <HomePage />
+          </PublicLayout>
+        }
+      />
+      <Route
+        path="/categories-browse"
+        element={
+          <PublicLayout>
+            <CategoriesBrowsePage />
           </PublicLayout>
         }
       />
@@ -456,7 +471,7 @@ function AppRouter() {
                 <h1 className="text-6xl font-bold mb-4">404</h1>
                 <p className="text-muted-foreground mb-6">Page non trouvée</p>
                 <a href="/" className="btn-primary">
-                  Retour à l'accueil
+                  Retour à l&apos;accueil
                 </a>
               </div>
             </div>

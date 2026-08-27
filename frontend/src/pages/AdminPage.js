@@ -1297,6 +1297,29 @@ export default function AdminPage() {
               <FileText className="w-5 h-5" />
               <span className="font-medium">Rapport mensuel PDF</span>
             </button>
+            
+            {/* Reset All Data Button */}
+            <button
+              onClick={async () => {
+                if (window.confirm("⚠️ ATTENTION: Cette action va supprimer TOUTES les commandes, rendez-vous, notifications, avis, paniers et données analytics. Cette action est IRRÉVERSIBLE.\n\nÊtes-vous sûr de vouloir continuer ?")) {
+                  try {
+                    await axios.post(`${API_URL}/api/admin/reset-all-data`, {}, {
+                      headers: { Authorization: `Bearer ${token}` }
+                    });
+                    toast.success("Toutes les données ont été remises à zéro");
+                    // Refresh the page to reload stats
+                    window.location.reload();
+                  } catch (error) {
+                    toast.error("Erreur lors de la remise à zéro");
+                    console.error(error);
+                  }
+                }
+              }}
+              className="w-full flex items-center gap-3 p-4 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span className="font-medium">Remettre à zéro</span>
+            </button>
           </div>
         </div>
       </div>

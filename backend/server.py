@@ -395,6 +395,7 @@ from routes.paydunya import router as paydunya_router
 from routes.reviews import router as reviews_router
 from routes.orange_sms import router as orange_sms_router
 from routes.sitemap import router as sitemap_router
+from routes.whatsapp import router as whatsapp_router, send_order_confirmation_whatsapp
 from routes.image_repair import router as image_repair_router
 api_router.include_router(gift_box_router)
 api_router.include_router(blog_router)
@@ -405,6 +406,7 @@ api_router.include_router(paydunya_router)
 api_router.include_router(reviews_router)
 api_router.include_router(orange_sms_router)
 api_router.include_router(sitemap_router)
+api_router.include_router(whatsapp_router)
 api_router.include_router(image_repair_router)
 
 # SEO Prerender router (served at /api/prerender/ for bot detection by Nginx)
@@ -554,6 +556,8 @@ class ProductBase(BaseModel):
     flash_sale_end: Optional[str] = None  # ISO datetime string
     flash_sale_price: Optional[int] = None
     specs: Optional[dict] = None
+    # Vehicle-specific specs (for automobile category)
+    vehicle_specs: Optional[dict] = None  # {marque, modele, annee, kilometrage, prix_sous_douane, carburant, transmission, places, couleur, puissance, etat}
     # Product variants/options
     brand: Optional[str] = None
     colors: Optional[List[str]] = None  # Available colors
@@ -3965,90 +3969,22 @@ async def send_shipping_update_email(order: dict, new_status: str):
     logger.info(f"Shipping update email sent for {order['order_id']} - Status: {new_status}")
 
 async def send_order_whatsapp_confirmation(order: dict, phone: str):
-    """Send WhatsApp order confirmation message to customer with full details"""
+    """Send WhatsApp order confirmation message to customer.
+    Uses WhatsApp Cloud API if configured, otherwise queues for manual send."""
     try:
-        # Format phone number (ensure +221 prefix for Senegal)
-        clean_phone = phone.replace(" ", "").replace("-", "")
-        if not clean_phone.startswith("+"):
-            if clean_phone.startswith("00"):
-                clean_phone = "+" + clean_phone[2:]
-            elif clean_phone.startswith("221"):
-                clean_phone = "+" + clean_phone
+        # Use the new WhatsApp integration
+        result = await send_order_confirmation_whatsapp(order, db)
+        
+        if result.get("success"):
+            if result.get("queued"):
+                logger.info(f"WhatsApp order confirmation queued for manual send: {order.get('order_id')}")
             else:
-                clean_phone = "+221" + clean_phone.lstrip("0")
-        
-        order_id = order.get("order_id")
-        total = order.get("total", 0)
-        subtotal = order.get("subtotal", 0)
-        shipping_cost = order.get("shipping_cost", 0)
-        items = order.get("items", [])
-        shipping = order.get("shipping", {})
-        customer_name = shipping.get("full_name", shipping.get("first_name", ""))
-        payment_method = order.get("payment_method", "")
-        payment_status = order.get("payment_status", "pending")
-        
-        # Payment status in French
-        status_text = {
-            "paid": "Paiement confirmé",
-            "cod_pending": "Paiement à la livraison",
-            "pending": "En attente de paiement",
-            "failed": "Paiement échoué"
-        }.get(payment_status, payment_status)
-        
-        # Format items list
-        items_text = ""
-        for item in items:
-            item_name = item.get("name", "Produit")
-            quantity = item.get("quantity", 1)
-            price = item.get("price", 0)
-            items_text += f"• {item_name} x{quantity} : {price:,} FCFA\n".replace(",", " ")
-        
-        # Create WhatsApp message for customer
-        message = f"""🎉 *Commande confirmée - GROUPE YAMA+*
-
-Bonjour {customer_name},
-
-Votre commande *#{order_id}* a bien été confirmée.
-
-📦 *Récapitulatif:*
-{items_text}
-*Sous-total:* {subtotal:,} FCFA
-*Livraison:* {shipping_cost:,} FCFA
-*Total:* {total:,} FCFA
-
-💳 *Paiement:* {status_text}
-
-📍 *Livraison:*
-{shipping.get('address', '')}
-{shipping.get('city', '')} - {shipping.get('region', '')}
-
-Nous préparons votre commande et vous tiendrons informé de son expédition.
-
-📞 Questions ? Répondez à ce message ou appelez-nous.
-
-Merci pour votre confiance !
-_L'équipe GROUPE YAMA+_""".replace(",", " ")
-
-        # Generate WhatsApp link (click-to-chat API)
-        encoded_message = message.replace("\n", "%0A").replace(" ", "%20").replace("*", "").replace("_", "")
-        whatsapp_link = f"https://wa.me/{clean_phone.replace('+', '')}?text={encoded_message}"
-        
-        # Log the WhatsApp notification for admin to send manually
-        await db.whatsapp_notifications.insert_one({
-            "notification_id": f"WA-{secrets.token_hex(4).upper()}",
-            "type": "order_confirmation",
-            "order_id": order_id,
-            "phone": clean_phone,
-            "message": message,
-            "whatsapp_link": whatsapp_link,
-            "status": "pending",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        })
-        
-        logger.info(f"WhatsApp order confirmation queued for {order_id} to {clean_phone}")
-        
+                logger.info(f"WhatsApp order confirmation sent automatically: {order.get('order_id')}")
+        else:
+            logger.warning(f"WhatsApp notification failed for order {order.get('order_id')}: {result.get('error')}")
+            
     except Exception as e:
-        logger.error(f"Error creating WhatsApp notification for order {order.get('order_id')}: {str(e)}")
+        logger.error(f"Error sending WhatsApp confirmation for order {order.get('order_id')}: {str(e)}")
 
 
 async def send_order_sms_orange(order: dict, phone: str):
@@ -7258,32 +7194,60 @@ async def get_admin_stats(user: User = Depends(require_admin)):
     revenue_result = await db.orders.aggregate(pipeline).to_list(1)
     total_revenue = revenue_result[0]["total"] if revenue_result else 0
     
-    # Calculate growth percentages
-    prev_period_start = now - timedelta(days=60)
-    prev_period_end = period_start
-    
-    # Current period confirmed orders
-    current_period_orders = await db.orders.count_documents({
-        "payment_status": {"$in": confirmed_statuses},
-        "created_at": {"$gte": period_start_str}
-    })
-    
-    # Current period revenue
-    current_revenue_pipeline = [
-        {"$match": {
-            "payment_status": {"$in": confirmed_statuses},
-            "created_at": {"$gte": period_start_str}
-        }},
-        {"$group": {"_id": None, "total": {"$sum": "$total"}}}
-    ]
-    current_revenue_result = await db.orders.aggregate(current_revenue_pipeline).to_list(1)
-    current_revenue = current_revenue_result[0]["total"] if current_revenue_result else 0
-    
-    # Previous period orders
-    prev_period_orders = await db.orders.count_documents({
-        "payment_status": {"$in": confirmed_statuses},
-        "created_at": {"$gte": prev_period_start.isoformat(), "$lt": period_start_str}
-    })
+    # Return stats without fake growth percentages
+    return {
+        "total_products": total_products,
+        "total_users": total_users,
+        "total_orders": total_confirmed_orders,
+        "pending_orders": pending_orders,
+        "total_revenue": total_revenue
+    }
+
+
+@api_router.post("/admin/reset-all-data")
+async def reset_all_data(user: User = Depends(require_admin)):
+    """Reset all analytics and operational data (keeps products and users)"""
+    try:
+        # Collections to clear
+        collections_to_clear = [
+            "orders",
+            "appointments", 
+            "notifications",
+            "reviews",
+            "carts",
+            "wishlists",
+            "abandoned_carts",
+            "newsletter_subscribers",
+            "contact_messages",
+            "analytics_events",
+            "sms_history",
+            "whatsapp_notifications",
+            "whatsapp_messages",
+            "page_views",
+            "search_queries"
+        ]
+        
+        deleted_counts = {}
+        
+        for collection_name in collections_to_clear:
+            try:
+                result = await db[collection_name].delete_many({})
+                deleted_counts[collection_name] = result.deleted_count
+            except Exception as e:
+                deleted_counts[collection_name] = f"Error: {str(e)}"
+        
+        # Log the reset action
+        logger.info(f"Admin {user.email} reset all data: {deleted_counts}")
+        
+        return {
+            "success": True,
+            "message": "Toutes les données ont été remises à zéro",
+            "deleted": deleted_counts
+        }
+        
+    except Exception as e:
+        logger.error(f"Error resetting data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la remise à zéro: {str(e)}")
     
     # Previous period revenue
     prev_revenue_pipeline = [
