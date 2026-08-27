@@ -104,17 +104,14 @@ function PublicLayout({ children }) {
         {!isAdminPage && <NotificationBanner />}
         {!isAdminPage && <Navbar />}
       </div>
-      {/* Main content with bottom padding for mobile nav */}
-      <div className="pb-16 md:pb-0">
-        {children}
-      </div>
+      {/* Main content */}
+      {children}
       {!isAdminPage && <Footer />}
       <CartDrawer />
       {!isAdminPage && <GameFloatingButton />}
       {!isAdminPage && <CompareFloatingBar />}
       {!isAdminPage && <WhatsAppButton />}
-      {/* Mobile Bottom Navigation */}
-      {!isAdminPage && <MobileBottomNav />}
+      {/* Mobile Bottom Navigation removed per user request - takes too much space */}
     </>
   );
 }

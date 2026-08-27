@@ -1742,6 +1742,31 @@ async def delete_product(product_id: str, user: User = Depends(require_admin)):
     
     return {"message": "Produit supprimé", "deleted": True}
 
+
+# ============== PRODUCT POSITIONING ==============
+
+class ProductPositionUpdate(BaseModel):
+    product_id: str
+    position: int
+
+@api_router.put("/admin/products/positions")
+async def update_product_positions(positions: List[ProductPositionUpdate], user: User = Depends(require_admin)):
+    """Update positions of multiple products at once - MUST BE BEFORE /admin/products/{product_id}"""
+    updated_count = 0
+    for item in positions:
+        result = await db.products.update_one(
+            {"product_id": item.product_id},
+            {"$set": {"position": item.position, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        if result.modified_count > 0:
+            updated_count += 1
+    
+    # Clear cache
+    clear_cache("products")
+    
+    return {"message": f"{updated_count} produits mis à jour", "updated_count": updated_count}
+
+
 @api_router.put("/admin/products/{product_id}")
 async def admin_update_product(product_id: str, request: Request, user: User = Depends(require_admin)):
     """Partial update for admin - update specific fields like featured, is_new, order"""
@@ -1780,27 +1805,6 @@ async def admin_update_product(product_id: str, request: Request, user: User = D
     updated = await db.products.find_one({"product_id": product_id}, {"_id": 0})
     return {"message": "Produit mis à jour", "product": updated}
 
-
-# ============== PRODUCT POSITIONING ==============
-
-class ProductPositionUpdate(BaseModel):
-    product_id: str
-    position: int
-
-@api_router.put("/admin/products/positions")
-async def update_product_positions(positions: List[ProductPositionUpdate], user: User = Depends(require_admin)):
-    """Update positions of multiple products at once"""
-    updated_count = 0
-    for item in positions:
-        result = await db.products.update_one(
-            {"product_id": item.product_id},
-            {"$set": {"position": item.position, "updated_at": datetime.now(timezone.utc).isoformat()}}
-        )
-        if result.modified_count > 0:
-            updated_count += 1
-    
-    clear_cache()
-    return {"message": f"{updated_count} produits mis à jour", "updated_count": updated_count}
 
 @api_router.put("/admin/products/{product_id}/position")
 async def update_single_product_position(product_id: str, position: int, user: User = Depends(require_admin)):
@@ -7248,37 +7252,7 @@ async def reset_all_data(user: User = Depends(require_admin)):
     except Exception as e:
         logger.error(f"Error resetting data: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur lors de la remise à zéro: {str(e)}")
-    
-    # Previous period revenue
-    prev_revenue_pipeline = [
-        {"$match": {
-            "payment_status": {"$in": confirmed_statuses},
-            "created_at": {"$gte": prev_period_start.isoformat(), "$lt": period_start_str}
-        }},
-        {"$group": {"_id": None, "total": {"$sum": "$total"}}}
-    ]
-    prev_revenue_result = await db.orders.aggregate(prev_revenue_pipeline).to_list(1)
-    prev_revenue = prev_revenue_result[0]["total"] if prev_revenue_result else 0
-    
-    # Calculate growth (only if we have valid comparison data)
-    revenue_growth = None
-    orders_growth = None
-    
-    if prev_revenue > 0 and current_revenue > 0:
-        revenue_growth = round(((current_revenue - prev_revenue) / prev_revenue) * 100, 1)
-    
-    if prev_period_orders > 0 and current_period_orders > 0:
-        orders_growth = round(((current_period_orders - prev_period_orders) / prev_period_orders) * 100, 1)
-    
-    return {
-        "total_orders": total_confirmed_orders,
-        "pending_orders": pending_orders,
-        "total_products": total_products,
-        "total_users": total_users,
-        "total_revenue": total_revenue,
-        "revenue_growth": revenue_growth,
-        "orders_growth": orders_growth
-    }
+
 
 @api_router.get("/admin/users")
 async def get_all_users(

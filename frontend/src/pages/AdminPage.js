@@ -406,6 +406,11 @@ export default function AdminPage() {
     order_delivery_days: "",
     meta_title: "",
     meta_description: "",
+    // Variants support
+    has_variants: false,
+    variants: [],
+    // Vehicle specs
+    vehicle_specs: {},
   });
 
   // Stable form field update function to prevent re-renders
@@ -436,6 +441,13 @@ export default function AdminPage() {
       specs: {},
       is_on_order: false,
       order_delivery_days: "",
+      meta_title: "",
+      meta_description: "",
+      // Variants support
+      has_variants: false,
+      variants: [],
+      // Vehicle specs
+      vehicle_specs: {},
     });
     setEditingProduct(null);
     setActiveFormTab("general");
@@ -638,6 +650,11 @@ export default function AdminPage() {
       order_delivery_days: product.order_delivery_days?.toString() || "",
       meta_title: product.meta_title || "",
       meta_description: product.meta_description || "",
+      // Variants support - CRITICAL for iPhone/Mattress pricing
+      has_variants: product.has_variants || false,
+      variants: product.variants ? [...product.variants] : [],
+      // Vehicle specs
+      vehicle_specs: product.vehicle_specs || {},
     });
     setShowProductForm(true);
     setActiveFormTab("general");

@@ -16,6 +16,8 @@ import {
   Download,
   MapPin,
   Info,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { useCart } from "../contexts/CartContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -106,6 +108,12 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  
+  // Payment failure recovery state
+  const [paymentFailed, setPaymentFailed] = useState(false);
+  const [failedOrderId, setFailedOrderId] = useState(null);
+  const [retryingPayment, setRetryingPayment] = useState(false);
+  const [switchingToCOD, setSwitchingToCOD] = useState(false);
   
   // Promo code state
   const [promoCode, setPromoCode] = useState("");
@@ -398,6 +406,8 @@ export default function CheckoutPage() {
             if (res.data.payment_status === 'paid') {
               Analytics.purchase(orderIdFromUrl, cart.items, total, shippingCost);
               toast.success("Paiement effectué avec succès !");
+              // Only clear cart on successful payment
+              clearCart();
             } else {
               toast.info("Paiement en cours de vérification...");
             }
@@ -408,18 +418,23 @@ export default function CheckoutPage() {
         
         setOrderId(orderIdFromUrl);
         setOrderComplete(true);
-        clearCart();
         // Clean URL
         window.history.replaceState({}, '', '/checkout');
-      } else if (paymentStatus === 'cancel') {
-        toast.error("Paiement annulé. Votre commande est en attente de paiement.");
-        setOrderId(orderIdFromUrl);
-        setOrderComplete(true);
-        clearCart();
+      } else if (paymentStatus === 'cancel' || paymentStatus === 'cancelled') {
+        // Payment cancelled - DO NOT clear cart
+        toast.error("Paiement annulé. Votre panier a été conservé.");
+        setPaymentFailed(true);
+        setFailedOrderId(orderIdFromUrl);
+        window.history.replaceState({}, '', '/checkout');
+      } else if (paymentStatus === 'failed') {
+        // Payment failed - DO NOT clear cart
+        toast.error("Le paiement a échoué. Votre panier a été conservé.");
+        setPaymentFailed(true);
+        setFailedOrderId(orderIdFromUrl);
         window.history.replaceState({}, '', '/checkout');
       }
     }
-  }, [clearCart, cart.items, total, shippingCost]);
+  }, [cart.items, total, shippingCost, clearCart]);
 
   const handleWhatsAppOrder = () => {
     const message = generateOrderMessage(cart.items, total, {
@@ -524,6 +539,89 @@ export default function CheckoutPage() {
       </div>
 
       <div className="container-lumina py-12">
+        {/* Payment Failed Recovery Section */}
+        {paymentFailed && failedOrderId && (
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-3xl p-6 md:p-8 mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-7 h-7 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-200">
+                    Votre paiement n&apos;a pas été effectué
+                  </h3>
+                  <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                    Votre panier a été conservé. Commande #{failedOrderId}
+                  </p>
+                  <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
+                    Vous pouvez réessayer le paiement ou choisir de payer à la livraison.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setRetryingPayment(true);
+                    try {
+                      const response = await axios.post(`${API_URL}/api/payments/paydunya/retry/${failedOrderId}`, {
+                        success_url: `${window.location.origin}/checkout?payment=success&order_id=${failedOrderId}`,
+                        cancel_url: `${window.location.origin}/checkout?payment=cancel&order_id=${failedOrderId}`
+                      });
+                      if (response.data.checkout_url) {
+                        window.location.href = response.data.checkout_url;
+                      }
+                    } catch (error) {
+                      toast.error("Erreur lors de la tentative de paiement");
+                    } finally {
+                      setRetryingPayment(false);
+                    }
+                  }}
+                  disabled={retryingPayment}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-xl font-semibold hover:bg-orange-700 disabled:opacity-50 transition-colors"
+                >
+                  {retryingPayment ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-5 h-5" />
+                  )}
+                  Réessayer le paiement
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setSwitchingToCOD(true);
+                    try {
+                      await axios.post(`${API_URL}/api/payments/paydunya/switch-to-cod/${failedOrderId}`);
+                      toast.success("Commande confirmée ! Vous paierez à la livraison.");
+                      clearCart();
+                      setPaymentFailed(false);
+                      setOrderId(failedOrderId);
+                      setOrderComplete(true);
+                    } catch (error) {
+                      toast.error("Erreur lors du changement de mode de paiement");
+                    } finally {
+                      setSwitchingToCOD(false);
+                    }
+                  }}
+                  disabled={switchingToCOD}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border-2 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 rounded-xl font-semibold hover:bg-orange-50 dark:hover:bg-orange-900/30 disabled:opacity-50 transition-colors"
+                >
+                  {switchingToCOD ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Truck className="w-5 h-5" />
+                  )}
+                  Payer à la livraison
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
           {/* Form */}
           <div className="lg:col-span-2">
@@ -762,7 +860,7 @@ export default function CheckoutPage() {
                         <p className="font-semibold text-xs sm:text-sm">
                           {formData.payment_method === "cash" 
                             ? "Paiement à la livraison" 
-                            : "Paiement sécurisé via Paytech"}
+                            : "Paiement sécurisé via PayDunya"}
                         </p>
                         <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
                           {paymentMethods.find(m => m.id === formData.payment_method)?.infoText}

@@ -48,6 +48,7 @@ import {
   getImageUrl,
 } from "../lib/utils";
 import { cn } from "../lib/utils";
+import ProductSpecsBanner from "../components/ProductSpecsBanner";
 import {
   Accordion,
   AccordionContent,
@@ -426,6 +427,13 @@ export default function ProductPage() {
                   ))}
                 </div>
               )}
+              
+              {/* Animated Specs Banner */}
+              <ProductSpecsBanner 
+                specs={product.specs} 
+                vehicleSpecs={product.vehicle_specs}
+                category={product.category}
+              />
             </div>
 
             {/* Product Info */}
