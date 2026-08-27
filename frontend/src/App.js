@@ -64,6 +64,7 @@ import SourcingPage from "./pages/SourcingPage";
 import VehicleRequestPage from "./pages/VehicleRequestPage";
 import SofaRequestPage from "./pages/SofaRequestPage";
 import ReupholsteryPage from "./pages/ReupholsteryPage";
+import PrivateQuotePage from "./pages/PrivateQuotePage";
 
 import "./App.css";
 

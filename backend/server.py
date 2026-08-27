@@ -398,6 +398,7 @@ from routes.sitemap import router as sitemap_router
 from routes.whatsapp import router as whatsapp_router, send_order_confirmation_whatsapp
 from routes.image_repair import router as image_repair_router
 from routes.custom_requests import router as custom_requests_router, init_custom_requests_routes
+from routes.private_quotes import router as private_quotes_router, init_private_quotes_routes
 api_router.include_router(gift_box_router)
 api_router.include_router(blog_router)
 api_router.include_router(real_estate_router)
@@ -413,6 +414,10 @@ api_router.include_router(image_repair_router)
 # Custom requests router (vehicle, sofa, reupholstery)
 init_custom_requests_routes(db)
 app.include_router(custom_requests_router)
+
+# Private quotes router (secure quotes with signature)
+init_private_quotes_routes(db)
+app.include_router(private_quotes_router)
 
 # SEO Prerender router (served at /api/prerender/ for bot detection by Nginx)
 prerender_router = APIRouter(prefix="/api/prerender")
