@@ -401,7 +401,13 @@ async def initiate_paydunya_payment(request: PayDunyaCheckoutRequest):
         }
     }
     
-    logger.info(f"PayDunya payment initiation for order {request.order_id}: {total_amount} FCFA")
+    # If card payment is selected, add target_payment to force card UI display
+    # This is required by PayDunya to display the card payment option on the checkout page
+    if request.payment_channel == "card":
+        invoice_body["invoice"]["target_payment"] = "Carte Bancaire"
+        logger.info(f"Card payment requested - adding target_payment parameter")
+    
+    logger.info(f"PayDunya payment initiation for order {request.order_id}: {total_amount} FCFA, channels: {channels}")
     
     try:
         result = await paydunya_client.create_invoice(invoice_body)
