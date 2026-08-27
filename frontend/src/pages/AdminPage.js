@@ -91,6 +91,7 @@ import ResellersAdmin from "../components/Admin/ResellersAdmin";
 import B2BAdmin from "../components/Admin/B2BAdmin";
 import SourcingAdmin from "../components/Admin/SourcingAdmin";
 import PushNotificationsAdmin from "../components/Admin/PushNotificationsAdmin";
+import CustomRequestsAdmin from "../components/Admin/CustomRequestsAdmin";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -103,6 +104,7 @@ const menuItems = [
   { id: "flash-sales", label: "Ventes Flash", icon: Zap, href: "/admin/flash-sales" },
   { id: "gift-boxes", label: "Coffrets Cadeaux", icon: Gift, href: "/admin/gift-boxes" },
   { id: "orders", label: "Commandes", icon: ShoppingCart, href: "/admin/orders" },
+  { id: "custom-requests", label: "Demandes spéciales", icon: ClipboardList, href: "/admin/custom-requests" },
   { id: "reservations", label: "Réservations", icon: Calendar, href: "/admin/reservations" },
   { id: "appointments", label: "Rendez-vous", icon: Clock, href: "/admin/appointments" },
   { id: "service-providers", label: "Prestataires", icon: Briefcase, href: "/admin/service-providers" },
@@ -2234,6 +2236,8 @@ export default function AdminPage() {
         return <B2BAdmin />;
       case "sourcing":
         return <SourcingAdmin />;
+      case "custom-requests":
+        return <CustomRequestsAdmin />;
       default:
         return renderDashboard();
     }

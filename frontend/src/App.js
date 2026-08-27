@@ -61,6 +61,9 @@ import ReferralRedirectPage from "./pages/ReferralRedirectPage";
 import B2BPortalPage from "./pages/B2BPortalPage";
 import CategoriesBrowsePage from "./pages/CategoriesBrowsePage";
 import SourcingPage from "./pages/SourcingPage";
+import VehicleRequestPage from "./pages/VehicleRequestPage";
+import SofaRequestPage from "./pages/SofaRequestPage";
+import ReupholsteryPage from "./pages/ReupholsteryPage";
 
 import "./App.css";
 
@@ -159,6 +162,7 @@ function AppRouter() {
       <Route path="/admin/ads-guide" element={<AdminPage />} />
       <Route path="/admin/reset" element={<AdminPage />} />
       <Route path="/admin/resellers" element={<AdminPage />} />
+      <Route path="/admin/custom-requests" element={<AdminPage />} />
       <Route path="/admin/featured" element={<FeaturedProductsAdmin />} />
 
       {/* Public Pages */}
@@ -457,6 +461,11 @@ function AppRouter() {
       <Route path="/sourcing" element={<SourcingPage />} />
       <Route path="/import-chine" element={<SourcingPage />} />
       <Route path="/sourcing/track/:requestId" element={<SourcingPage />} />
+
+      {/* Custom Requests (Vehicle, Sofa, Reupholstery) */}
+      <Route path="/demande-vehicule" element={<VehicleRequestPage />} />
+      <Route path="/salon-sur-commande" element={<SofaRequestPage />} />
+      <Route path="/rehoussage" element={<ReupholsteryPage />} />
 
       {/* 404 */}
       <Route

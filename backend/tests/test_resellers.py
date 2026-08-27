@@ -31,7 +31,7 @@ class TestResellerAdminAPI:
                     json={"is_active": False},
                     headers=self.headers
                 )
-            except:
+            except Exception:
                 pass
     
     def test_get_resellers_list(self):
@@ -249,7 +249,7 @@ class TestResellerPortalAPI:
                     json={"is_active": False},
                     headers=self.admin_headers
                 )
-            except:
+            except Exception:
                 pass
     
     def test_reseller_login_success(self):
@@ -375,7 +375,7 @@ class TestResellerCommissionPayment:
                     json={"is_active": False},
                     headers=self.admin_headers
                 )
-            except:
+            except Exception:
                 pass
     
     def test_pay_commission_no_pending(self):

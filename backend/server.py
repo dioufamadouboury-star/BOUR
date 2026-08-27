@@ -397,6 +397,7 @@ from routes.orange_sms import router as orange_sms_router
 from routes.sitemap import router as sitemap_router
 from routes.whatsapp import router as whatsapp_router, send_order_confirmation_whatsapp
 from routes.image_repair import router as image_repair_router
+from routes.custom_requests import router as custom_requests_router, init_custom_requests_routes
 api_router.include_router(gift_box_router)
 api_router.include_router(blog_router)
 api_router.include_router(real_estate_router)
@@ -408,6 +409,10 @@ api_router.include_router(orange_sms_router)
 api_router.include_router(sitemap_router)
 api_router.include_router(whatsapp_router)
 api_router.include_router(image_repair_router)
+
+# Custom requests router (vehicle, sofa, reupholstery)
+init_custom_requests_routes(db)
+app.include_router(custom_requests_router)
 
 # SEO Prerender router (served at /api/prerender/ for bot detection by Nginx)
 prerender_router = APIRouter(prefix="/api/prerender")
@@ -2904,7 +2909,7 @@ async def subscribe_push(subscription: PushSubscription, request: Request):
             token = auth_header.split(" ")[1]
             payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
             user_id = payload.get("user_id")
-        except:
+        except (jwt.InvalidTokenError, IndexError):
             pass
     
     sub_doc = {
@@ -2985,7 +2990,7 @@ async def get_recent_notifications(request: Request):
             token = auth_header.split(" ")[1]
             payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
             user_id = payload.get("user_id")
-        except:
+        except (jwt.InvalidTokenError, IndexError):
             pass
     
     # Get notifications from last 24 hours
@@ -3023,7 +3028,7 @@ async def start_chat_session(request: Request):
             if user:
                 user_name = user.get("name", user_name)
                 user_email = user.get("email", user_email)
-        except:
+        except (jwt.InvalidTokenError, IndexError):
             pass
     
     session = {
@@ -6148,44 +6153,7 @@ async def get_user_orders(user: User = Depends(require_auth)):
     
     return orders
 
-@api_router.get("/orders/{order_id}")
-async def get_order(order_id: str, request: Request):
-    """Get order details - public for basic tracking, full details for owner/admin"""
-    user = await get_current_user(request)
-    
-    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
-    if not order:
-        raise HTTPException(status_code=404, detail="Commande non trouvée")
-    
-    # Convert datetime if needed
-    if isinstance(order.get('created_at'), str):
-        order['created_at'] = datetime.fromisoformat(order['created_at'])
-    
-    # Check if user is owner or admin
-    is_owner = user and (user.role == "admin" or order.get("user_id") == user.user_id)
-    
-    # For public access (no user or not owner), return limited info
-    if not is_owner:
-        # Return public-safe order info for tracking
-        return {
-            "order_id": order.get("order_id"),
-            "order_status": order.get("order_status"),
-            "payment_status": order.get("payment_status"),
-            "payment_method": order.get("payment_method"),
-            "total": order.get("total"),
-            "shipping_cost": order.get("shipping_cost"),
-            "created_at": order.get("created_at"),
-            "status_history": order.get("status_history", []),
-            "items": [{"name": item.get("name"), "quantity": item.get("quantity"), "image": item.get("image")} for item in order.get("items", [])],
-            "shipping": {
-                "city": order.get("shipping", {}).get("city"),
-                "region": order.get("shipping", {}).get("region"),
-            }
-        }
-    
-    return order
-
-# ============== ORDER TRACKING (PUBLIC) ==============
+# ============== ORDER TRACKING (PUBLIC) - Must be before /orders/{order_id} ==============
 
 @api_router.get("/orders/track")
 async def track_order(order_id: str, email: str):
@@ -6779,7 +6747,7 @@ async def cancel_order_by_customer(order_id: str, request: Request):
     body = {}
     try:
         body = await request.json()
-    except:
+    except (ValueError, json.JSONDecodeError):
         pass
     
     customer_email = body.get("email", "").lower()
@@ -9913,8 +9881,8 @@ app.include_router(api_router)
 
 # Commercial routes
 from routes.commercial_routes import get_commercial_routes
-commercial_router = get_commercial_routes(db, require_admin)
-app.include_router(commercial_router)
+commercial_routes_instance = get_commercial_routes(db, require_admin)
+app.include_router(commercial_routes_instance)
 
 # CORS - Allow multiple origins including production
 ALLOWED_ORIGINS = [

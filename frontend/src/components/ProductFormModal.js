@@ -138,6 +138,7 @@ const ProductFormModal = memo(({
       annee: "",
       kilometrage: "",
       prix_sous_douane: "",
+      customs_status: "sous_douane",
       carburant: "",
       transmission: "",
       places: "",
@@ -185,6 +186,7 @@ const ProductFormModal = memo(({
           annee: "",
           kilometrage: "",
           prix_sous_douane: "",
+          customs_status: "sous_douane",
           carburant: "",
           transmission: "",
           places: "",
@@ -1466,7 +1468,7 @@ const ProductFormModal = memo(({
                   </div>
 
                   {/* Prix sous douane */}
-                  <div className="col-span-2">
+                  <div>
                     <label className="block text-sm font-medium mb-2">
                       Prix sous douane (FCFA)
                       <span className="text-xs text-amber-600 ml-2">* Prix avant dédouanement</span>
@@ -1478,6 +1480,28 @@ const ProductFormModal = memo(({
                       className="w-full px-4 py-2.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/20"
                       placeholder="8 000 000"
                     />
+                  </div>
+
+                  {/* Statut Douane */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Statut douane
+                      <span className="text-xs text-primary ml-2">* Important</span>
+                    </label>
+                    <select
+                      value={form.vehicle_specs?.customs_status || "sous_douane"}
+                      onChange={(e) => updateField("vehicle_specs", { ...form.vehicle_specs, customs_status: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-primary/30 bg-primary/5"
+                    >
+                      <option value="sous_douane">Sous douane (non dédouané)</option>
+                      <option value="dedouane">Dédouané (prêt à immatriculer)</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {form.vehicle_specs?.customs_status === "dedouane" 
+                        ? "Le prix affiché inclut tous les frais de dédouanement"
+                        : "Le prix affiché n'inclut pas les frais de dédouanement"
+                      }
+                    </p>
                   </div>
 
                   {/* Carburant */}

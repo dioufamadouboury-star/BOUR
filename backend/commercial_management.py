@@ -92,7 +92,7 @@ def create_pdf_header(canvas_obj, doc, title, doc_number, doc_date):
     if logo_path:
         try:
             canvas_obj.drawImage(logo_path, 2*cm, A4[1] - 3*cm, width=4*cm, height=1.5*cm, preserveAspectRatio=True)
-        except:
+        except Exception:
             pass
     
     # Company name

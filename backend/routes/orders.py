@@ -177,40 +177,6 @@ async def get_user_orders(user = Depends(lambda: require_auth)):
     return orders
 
 
-@router.get("/orders/{order_id}")
-async def get_order(order_id: str, request: Request):
-    """Get order details - public for basic tracking, full for owner/admin"""
-    user = await get_current_user(request)
-    
-    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
-    if not order:
-        raise HTTPException(status_code=404, detail="Commande non trouvée")
-    
-    if isinstance(order.get('created_at'), str):
-        order['created_at'] = datetime.fromisoformat(order['created_at'])
-    
-    is_owner = user and (user.role == "admin" or order.get("user_id") == user.user_id)
-    
-    if not is_owner:
-        return {
-            "order_id": order.get("order_id"),
-            "order_status": order.get("order_status"),
-            "payment_status": order.get("payment_status"),
-            "payment_method": order.get("payment_method"),
-            "total": order.get("total"),
-            "shipping_cost": order.get("shipping_cost"),
-            "created_at": order.get("created_at"),
-            "status_history": order.get("status_history", []),
-            "items": [{"name": item.get("name"), "quantity": item.get("quantity"), "image": item.get("image")} for item in order.get("items", [])],
-            "shipping": {
-                "city": order.get("shipping", {}).get("city"),
-                "region": order.get("shipping", {}).get("region"),
-            }
-        }
-    
-    return order
-
-
 @router.get("/orders/track")
 async def track_order(order_id: str, email: str):
     """Public endpoint to track order by order_id and email"""
@@ -272,3 +238,37 @@ async def track_order(order_id: str, email: str):
         "discount": order.get("discount", 0),
         "total": order.get("total", 0)
     }
+
+
+@router.get("/orders/{order_id}")
+async def get_order(order_id: str, request: Request):
+    """Get order details - public for basic tracking, full for owner/admin"""
+    user = await get_current_user(request)
+    
+    order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+    
+    if isinstance(order.get('created_at'), str):
+        order['created_at'] = datetime.fromisoformat(order['created_at'])
+    
+    is_owner = user and (user.role == "admin" or order.get("user_id") == user.user_id)
+    
+    if not is_owner:
+        return {
+            "order_id": order.get("order_id"),
+            "order_status": order.get("order_status"),
+            "payment_status": order.get("payment_status"),
+            "payment_method": order.get("payment_method"),
+            "total": order.get("total"),
+            "shipping_cost": order.get("shipping_cost"),
+            "created_at": order.get("created_at"),
+            "status_history": order.get("status_history", []),
+            "items": [{"name": item.get("name"), "quantity": item.get("quantity"), "image": item.get("image")} for item in order.get("items", [])],
+            "shipping": {
+                "city": order.get("shipping", {}).get("city"),
+                "region": order.get("shipping", {}).get("region"),
+            }
+        }
+    
+    return order

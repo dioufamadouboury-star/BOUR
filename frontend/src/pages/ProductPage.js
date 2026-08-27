@@ -461,7 +461,7 @@ export default function ProductPage() {
               </div>
 
               {/* Price */}
-              <div className="flex items-baseline gap-3 mb-4">
+              <div className="flex items-baseline gap-3 mb-2">
                 <span
                   className="text-3xl font-semibold price-fcfa"
                   data-testid="product-price"
@@ -474,6 +474,33 @@ export default function ProductPage() {
                   </span>
                 )}
               </div>
+
+              {/* Customs Status for Vehicles */}
+              {product.category === "automobile" && product.vehicle_specs?.customs_status && (
+                <div 
+                  data-testid="vehicle-customs-status"
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium mb-4 ${
+                  product.vehicle_specs.customs_status === "dedouane" 
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
+                }`}>
+                  {product.vehicle_specs.customs_status === "dedouane" ? (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Prix dédouané (prêt à immatriculer)
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      Prix sous douane (frais de dédouanement non inclus)
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* Variant Selection for Phones */}
               {product.has_variants && product.variants?.length > 0 && (

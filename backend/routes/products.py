@@ -250,7 +250,7 @@ async def get_flash_sales():
             if isinstance(product.get(field), str):
                 try:
                     product[field] = datetime.fromisoformat(product[field].replace('Z', '+00:00'))
-                except:
+                except (ValueError, AttributeError):
                     pass
     
     return products
@@ -322,11 +322,12 @@ async def get_similar_products(product_id: str, limit: int = 6):
     similar = await db.products.find(query, {"_id": 0}).limit(limit).to_list(limit)
     
     if len(similar) < limit:
+        existing_ids = [p["product_id"] for p in similar]
+        existing_ids.append(product_id)
         more = await db.products.find(
             {
-                "product_id": {"$ne": product_id},
-                "category": product.get("category"),
-                "product_id": {"$nin": [p["product_id"] for p in similar]}
+                "product_id": {"$nin": existing_ids},
+                "category": product.get("category")
             },
             {"_id": 0}
         ).limit(limit - len(similar)).to_list(limit - len(similar))
@@ -436,6 +437,8 @@ async def create_review(product_id: str, review_data: ReviewCreate, user = Depen
     
     await db.reviews.insert_one(review_doc)
     
+    # Return a clean copy without _id
+    review_doc.pop("_id", None)
     review_doc["user_name"] = user.name
     return review_doc
 

@@ -14,81 +14,104 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 
 ## Session Changes (August 27, 2026 - Latest Session)
 
-### ✅ Verified and Fixed Features
+### ✅ NEW Custom Request System (Fully Tested - 100%)
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 1 | Reset Dashboard Endpoint | ✅ ADDED | `POST /api/admin/reset-all-data` - clears orders, carts, analytics, etc. |
-| 2 | Admin Sidebar Scroll | ✅ WORKING | `overflow-y-auto min-h-0` - all 19 tabs visible |
-| 3 | Dark Mode Harmonized | ✅ PARTIAL | Gradient backgrounds implemented |
-| 4 | Page Transitions | ✅ ADDED | `PageTransition.js` component with framer-motion |
-| 5 | Mobile Bottom Nav | ✅ ADDED | `MobileBottomNav.js` - 5 icons (Home, Search, Explore, Cart, Account) |
-| 6 | Categories Browse Page | ✅ ADDED | `/categories-browse` route with category grid |
-| 7 | Vehicle Specs (Automobile) | ✅ ADDED | `vehicle_specs` field + Admin form tab |
-| 8 | Reset Button in Admin | ✅ ADDED | Red "Remettre à zéro" button in Quick Actions |
-| 9 | Stats Without Fake Growth | ✅ FIXED | Removed fake +12%, +8% percentages |
+| 1 | Vehicle Request Form | ✅ DONE | `/demande-vehicule` - Form for vehicle import requests from China |
+| 2 | Custom Sofa Order Form | ✅ DONE | `/salon-sur-commande` - Form for custom furniture orders |
+| 3 | Reupholstery Quote Form | ✅ DONE | `/rehoussage` - Form with photo upload for furniture restoration |
+| 4 | Admin Dashboard | ✅ DONE | `/admin/custom-requests` - Stats, filters, search, detail view |
+| 5 | Vehicle Customs Status | ✅ DONE | Display "sous douane" or "dédouané" on product page |
 
-### ✅ Previously Fixed (Same Session)
-
-| # | Feature | Status |
-|---|---------|--------|
-| 1 | Admin Featured Products | ✅ WORKING | `PUT /api/admin/products/{id}` endpoint |
-| 2 | SMS Client Personalization | ✅ WORKING | First name, products, tracking link |
-| 3 | Email Images | ✅ FIXED | Table layout instead of flex |
-| 4 | "Sur commande" Stock | ✅ WORKING | `is_on_order=true` skips stock validation |
-| 5 | Failed Payment Recovery | ✅ WORKING | Retry or switch to COD |
-| 6 | Auto-Generate Variants | ✅ ADDED | Buttons for Phone/AC/Mattress variants |
-| 7 | Visual Specs Cards | ✅ ADDED | Icons for TV/Phone/AC/Real Estate specs |
-| 8 | WhatsApp Auto Integration | ✅ ADDED | Cloud API with manual fallback queue |
+### API Endpoints Created
+- `POST /api/custom-requests/vehicle` - Submit vehicle search request
+- `POST /api/custom-requests/sofa` - Submit custom sofa order
+- `POST /api/custom-requests/reupholstery` - Submit reupholstery quote
+- `GET /api/custom-requests/track/{request_number}` - Public tracking
+- `GET /api/custom-requests/admin/list` - Admin list with filters
+- `GET /api/custom-requests/admin/stats` - Aggregated statistics
+- `GET /api/custom-requests/admin/{request_number}` - Full details
+- `PUT /api/custom-requests/admin/{request_number}/status` - Update status/quote
+- `POST /api/custom-requests/admin/{request_number}/propose-vehicle` - Add proposed vehicle
 
 ---
 
-## New Files Created
+## New Files Created This Session
 
 ```
-/app/frontend/src/components/MobileBottomNav.js    # Mobile navigation bar
-/app/frontend/src/components/PageTransition.js      # Animation wrapper
-/app/frontend/src/pages/CategoriesBrowsePage.js    # Mobile categories page
-/app/backend/routes/whatsapp.py                     # WhatsApp Cloud API
+/app/frontend/src/pages/SofaRequestPage.js           # Custom sofa order form
+/app/frontend/src/pages/ReupholsteryPage.js          # Reupholstery quote form
+/app/frontend/src/components/Admin/CustomRequestsAdmin.js # Admin dashboard
+/app/backend/routes/custom_requests.py                # Backend routes
 ```
 
-## Key API Endpoints
+## Files Updated This Session
 
-### Admin
-- `GET /api/admin/stats` - Dashboard stats (no fake growth %)
-- `POST /api/admin/reset-all-data` - Reset all operational data
-- `PUT /api/admin/products/{id}` - Partial product update
-
-### Payments
-- `POST /api/payments/paydunya/retry/{order_id}` - Retry failed payment
-- `POST /api/payments/paydunya/switch-to-cod/{order_id}` - Switch to COD
-
-### WhatsApp
-- `GET /api/whatsapp/status` - Configuration status
-- `GET /api/whatsapp/pending` - Pending notifications
-- `POST /api/whatsapp/webhook` - Meta webhook receiver
+- `/app/frontend/src/App.js` - Added routes for new pages
+- `/app/frontend/src/pages/AdminPage.js` - Added custom-requests menu item
+- `/app/frontend/src/pages/ProductPage.js` - Added customs status display
+- `/app/frontend/src/components/ProductFormModal.js` - Added customs_status field
+- `/app/backend/server.py` - Integrated custom_requests router
 
 ---
 
 ## Database Schema Updates
 
-### Products Collection
+### Custom Requests Collection (NEW)
 ```javascript
 {
-  vehicle_specs: {           // NEW - For automobile category
-    marque: String,
-    modele: String,
-    annee: String,
-    kilometrage: String,
-    prix_sous_douane: String,  // Pre-customs price
-    carburant: String,
-    transmission: String,
-    places: String,
-    couleur: String,
-    puissance: String,
-    etat: String
-  },
-  // ... existing fields
+  request_number: String,      // VEH-XXXXXXXX, SAL-XXXXXXXX, REH-XXXXXXXX
+  request_type: String,        // "vehicle" | "sofa" | "reupholstery"
+  status: String,              // pending, searching, found, quoted, accepted, etc.
+  created_at: String,
+  updated_at: String,
+  full_name: String,
+  phone: String,
+  whatsapp: String,
+  address: String,
+  city: String,
+  comments: String,
+  admin_notes: String,
+  quote_sent: Boolean,
+  quote_amount: Number,
+  
+  // Vehicle-specific
+  brand: String,
+  model: String,
+  year_min: String,
+  year_max: String,
+  budget_min: String,
+  budget_max: String,
+  customs_status: String,      // "sous_douane" | "dedouane"
+  proposed_vehicles: Array,
+  
+  // Sofa-specific
+  sofa_type: String,
+  width: String,
+  depth: String,
+  height: String,
+  fabric: String,
+  color: String,
+  reference_images: Array,
+  
+  // Reupholstery-specific
+  furniture_type: String,
+  service_type: String,
+  piece_count: String,
+  photos: Array,
+  pickup_needed: Boolean,
+  urgency: String
+}
+```
+
+### Products Collection (Updated)
+```javascript
+{
+  vehicle_specs: {
+    // ... existing fields
+    customs_status: String    // NEW - "sous_douane" | "dedouane"
+  }
 }
 ```
 
@@ -96,25 +119,68 @@ Full-stack e-commerce platform for GROUPE YAMA+ in Senegal with premium categori
 
 ## Remaining Tasks (Prioritized)
 
+### P0 - Critical (Deploy)
+- [ ] Deploy all changes to production VPS (`rsync` + Nginx reload)
+
 ### P1 - High Priority
-- [ ] Deploy all changes to production VPS
-- [ ] PayTech card payment `target_payment` parameter
+- [ ] Dashboard Admin "Recherches véhicules" - Send private offers to clients
+- [ ] Dashboard Admin "Devis Privé" - Secure links for signature and deposit
+- [ ] Configure product specs - Add specs to existing products for animated banner
 
 ### P2 - Medium Priority
-- [ ] SEO Meta tags and Schema.org structured data
-- [ ] WhatsApp Business API credentials configuration
+- [ ] Webhook strict confirmation - Mark orders "Paid" only via PayDunya webhook
+- [ ] WhatsApp API credentials - Connect live Meta API (currently manual fallback)
 
-### P3 - Future/Backlog
-- [ ] Refactor server.py (>11k lines → split into routes/)
-- [ ] Ad campaign tutorial (Facebook/Google/YouTube)
+### P3 - Future
+- [ ] Refactor `server.py` (>11,000 lines)
+- [ ] Backend linting errors (route shadowing cleanup)
 
 ---
 
-## Test Results (August 27, 2026)
-- **Backend Tests**: All endpoints responding correctly
-- **Frontend Tests**: Mobile nav, Admin reset button, Vehicle form all functional
-- **Visual Verification**: Screenshots confirm all UI elements in place
+## Test Results
 
-## Credentials
-- **Admin**: admin@yamaplus.com / Admin123!
-- **VPS**: groupeyamaplus.com (SSH credentials in bash history)
+### Latest Test Report (iteration_21.json)
+- **Backend**: 100% (26/26 tests passed)
+- **Frontend**: 100% (19/19 tests passed)
+- **Regression**: 45 tests passed, 0 failed, 0 skipped
+
+### Test Files Created
+- `/app/backend/tests/test_custom_requests.py`
+- `/app/tests/e2e/custom-requests.spec.ts`
+- `/app/tests/e2e/admin-custom-requests.spec.ts`
+
+---
+
+## Deployment Notes
+
+### VPS Access
+- **Host**: groupeyamaplus.com
+- **User**: root
+- **Service**: yamaplus-backend.service
+
+### Deployment Commands
+```bash
+# Build frontend
+cd /app/frontend && yarn build
+
+# Deploy to VPS
+sshpass -p "@Boury778498137" rsync -avz --delete /app/frontend/build/ root@groupeyamaplus.com:/var/www/yamaplus/frontend/build/
+sshpass -p "@Boury778498137" rsync -avz /app/backend/ root@groupeyamaplus.com:/var/www/yamaplus/backend/
+
+# Restart services on VPS
+ssh root@groupeyamaplus.com "sudo systemctl restart yamaplus-backend && sudo nginx -s reload"
+```
+
+---
+
+## Known Issues / Blockers
+
+1. **PayDunya Card Payments** - Visa/Mastercard not activated (requires PayDunya merchant config)
+2. **WhatsApp API** - Running in manual fallback mode (needs META_ACCESS_TOKEN)
+3. **Google OAuth** - Requires correct callback URI in Google Console
+
+---
+
+## Contact
+- **Manager Email**: ndeyeaminatadiouf3101@gmail.com
+- **Manager WhatsApp**: +221 78 598 75 18

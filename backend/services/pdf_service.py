@@ -859,7 +859,7 @@ def generate_partnership_contract_pdf(
             # Add tagline below logo
             elements.append(Paragraph("<i>Votre partenaire de croissance</i>", ParagraphStyle('Tagline', fontSize=9, textColor=YAMA_GRAY, fontName='Helvetica-Oblique', alignment=TA_CENTER)))
             elements.append(Spacer(1, 5*mm))
-    except:
+    except Exception:
         pass
     
     # ========== TITLE ==========
@@ -1410,7 +1410,7 @@ def generate_customer_invoice_pdf(
     if isinstance(order_date, str):
         try:
             order_date = datetime.fromisoformat(order_date.replace('Z', '+00:00'))
-        except:
+        except (ValueError, AttributeError):
             order_date = datetime.now()
     formatted_date = order_date.strftime("%d/%m/%Y") if hasattr(order_date, 'strftime') else str(order_date)[:10]
     

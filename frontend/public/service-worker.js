@@ -79,18 +79,22 @@ self.addEventListener('sync', (event) => {
 
 async function syncCart() {
   // Sync cart data when back online
-  const cart = await localforage.getItem('pending-cart');
-  if (cart) {
-    try {
+  // Note: localforage is not available in service workers, use IndexedDB or skip
+  try {
+    // Use cache API as fallback instead of localforage
+    const cache = await caches.open('yamaplus-cart-sync');
+    const response = await cache.match('pending-cart');
+    if (response) {
+      const cart = await response.json();
       await fetch('/api/cart/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cart)
       });
-      await localforage.removeItem('pending-cart');
-    } catch (e) {
-      console.error('Cart sync failed:', e);
+      await cache.delete('pending-cart');
     }
+  } catch (e) {
+    console.error('Cart sync failed:', e);
   }
 }
 
@@ -120,7 +124,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   if (event.action === 'open' || !event.action) {
     event.waitUntil(
-      clients.openWindow(event.notification.data.url)
+      self.clients.openWindow(event.notification.data.url)
     );
   }
 });
